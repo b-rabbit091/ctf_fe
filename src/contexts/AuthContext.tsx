@@ -1,0 +1,101 @@
+// src/contexts/AuthContext.tsx
+import React, {createContext, useContext, useEffect, useState} from "react";
+import jwtDecode from "jwt-decode";
+import {loginUser, registerUser, inviteAdmin, verifyEmailAndSetPassword} from "../api/auth";
+import {setAccessToken, setRefreshToken, getAccessToken, clearTokens} from "../utils/token";
+import {toast} from "react-toastify";
+
+type User = { user_id?: number; username?: string; role?: string , email?:string, };
+
+type AuthContextType = {
+    user: User | null;
+    accessToken: string | null;
+    login: (username: string, password: string) => Promise<void>;
+    logout: () => void;
+    register: (payload: { username: string; email: string; first_name: string, last_name: string }) => Promise<void>;
+    inviteAdmin: (payload: { username: string; email: string }) => Promise<void>;
+    verifyEmailSetPassword: (token: string, password: string, confirm_password: string) => Promise<void>;
+    ready: boolean;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [accessToken, setAccessTokenState] = useState<string | null>(getAccessToken());
+    const [ready, setReady] = useState(false);
+
+    // initialize from localStorage token
+    useEffect(() => {
+        const t = getAccessToken();
+        if (t) {
+            try {
+                const d: any = jwtDecode(t);
+                setUser({user_id: d.user_id, username: d.username , email: d.email, role: d.role});
+                setAccessTokenState(t);
+            } catch {
+                clearTokens();
+            }
+        }
+        setReady(true);
+    }, []);
+
+    const login = async (username: string, password: string) => {
+        const data = await loginUser({username, password});
+        const {access, refresh} = data;
+        setAccessToken(access);
+        setRefreshToken(refresh);
+        setAccessTokenState(access);
+        try {
+            const d: any = jwtDecode(access);
+            setUser({user_id: d.user_id, username: d.username || d.user || d.email, role: d.role});
+        } catch {
+            setUser(null);
+        }
+    };
+
+    const logout = () => {
+        clearTokens();
+        setUser(null);
+        setAccessTokenState(null);
+    };
+
+    const register = async (payload: { username: string; email: string; first_name: string, last_name: string }) => {
+        await registerUser(payload);
+        toast.success("Verification email sent — check your inbox.");
+    };
+
+    const inviteAdminFn = async (payload: { username: string; email: string }) => {
+        // inviteAdmin expects auth header via axios (interceptor), so just call
+        await inviteAdmin(payload);
+        toast.success("Admin invite sent.");
+    };
+
+    const verifyEmailSetPassword = async (token: string, password: string, confirm_password: string) => {
+        await verifyEmailAndSetPassword(token, password,confirm_password);
+        toast.success("Password set — account activated. Please login.");
+    };
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                accessToken,
+                login,
+                logout,
+                register,
+                inviteAdmin: inviteAdminFn,
+                verifyEmailSetPassword,
+                ready
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = (): AuthContextType => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+    return ctx;
+};
