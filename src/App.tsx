@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import PrivateRoute from "./routes/PrivateRoute";
 import AdminRoute from "./routes/AdminRoute";
+import VerifyResetPassword from "./pages/VerifyResetPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const App: React.FC = () => {
     return (
@@ -22,6 +24,8 @@ const App: React.FC = () => {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
                     <Route
                         path="/dashboard"

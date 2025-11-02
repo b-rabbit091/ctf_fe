@@ -20,6 +20,10 @@ export interface AdminInvitePayload {
     email: string;
     role?: string;
 }
+export interface VerifyPasswordResetPayload {
+    email: string;
+
+}
 
 // login
 export const loginUser = async (data: LoginPayload) => {
@@ -32,6 +36,13 @@ export const registerUser = async (data: RegisterPayload) => {
     const resp = await api.post(`${API_URL}register/`, data);
     return resp.data;
 };
+
+export const verifyResetUserPassword = async (data: VerifyPasswordResetPayload) => {
+    const resp = await api.post(`${API_URL}verify-reset-password/`, data);
+    return resp.data;
+};
+
+
 
 // refresh
 export const refreshToken = async (refresh: string) => {

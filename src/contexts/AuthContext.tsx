@@ -1,11 +1,17 @@
 // src/contexts/AuthContext.tsx
 import React, {createContext, useContext, useEffect, useState} from "react";
 import jwtDecode from "jwt-decode";
-import {loginUser, registerUser, inviteAdmin, verifyEmailAndSetPassword} from "../api/auth";
+import {
+    loginUser,
+    registerUser,
+    inviteAdmin,
+    verifyEmailAndSetPassword,
+    verifyResetUserPassword,
+} from "../api/auth";
 import {setAccessToken, setRefreshToken, getAccessToken, clearTokens} from "../utils/token";
 import {toast} from "react-toastify";
 
-type User = { user_id?: number; username?: string; role?: string , email?:string, };
+type User = { user_id?: number; username?: string; role?: string, email?: string, };
 
 type AuthContextType = {
     user: User | null;
@@ -15,6 +21,8 @@ type AuthContextType = {
     register: (payload: { username: string; email: string; first_name: string, last_name: string }) => Promise<void>;
     inviteAdmin: (payload: { username: string; email: string }) => Promise<void>;
     verifyEmailSetPassword: (token: string, password: string, confirm_password: string) => Promise<void>;
+    verifyResetPassword: (payload: { email: string }) => Promise<void>;
+
     ready: boolean;
 };
 
@@ -62,7 +70,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
 
     const register = async (payload: { username: string; email: string; first_name: string, last_name: string }) => {
         await registerUser(payload);
-        toast.success("Verification email sent — check your inbox.");
+    };
+
+
+    const verifyResetPassword = async (payload: { email: string; }) => {
+        await verifyResetUserPassword(payload);
     };
 
     const inviteAdminFn = async (payload: { username: string; email: string }) => {
@@ -86,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
                 register,
                 inviteAdmin: inviteAdminFn,
                 verifyEmailSetPassword,
+                verifyResetPassword,
                 ready
             }}
         >
