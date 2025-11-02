@@ -135,14 +135,33 @@ const Login: React.FC = () => {
                                 "Sign In"
                             )}
                         </button>
+                        {/* Forgot password link */}
+                        <p className="text-center mt-2">
+                            <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                                Forgot Password?
+                            </Link>
+                        </p>
+
+                        {/* Divider */}
+                        <div className="flex items-center my-4">
+                            <div className="flex-grow border-t border-gray-300" />
+                            <span className="px-2 text-gray-500 text-sm">OR</span>
+                            <div className="flex-grow border-t border-gray-300" />
+                        </div>
+
+                        {/* Create account button */}
+                        <div className="flex justify-center mt-4">
+                            <Link
+                                to="/register"
+                                className="bg-green-600 text-white font-semibold px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                            >
+                                Create New Account
+                            </Link>
+                        </div>
+
                     </form>
 
-                    <p className="mt-6 text-center text-gray-600">
-                        New student?{" "}
-                        <Link to="/register" className="text-green-600 hover:underline">
-                            Create your account
-                        </Link>
-                    </p>
+
                 </div>
             </div>
         </div>

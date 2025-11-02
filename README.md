@@ -4,7 +4,7 @@ This is a **CTF (Capture The Flag)** frontend project built using **React** and 
 
 ---
 
-## ⚙️ Installation and Setup
+##  Installation and Setup
 
 Follow the steps below to install dependencies and run the project in your local environment.
 
@@ -25,8 +25,8 @@ npm -v
 
 ### 2. Clone the Repository
 ```bash
-git clone <repository_url>
-cd ctf_fe/ctf-frontend
+git clone git@github.com:b-rabbit091/ctf_fe.git
+cd ctf_fe/
 ```
 
 ### 3. Install Dependencies
