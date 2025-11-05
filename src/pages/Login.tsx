@@ -137,7 +137,7 @@ const Login: React.FC = () => {
                         </button>
                         {/* Forgot password link */}
                         <p className="text-center mt-2">
-                            <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                            <Link to="/verify-reset-password" className="text-blue-600 hover:underline">
                                 Forgot Password?
                             </Link>
                         </p>
