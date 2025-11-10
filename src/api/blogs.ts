@@ -67,3 +67,4 @@ export const deleteBlog = async (id: number): Promise<void> => {
         throw err.response?.data || err;
     }
 };
+
