@@ -19,6 +19,7 @@ import BlogDetail from "./pages/BlogDetail";
 import BlogEditor from "./pages/BlogEditor";
 import PracticeList from "./pages/PracticePage/PracticeList";
 import PracticeDetail from "./pages/PracticePage";
+import PracticeCreate from "./pages/PracticePage/PracticeCreate";
 
 
 const App: React.FC = () => {
@@ -60,6 +61,7 @@ const App: React.FC = () => {
                     />
                     <Route path="/practice" element={<PracticeList/>}/>
                     <Route path="/practice/:id" element={< PracticeDetail/>}/>
+                    <Route path="/practice/new" element={< PracticeCreate/>}/>
 
                 </Routes>
             </BrowserRouter>
