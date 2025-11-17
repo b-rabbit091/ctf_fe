@@ -19,7 +19,10 @@ import BlogDetail from "./pages/BlogDetail";
 import BlogEditor from "./pages/BlogEditor";
 import PracticeList from "./pages/PracticePage/PracticeList";
 import PracticeDetail from "./pages/PracticePage";
+import CompetitionDetail from "./pages/CompetitionPage";
 import PracticeCreate from "./pages/PracticePage/PracticeCreate";
+import CompetitionList from "./pages/CompetitionPage/CompetitionList";
+import CompetitionCreate from "./pages/CompetitionPage/CompetitionCreate";
 
 
 const App: React.FC = () => {
@@ -62,6 +65,9 @@ const App: React.FC = () => {
                     <Route path="/practice" element={<PracticeList/>}/>
                     <Route path="/practice/:id" element={< PracticeDetail/>}/>
                     <Route path="/practice/new" element={< PracticeCreate/>}/>
+                    <Route path="/compete" element={< CompetitionList/>}/>
+                    <Route path="/compete/:id" element={< CompetitionDetail/>}/>
+                    <Route path="/compete/new" element={< CompetitionCreate/>}/>
 
                 </Routes>
             </BrowserRouter>

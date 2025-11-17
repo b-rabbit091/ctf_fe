@@ -5,11 +5,12 @@ import {useAuth} from "../contexts/AuthContext";
 
 
 
-export const getChallenges = async (filters?: { category?: string; difficulty?: string }): Promise<Challenge[]> => {
+export const getChallenges = async (filters?: { category?: string; difficulty?: string ; type?:string}): Promise<Challenge[]> => {
     // Call backend API with query params
     const params: Record<string, string> = {};
     if (filters?.category) params.category = filters.category;
     if (filters?.difficulty) params.difficulty = filters.difficulty;
+    if (filters?.type) params.type = filters.type;
 
     const resp = await api.get("/api/challenges/challenges", {params});
 
@@ -43,7 +44,7 @@ export const updateChallenge = async (id: number, data: FormData) => {
 };
 
 export const deleteChallenge = async (id: number) => {
-    const resp = await api.delete(`/api/challenges/${id}/`);
+    const resp = await api.delete(`/api/challenges/challenges/${id}/`);
 
     return {success: resp.status};
 };
