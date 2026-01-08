@@ -91,12 +91,12 @@ body::before {
     min-height: 100vh;
     display: flex;
     justify-content: center;
-    padding: 24px 12px;
+    padding: 0;
 }
 
 .app-shell-inner {
     width: 100%;
-    max-width: var(--mac-max-width);
+    max-width: none;
     margin: 0 auto;
 }
 

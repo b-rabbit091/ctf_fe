@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {useAuth} from "../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
 import {toast} from "react-toastify";
 import {ImSpinner8} from "react-icons/im";
 import {Link} from "react-router-dom";

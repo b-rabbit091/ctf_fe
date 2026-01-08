@@ -8,10 +8,22 @@ import {
     verifyEmailAndSetPassword,
     verifyResetUserPassword,
 } from "../api/auth";
-import {setAccessToken, setRefreshToken, getAccessToken, clearTokens} from "../utils/token";
+import {
+    setAccessToken,
+    setRefreshToken,
+    getAccessToken,
+    clearTokens
+} from "../utils/token";
 import {toast} from "react-toastify";
 
-type User = { user_id?: number; username?: string; role?: string, email?: string, };
+// ✅ add `id` as alias (so pages can use user.id)
+type User = {
+    id?: number;
+    user_id?: number;
+    username?: string;
+    role?: string;
+    email?: string;
+};
 
 type AuthContextType = {
     user: User | null;
@@ -22,7 +34,6 @@ type AuthContextType = {
     inviteAdmin: (payload: { username: string; email: string }) => Promise<void>;
     verifyEmailSetPassword: (token: string, password: string, confirm_password: string) => Promise<void>;
     verifyResetPassword: (payload: { email: string }) => Promise<void>;
-
     ready: boolean;
 };
 
@@ -51,12 +62,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
     const login = async (username: string, password: string) => {
         const data = await loginUser({username, password});
         const {access, refresh} = data;
+
         setAccessToken(access);
         setRefreshToken(refresh);
         setAccessTokenState(access);
+
         try {
             const d: any = jwtDecode(access);
-            setUser({user_id: d.user_id, username: d.username || d.user || d.email, role: d.role});
+            const uid = d.user_id ?? d.id ?? d.pk;
+
+            setUser({
+                id: uid,
+                user_id: uid,
+                username: d.username || d.user || d.email || username,
+                email: d.email,
+                role: d.role,
+            });
         } catch {
             setUser(null);
         }
@@ -72,19 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         await registerUser(payload);
     };
 
-
     const verifyResetPassword = async (payload: { email: string; }) => {
         await verifyResetUserPassword(payload);
     };
 
     const inviteAdminFn = async (payload: { username: string; email: string }) => {
-        // inviteAdmin expects auth header via axios (interceptor), so just call
         await inviteAdmin(payload);
         toast.success("Admin invite sent.");
     };
 
     const verifyEmailSetPassword = async (token: string, password: string, confirm_password: string) => {
-        await verifyEmailAndSetPassword(token, password,confirm_password);
+        await verifyEmailAndSetPassword(token, password, confirm_password);
         toast.success("Password set — account activated. Please login.");
     };
 

@@ -6,14 +6,12 @@ import {
     getDifficulties,
     getSolutionTypes,
     createChallenge,
-} from "../../api/practice";
-import {useAuth} from "../../contexts/AuthContext";
+} from "./practice";
 
 type TabKey = "question" | "solution";
 
-const ChallengeCreate: React.FC = () => {
+const PracticeCreate: React.FC = () => {
     const navigate = useNavigate();
-    const {user} = useAuth();
 
     // Tabs
     const [activeTab, setActiveTab] = useState<TabKey>("question");
@@ -30,18 +28,16 @@ const ChallengeCreate: React.FC = () => {
     const [category, setCategory] = useState<number | "">("");
     const [difficulty, setDifficulty] = useState<number | "">("");
     const [solutionType, setSolutionType] = useState<number | "">("");
-    const [questionType, setQuestionType] = useState<"practice" | "competition">(
-        "practice"
-    );
+    const [questionType,setQuestionType] = useState<"practice" | "competition">("practice");
 
-    // Solutions (currently UI-only – wire to backend when you add endpoints for FlagSolution/TextSolution)
+    // Solutions
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
 
-    // File uploads (images + zip)
+    // Files
     const [uploadFiles, setUploadFiles] = useState<File[]>([]);
 
-    // Options
+    // Dropdowns
     const [categories, setCategories] = useState<any[]>([]);
     const [difficulties, setDifficulties] = useState<any[]>([]);
     const [solutionTypes, setSolutionTypes] = useState<any[]>([]);
@@ -60,12 +56,12 @@ const ChallengeCreate: React.FC = () => {
                     getSolutionTypes(),
                 ]);
                 if (!mounted) return;
+
                 setCategories(cats);
                 setDifficulties(diffs);
                 setSolutionTypes(sols);
-            } catch (e) {
-                if (!mounted) return;
-                setError("Failed to load options. Please refresh and try again.");
+            } catch {
+                if (mounted) setError("Failed to load dropdowns.");
             }
         })();
         return () => {
@@ -81,63 +77,55 @@ const ChallengeCreate: React.FC = () => {
     const handleSaveQuestion = () => {
         resetMessages();
 
-        if (!title.trim() || !description.trim()) {
-            setError("Title and Description are required.");
+        if (!title || !description) {
+            setError("Title & Description are required.");
             return;
         }
         if (!category || !difficulty || !solutionType) {
-            setError("Category, Difficulty, and Solution Type are required.");
+            setError("Please select Category, Difficulty, and Solution Type.");
             return;
         }
 
         setQuestionSaved(true);
         setActiveTab("solution");
-        setMessage("Question draft saved. You can now add solution details.");
+        setMessage("Draft saved. You can now enter solution details.");
     };
 
     const handleFilesChange = (files: FileList | null) => {
         if (!files) return;
+
         resetMessages();
 
         const allowedTypes = [
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-            "application/zip",
-            "application/x-zip-compressed",
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "application/zip", "application/x-zip-compressed"
         ];
 
-        const maxSizeBytes = 20 * 1024 * 1024; // 20MB
-        const nextFiles: File[] = [];
+        const maxSize = 20 * 1024 * 1024;
+        const accepted: File[] = [];
         const rejected: string[] = [];
 
-        Array.from(files).forEach((file) => {
-            if (!allowedTypes.includes(file.type)) {
-                rejected.push(`${file.name} (unsupported type)`);
+        Array.from(files).forEach(f => {
+            if (!allowedTypes.includes(f.type)) {
+                rejected.push(`${f.name} (invalid type)`);
                 return;
             }
-            if (file.size > maxSizeBytes) {
-                rejected.push(`${file.name} (too large > 20MB)`);
+            if (f.size > maxSize) {
+                rejected.push(`${f.name} (exceeds 20MB)`);
                 return;
             }
-            nextFiles.push(file);
+            accepted.push(f);
         });
 
-        setUploadFiles((prev) => [...prev, ...nextFiles]);
+        setUploadFiles(prev => [...prev, ...accepted]);
 
         if (rejected.length > 0) {
-            setError(
-                `Some files were rejected:\n${rejected
-                    .map((r) => `• ${r}`)
-                    .join("\n")}`
-            );
+            setError("Rejected files:\n" + rejected.join("\n"));
         }
     };
 
-    const handleRemoveFile = (index: number) => {
-        resetMessages();
-        setUploadFiles((prev) => prev.filter((_, i) => i !== index));
+    const handleRemoveFile = (idx: number) => {
+        setUploadFiles(prev => prev.filter((_, i) => i !== idx));
     };
 
     const handleSubmitChallenge = async (e: FormEvent) => {
@@ -145,103 +133,69 @@ const ChallengeCreate: React.FC = () => {
         resetMessages();
 
         if (!questionSaved) {
-            setError("Please save the question draft before creating the challenge.");
-            setActiveTab("question");
-            return;
-        }
-
-        if (!solutionType) {
-            setError("Solution Type is required.");
-            setActiveTab("question");
-            return;
-        }
-
-        if (!category || !difficulty) {
-            setError("Category and Difficulty are required.");
+            setError("Please save the question draft first.");
             setActiveTab("question");
             return;
         }
 
         setSubmitting(true);
+
         try {
-            const formData = new FormData();
-            formData.append("title", title);
-            formData.append("description", description);
-            formData.append("constraints", constraints);
-            formData.append("input_format", inputFormat);
-            formData.append("output_format", outputFormat);
-            formData.append("sample_input", sampleInput);
-            formData.append("sample_output", sampleOutput);
+            const form = new FormData();
+            form.append("title", title);
+            form.append("description", description);
+            form.append("constraints", constraints);
+            form.append("input_format", inputFormat);
+            form.append("output_format", outputFormat);
+            form.append("sample_input", sampleInput);
+            form.append("sample_output", sampleOutput);
 
-            formData.append("question_type", questionType);
-            if (category) formData.append("category", String(category));
-            if (difficulty) formData.append("difficulty", String(difficulty));
-            if (solutionType) formData.append("solution_type", String(solutionType));
+            form.append("question_type", "practice");
+            form.append("category", String(category));
+            form.append("difficulty", String(difficulty));
+            form.append("solution_type", String(solutionType));
 
-            // Files field expected by backend: `uploaded_files`
-            uploadFiles.forEach((file) => {
-                formData.append("uploaded_files", file);
-            });
+            uploadFiles.forEach(f => form.append("uploaded_files", f));
 
-            await createChallenge(formData);
-
-            setMessage("Challenge created successfully.");
-            navigate("/practice");
+            await createChallenge(form);
+            navigate("/admin/practice");
         } catch (err) {
-            console.error(err);
-            setError("Failed to create challenge. Please check your input and try again.");
+            setError("Failed to create practice challenge.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (user?.role !== "admin") {
-        return (
-            <div className="min-h-screen bg-gray-50">
-                <Navbar/>
-                <div className="max-w-3xl mx-auto p-6">
-                    <p className="text-center text-red-600 font-medium">
-                        Unauthorized – admin access required.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-slate-50">
-            <Navbar/>
+            <Navbar />
             <div className="max-w-6xl mx-auto px-4 py-8">
-                <div className="bg-white shadow-sm rounded-xl border border-slate-200">
-                    <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold text-slate-900">
-                                Create New Challenge
-                            </h1>
-                            <p className="text-sm text-slate-500 mt-1">
-                                Define the problem statement, metadata, and reference files.
-                            </p>
-                        </div>
-                        <div className="flex gap-2 text-xs text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">
-                Admin Panel
-              </span>
-                        </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+
+                    {/* --- HEADER --- */}
+                    <div className="px-6 py-4 border-b border-slate-200">
+                        <h1 className="text-2xl font-semibold text-slate-900">
+                            Create Practice Challenge
+                        </h1>
+                        <p className="text-sm text-slate-500">
+                            Define the problem, metadata, and files.
+                        </p>
                     </div>
 
+                    {/* FORM */}
                     <form onSubmit={handleSubmitChallenge}>
-                        {/* Global alerts */}
+
+                        {/* Alerts */}
                         {(error || message) && (
                             <div className="px-6 pt-4">
                                 {error && (
-                                    <div
-                                        className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 whitespace-pre-line">
+                                    <div className="mb-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm whitespace-pre-line">
                                         {error}
                                     </div>
                                 )}
                                 {message && (
-                                    <div
-                                        className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                    <div className="mb-3 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm">
                                         {message}
                                     </div>
                                 )}
@@ -254,38 +208,34 @@ const ChallengeCreate: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("question")}
-                                    className={`relative pb-2 text-sm font-medium ${
+                                    className={`pb-2 text-sm font-medium ${
                                         activeTab === "question"
-                                            ? "text-slate-900"
-                                            : "text-slate-500 hover:text-slate-700"
+                                            ? "text-slate-900 border-b-2 border-blue-600"
+                                            : "text-slate-500"
                                     }`}
                                 >
                                     Question
-                                    {activeTab === "question" && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full bg-blue-600 rounded-full"/>
-                                    )}
                                 </button>
+
                                 <button
                                     type="button"
                                     disabled={!questionSaved}
-                                    onClick={() => questionSaved && setActiveTab("solution")}
-                                    className={`relative pb-2 text-sm font-medium ${
+                                    onClick={() => setActiveTab("solution")}
+                                    className={`pb-2 text-sm font-medium ${
                                         !questionSaved
                                             ? "text-slate-300 cursor-not-allowed"
                                             : activeTab === "solution"
-                                                ? "text-slate-900"
-                                                : "text-slate-500 hover:text-slate-700"
+                                                ? "text-slate-900 border-b-2 border-blue-600"
+                                                : "text-slate-500"
                                     }`}
                                 >
                                     Solution Notes
-                                    {activeTab === "solution" && questionSaved && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full bg-blue-600 rounded-full"/>
-                                    )}
                                 </button>
                             </div>
                         </div>
+
+
+
 
                         {/* Question Tab */}
                         {activeTab === "question" && (
@@ -582,6 +532,7 @@ const ChallengeCreate: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
                     </form>
                 </div>
             </div>
@@ -589,4 +540,4 @@ const ChallengeCreate: React.FC = () => {
     );
 };
 
-export default ChallengeCreate;
+export default PracticeCreate;

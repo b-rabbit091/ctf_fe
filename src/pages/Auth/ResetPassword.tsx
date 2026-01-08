@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import Input from "../components/Input";
-import Button from "../components/Button";
-import { useAuth } from "../contexts/AuthContext";
+import Input from "../../components/Input";
+import Button from "../../components/Button";
+import { useAuth } from "../../contexts/AuthContext";
 import { motion } from "framer-motion";
 
 const ResetPassword: React.FC = () => {
@@ -117,7 +117,7 @@ const ResetPassword: React.FC = () => {
                             animate={{ opacity: 1 }}
                         >
                             {passwordsMatch
-                                ? "✅ Passwords match"
+                                ? " Passwords match"
                                 : "❌ Passwords do not match"}
                         </motion.p>
                     )}
