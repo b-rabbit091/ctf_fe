@@ -1,11 +1,11 @@
 // src/pages/practice/PracticeList.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {useAuth} from "../../contexts/AuthContext";
 import Navbar from "../../components/Navbar";
-import { getChallenges, getCategories, getDifficulties } from "./practice";
-import { useNavigate } from "react-router-dom";
-import { FiEye } from "react-icons/fi";
-import type { Challenge } from "./types";
+import {getChallenges, getCategories, getDifficulties} from "./practice";
+import {useNavigate} from "react-router-dom";
+import {FiEye} from "react-icons/fi";
+import type {Challenge} from "./types";
 
 /** Truncate text safely */
 const truncateText = (text: string, maxLength: number) =>
@@ -22,7 +22,7 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 }
 
 const PracticeList: React.FC = () => {
-    const { user } = useAuth(); // kept (even if unused today)
+    const {user} = useAuth(); // kept (even if unused today)
     void user;
 
     const navigate = useNavigate();
@@ -60,7 +60,7 @@ const PracticeList: React.FC = () => {
                 const [cats, diffs, chals] = await Promise.all([
                     getCategories(),
                     getDifficulties(),
-                    getChallenges({ type: "practice" }),
+                    getChallenges({type: "practice"}),
                 ]);
                 if (!mounted) return;
 
@@ -135,7 +135,7 @@ const PracticeList: React.FC = () => {
     const onPageChange = (newPage: number) => {
         if (newPage < 1 || newPage > pageCount) return;
         setPage(newPage);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({top: 0, behavior: "smooth"});
     };
 
     /** Card renderer (same as your original) */
@@ -170,7 +170,8 @@ const PracticeList: React.FC = () => {
 
                     <div className="mt-3 flex flex-col gap-1 text-[11px]">
                         <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
+              <span
+                  className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
                 <span className="mr-1 font-medium">Category:</span>
                   {category}
               </span>
@@ -191,8 +192,8 @@ const PracticeList: React.FC = () => {
                         className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
                         aria-label={`View challenge ${c.title}`}
                     >
-                        <FiEye size={16} />
-                        <span>View</span>
+                        <FiEye size={16}/>
+                        <span>SOLVE</span>
                     </button>
                 </div>
             </article>
@@ -204,7 +205,7 @@ const PracticeList: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            <Navbar />
+            <Navbar/>
 
             <main className="w-full px-4 py-8">
                 <div className="mx-auto max-w-6xl">
@@ -217,11 +218,13 @@ const PracticeList: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
+              <span
+                  className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
                 <span className="text-slate-500">Total:</span>
                 <span className="ml-2 font-semibold text-slate-900">{total}</span>
               </span>
-                            <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+                            <span
+                                className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
                 <span className="text-slate-500">Filters:</span>
                 <span className="ml-2 font-semibold text-slate-900">
                   {activeFiltersCount}
@@ -306,12 +309,14 @@ const PracticeList: React.FC = () => {
 
                     {/* Alerts */}
                     {loading && (
-                        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div
+                            className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                             Loading challenges...
                         </div>
                     )}
                     {error && (
-                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+                        <div
+                            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
                             {error}
                         </div>
                     )}
@@ -320,7 +325,8 @@ const PracticeList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
+                                <div
+                                    className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
                                     No challenges match your filters.
                                 </div>
                             ) : (
@@ -330,7 +336,8 @@ const PracticeList: React.FC = () => {
                                     </div>
 
                                     {/* Pagination */}
-                                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                                    <div
+                                        className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => onPageChange(page - 1)}

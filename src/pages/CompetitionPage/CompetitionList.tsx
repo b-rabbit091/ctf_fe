@@ -320,7 +320,7 @@ const CompetitionList: React.FC = () => {
                             aria-label={`View competition challenge ${cc.title}`}
                         >
                             <FiEye size={16}/>
-                            <span>View</span>
+                            <span>PARTICIPATE</span>
                         </button>
                     )}
                 </div>
