@@ -24,6 +24,7 @@ npm -v
 ```
 
 ### 2. Clone the Repository
+Active branch : v1.0
 ```bash
 git clone git@github.com:b-rabbit091/ctf_fe.git
 cd ctf_fe/
