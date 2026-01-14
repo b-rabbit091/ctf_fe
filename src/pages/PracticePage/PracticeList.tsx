@@ -1,11 +1,11 @@
 // src/pages/practice/PracticeList.tsx
-import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {useAuth} from "../../contexts/AuthContext";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 import Navbar from "../../components/Navbar";
-import {getChallenges, getCategories, getDifficulties} from "./practice";
-import {useNavigate} from "react-router-dom";
-import {FiEye} from "react-icons/fi";
-import type {Challenge} from "./types";
+import { getChallenges, getCategories, getDifficulties } from "./practice";
+import { useNavigate } from "react-router-dom";
+import { FiEye } from "react-icons/fi";
+import type { Challenge } from "./types";
 
 /** Truncate text safely */
 const truncateText = (text: string, maxLength: number) =>
@@ -22,16 +22,15 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 }
 
 const PracticeList: React.FC = () => {
-    const {user} = useAuth(); // kept (even if unused today)
+    const { user } = useAuth(); // kept (even if unused today)
     void user;
 
     const navigate = useNavigate();
 
     const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
     const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-    const [difficulties, setDifficulties] = useState<{ id: number; level: string }[]>(
-        []
-    );
+    const [difficulties, setDifficulties] = useState<{ id: number; level: string }[]>([]);
+    void difficulties; // kept (even if unused today)
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -41,9 +40,7 @@ const PracticeList: React.FC = () => {
     const debouncedSearch = useDebouncedValue(search, 300);
 
     const [categoryFilter, setCategoryFilter] = useState(""); // only dropdown kept
-    const [difficultyTag, setDifficultyTag] = useState<"" | "Easy" | "Moderate" | "Hard">(
-        ""
-    ); // chips
+    const [difficultyTag, setDifficultyTag] = useState<"" | "Easy" | "Moderate" | "Hard">(""); // chips
 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(9);
@@ -60,7 +57,7 @@ const PracticeList: React.FC = () => {
                 const [cats, diffs, chals] = await Promise.all([
                     getCategories(),
                     getDifficulties(),
-                    getChallenges({type: "practice"}),
+                    getChallenges({ type: "practice" }),
                 ]);
                 if (!mounted) return;
 
@@ -104,11 +101,7 @@ const PracticeList: React.FC = () => {
             const desc = (c.description || "").toLowerCase();
             const cat = (c.category?.name || "").toLowerCase();
 
-            return (
-                title.includes(searchLower) ||
-                desc.includes(searchLower) ||
-                cat.includes(searchLower)
-            );
+            return title.includes(searchLower) || desc.includes(searchLower) || cat.includes(searchLower);
         });
     }, [allChallenges, categoryFilter, difficultyTag, debouncedSearch]);
 
@@ -135,7 +128,7 @@ const PracticeList: React.FC = () => {
     const onPageChange = (newPage: number) => {
         if (newPage < 1 || newPage > pageCount) return;
         setPage(newPage);
-        window.scrollTo({top: 0, behavior: "smooth"});
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     /** Card renderer (same as your original) */
@@ -159,26 +152,19 @@ const PracticeList: React.FC = () => {
             >
                 <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-start justify-between gap-3">
-                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">
-                            {c.title}
-                        </h2>
+                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">{c.title}</h2>
                     </div>
 
-                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">
-                        {truncateText(c.description || "", 200)}
-                    </p>
+                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">{truncateText(c.description || "", 200)}</p>
 
                     <div className="mt-3 flex flex-col gap-1 text-[11px]">
                         <div className="flex flex-wrap items-center gap-2">
-              <span
-                  className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
+              <span className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
                 <span className="mr-1 font-medium">Category:</span>
                   {category}
               </span>
 
-                            <span
-                                className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}
-                            >
+                            <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}>
                 <span className="mr-1 font-medium">Difficulty:</span>
                                 {difficulty}
               </span>
@@ -192,7 +178,7 @@ const PracticeList: React.FC = () => {
                         className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
                         aria-label={`View challenge ${c.title}`}
                     >
-                        <FiEye size={16}/>
+                        <FiEye size={16} />
                         <span>SOLVE</span>
                     </button>
                 </div>
@@ -200,35 +186,28 @@ const PracticeList: React.FC = () => {
         );
     };
 
-    const activeFiltersCount =
-        (search.trim() ? 1 : 0) + (categoryFilter ? 1 : 0) + (difficultyTag ? 1 : 0);
+    const activeFiltersCount = (search.trim() ? 1 : 0) + (categoryFilter ? 1 : 0) + (difficultyTag ? 1 : 0);
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans">
-            <Navbar/>
+        <div className="min-h-screen w-full bg-slate-50 font-sans flex flex-col">
+            <Navbar />
 
-            <main className="w-full px-4 py-8">
-                <div className="mx-auto max-w-6xl">
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <div className="w-full">
                     {/* Header */}
                     <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                Practice Challenges
-                            </h1>
+                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Practice Challenges</h1>
                         </div>
 
                         <div className="flex items-center gap-2 text-sm">
-              <span
-                  className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
+              <span className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
                 <span className="text-slate-500">Total:</span>
                 <span className="ml-2 font-semibold text-slate-900">{total}</span>
               </span>
-                            <span
-                                className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+                            <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
                 <span className="text-slate-500">Filters:</span>
-                <span className="ml-2 font-semibold text-slate-900">
-                  {activeFiltersCount}
-                </span>
+                <span className="ml-2 font-semibold text-slate-900">{activeFiltersCount}</span>
               </span>
                         </div>
                     </header>
@@ -309,14 +288,12 @@ const PracticeList: React.FC = () => {
 
                     {/* Alerts */}
                     {loading && (
-                        <div
-                            className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                             Loading challenges...
                         </div>
                     )}
                     {error && (
-                        <div
-                            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
                             {error}
                         </div>
                     )}
@@ -325,8 +302,7 @@ const PracticeList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div
-                                    className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
+                                <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
                                     No challenges match your filters.
                                 </div>
                             ) : (
@@ -336,8 +312,7 @@ const PracticeList: React.FC = () => {
                                     </div>
 
                                     {/* Pagination */}
-                                    <div
-                                        className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => onPageChange(page - 1)}
@@ -347,8 +322,7 @@ const PracticeList: React.FC = () => {
                                                 Prev
                                             </button>
                                             <span className="text-xs md:text-sm">
-                        Page{" "}
-                                                <span className="font-semibold text-slate-900">{page}</span> of{" "}
+                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
                                                 <span className="font-semibold text-slate-900">{pageCount}</span>
                       </span>
                                             <button
@@ -381,14 +355,10 @@ const PracticeList: React.FC = () => {
 
                                             <div className="text-slate-500">
                                                 Showing{" "}
-                                                <span className="font-medium text-slate-900">
-                          {total === 0 ? 0 : (page - 1) * pageSize + 1}
-                        </span>{" "}
+                                                <span className="font-medium text-slate-900">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
                                                 –{" "}
-                                                <span className="font-medium text-slate-900">
-                          {Math.min(page * pageSize, total)}
-                        </span>{" "}
-                                                of <span className="font-medium text-slate-900">{total}</span>
+                                                <span className="font-medium text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="font-medium text-slate-900">{total}</span>
                                             </div>
                                         </div>
                                     </div>

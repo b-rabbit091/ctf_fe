@@ -4,9 +4,8 @@ import { FiEdit, FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
 
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../contexts/AuthContext";
-import { deleteBlog, getBlogs} from "./api";
-import {Blog as BlogType } from "./types";
-
+import { deleteBlog, getBlogs } from "./api";
+import { Blog as BlogType } from "./types";
 
 /**
  * LeetCode-style listing notes:
@@ -63,9 +62,7 @@ const BlogList: React.FC = () => {
     }, []);
 
     const onDelete = async (id: number) => {
-        const ok = window.confirm(
-            "Are you sure you want to delete this blog? This cannot be undone."
-        );
+        const ok = window.confirm("Are you sure you want to delete this blog? This cannot be undone.");
         if (!ok) return;
 
         try {
@@ -89,10 +86,10 @@ const BlogList: React.FC = () => {
     }, [blogs]);
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar />
 
-            <main className="mx-auto max-w-5xl lg:max-w-6xl px-4 py-8">
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
                 {/* Header */}
                 <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -166,17 +163,13 @@ const BlogList: React.FC = () => {
                                         {/* Content */}
                                         <div className="flex flex-1 flex-col px-4 py-3">
                                             <div className="mb-2">
-                                                <h2 className="line-clamp-2 text-base font-semibold text-slate-900">
-                                                    {blog.title}
-                                                </h2>
+                                                <h2 className="line-clamp-2 text-base font-semibold text-slate-900">{blog.title}</h2>
                                                 <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
                                                     {blog.formattedDate}
                                                 </div>
                                             </div>
 
-                                            <p className="mt-1 flex-1 text-sm text-slate-600 line-clamp-4">
-                                                {blog.excerpt}
-                                            </p>
+                                            <p className="mt-1 flex-1 text-sm text-slate-600 line-clamp-4">{blog.excerpt}</p>
 
                                             {/* Actions */}
                                             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">

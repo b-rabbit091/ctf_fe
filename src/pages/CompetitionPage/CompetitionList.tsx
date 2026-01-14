@@ -94,7 +94,7 @@ const CompetitionList: React.FC = () => {
 
     const [statusFilter, setStatusFilter] = useState<ContestStatus | "ALL">("ALL");
 
-    //  NEW: group competition filter
+    // NEW: group competition filter
     const [groupFilter, setGroupFilter] = useState<GroupFilter>("ALL");
 
     const [page, setPage] = useState(1);
@@ -107,7 +107,6 @@ const CompetitionList: React.FC = () => {
         {key: "ENDED", label: "Ended"},
         {key: "NONE", label: "No contest"},
     ];
-
 
     /** Fetch initial data */
     useEffect(() => {
@@ -157,9 +156,7 @@ const CompetitionList: React.FC = () => {
                 if (meta.status !== statusFilter) return false;
             }
 
-            //  NEW: group filter
-            // - GROUP_ONLY: only challenges where group_only = true
-            // - SOLO_ONLY: only challenges where group_only = false
+            // NEW: group filter
             if (groupFilter === "GROUP_ONLY" && !c.group_only) return false;
             if (groupFilter === "SOLO_ONLY" && c.group_only) return false;
 
@@ -210,7 +207,7 @@ const CompetitionList: React.FC = () => {
         setDifficultyFilter("");
         setSearch("");
         setStatusFilter("ALL");
-        setGroupFilter("ALL"); //  reset
+        setGroupFilter("ALL"); // reset
         setPage(1);
     }, []);
 
@@ -254,14 +251,10 @@ const CompetitionList: React.FC = () => {
             >
                 <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-start justify-between gap-3">
-                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">
-                            {cc.title}
-                        </h2>
+                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">{cc.title}</h2>
                     </div>
 
-                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">
-                        {truncateText(cc.description || "", 200)}
-                    </p>
+                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">{truncateText(cc.description || "", 200)}</p>
 
                     <div className="mt-3 flex flex-col gap-1 text-[11px]">
                         <div className="flex flex-wrap items-center gap-2">
@@ -272,8 +265,7 @@ const CompetitionList: React.FC = () => {
               </span>
 
                             <span
-                                className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}
-                            >
+                                className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}>
                 <span className="mr-1 font-medium">Difficulty:</span>
                                 {difficulty}
               </span>
@@ -284,7 +276,7 @@ const CompetitionList: React.FC = () => {
                 {contest.label}
               </span>
 
-                            {/*  Group-only badge */}
+                            {/* Group-only badge */}
                             <span
                                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${groupBadgeClass}`}
                                 title={isGroupOnly ? "Group-only competition" : "Open competition"}
@@ -304,7 +296,7 @@ const CompetitionList: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
-                    {/*  RULE:
+                    {/* RULE:
               - if group_only && !can_participate -> show "Group competition" text, no View button
               - else -> show View button (existing behavior)
           */}
@@ -329,24 +321,21 @@ const CompetitionList: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans">
+        <div className="min-h-screen w-full bg-slate-50 font-sans flex flex-col">
             <Navbar/>
 
-            <main className="w-full px-4 py-8">
-                <div className="mx-auto">
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <div className="w-full">
                     <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                Competition Challenges
-                            </h1>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Join time-bound contests and compete on curated problems.
-                            </p>
+                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Competition
+                                Challenges</h1>
+                            <p className="mt-1 text-sm text-slate-500">Join time-bound contests and compete on curated
+                                problems.</p>
                         </div>
                     </header>
 
                     {/* Filters panel */}
-
                     <section className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
                         {/* Top row: LeetCode-like toolbar */}
                         <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
@@ -363,13 +352,12 @@ const CompetitionList: React.FC = () => {
                                         }}
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     />
-
                                 </div>
                             </div>
 
                             {/* Right: dropdowns + reset + total */}
                             <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                                {/* Difficulty (LeetCode-like select) */}
+                                {/* Difficulty */}
                                 <div className="relative">
                                     <select
                                         value={difficultyFilter}
@@ -453,13 +441,13 @@ const CompetitionList: React.FC = () => {
                                 {/* Total */}
                                 <span
                                     className="ml-1 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
-        <span className="text-slate-500">Total:</span>
-        <span className="ml-1 font-semibold text-slate-900">{total}</span>
-      </span>
+                  <span className="text-slate-500">Total:</span>
+                  <span className="ml-1 font-semibold text-slate-900">{total}</span>
+                </span>
                             </div>
                         </div>
 
-                        {/* Bottom row: LeetCode-style “chip” quick filters (optional but looks pro) */}
+                        {/* Bottom row: chips */}
                         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2.5">
                             {/* Difficulty chips */}
                             {["Easy", "Moderate", "Hard"].map((lvl) => {
@@ -486,7 +474,6 @@ const CompetitionList: React.FC = () => {
 
                             <span className="mx-1 h-5 w-px bg-slate-200"/>
 
-
                             {STATUS_OPTIONS.map((opt) => {
                                 const active = statusFilter === opt.key;
 
@@ -509,138 +496,8 @@ const CompetitionList: React.FC = () => {
                                     </button>
                                 );
                             })}
-
                         </div>
                     </section>
-
-
-                    {/*    <section className="mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-4 shadow-sm">*/}
-                    {/*        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">*/}
-                    {/*            <div className="flex flex-wrap items-center gap-3">*/}
-                    {/*                <div className="relative">*/}
-                    {/*                    <input*/}
-                    {/*                        type="search"*/}
-                    {/*                        placeholder="Search by title, description, category..."*/}
-                    {/*                        value={search}*/}
-                    {/*                        onChange={(e) => {*/}
-                    {/*                            setSearch(e.target.value);*/}
-                    {/*                            setPage(1);*/}
-                    {/*                        }}*/}
-                    {/*                        className="w-64 md:w-80 rounded-md border border-slate-300 bg-white px-3 py-2 pr-8 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"*/}
-                    {/*                    />*/}
-                    {/*                </div>*/}
-
-                    {/*                <select*/}
-                    {/*                    value={categoryFilter}*/}
-                    {/*                    onChange={(e) => {*/}
-                    {/*                        setCategoryFilter(e.target.value);*/}
-                    {/*                        setPage(1);*/}
-                    {/*                    }}*/}
-                    {/*                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"*/}
-                    {/*                >*/}
-                    {/*                    <option value="">All Categories</option>*/}
-                    {/*                    {categories.map((cat) => (*/}
-                    {/*                        <option key={cat.id} value={cat.name}>*/}
-                    {/*                            {cat.name}*/}
-                    {/*                        </option>*/}
-                    {/*                    ))}*/}
-                    {/*                </select>*/}
-
-                    {/*                <select*/}
-                    {/*                    value={difficultyFilter}*/}
-                    {/*                    onChange={(e) => {*/}
-                    {/*                        setDifficultyFilter(e.target.value);*/}
-                    {/*                        setPage(1);*/}
-                    {/*                    }}*/}
-                    {/*                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"*/}
-                    {/*                >*/}
-                    {/*                    <option value="">All Difficulties</option>*/}
-                    {/*                    {difficulties.map((diff) => (*/}
-                    {/*                        <option key={diff.id} value={diff.level}>*/}
-                    {/*                            {diff.level}*/}
-                    {/*                        </option>*/}
-                    {/*                    ))}*/}
-                    {/*                </select>*/}
-
-                    {/*                /!*  NEW: Group competition filter *!/*/}
-                    {/*                <div className="flex flex-wrap items-center gap-1 text-[11px] md:text-xs">*/}
-                    {/*                    <span className="mr-1 text-slate-500">Group:</span>*/}
-                    {/*                    {[*/}
-                    {/*                        { key: "ALL", label: "All" },*/}
-                    {/*                        { key: "GROUP_ONLY", label: "Group only" },*/}
-                    {/*                        { key: "SOLO_ONLY", label: "Open" },*/}
-                    {/*                    ].map((opt) => {*/}
-                    {/*                        const active = groupFilter === (opt.key as GroupFilter);*/}
-                    {/*                        return (*/}
-                    {/*                            <button*/}
-                    {/*                                key={opt.key}*/}
-                    {/*                                type="button"*/}
-                    {/*                                onClick={() => {*/}
-                    {/*                                    setGroupFilter(opt.key as GroupFilter);*/}
-                    {/*                                    setPage(1);*/}
-                    {/*                                }}*/}
-                    {/*                                className={[*/}
-                    {/*                                    "rounded-full border px-2.5 py-1",*/}
-                    {/*                                    "transition-colors",*/}
-                    {/*                                    active*/}
-                    {/*                                        ? "border-slate-900 bg-slate-900 text-white"*/}
-                    {/*                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",*/}
-                    {/*                                ].join(" ")}*/}
-                    {/*                            >*/}
-                    {/*                                {opt.label}*/}
-                    {/*                            </button>*/}
-                    {/*                        );*/}
-                    {/*                    })}*/}
-                    {/*                </div>*/}
-
-                    {/*                /!* Status filter *!/*/}
-                    {/*                <div className="flex flex-wrap items-center gap-1 text-[11px] md:text-xs">*/}
-                    {/*                    <span className="mr-1 text-slate-500">Status:</span>*/}
-                    {/*                    {[*/}
-                    {/*                        { key: "ALL", label: "All" },*/}
-                    {/*                        { key: "ONGOING", label: "Ongoing" },*/}
-                    {/*                        { key: "UPCOMING", label: "Upcoming" },*/}
-                    {/*                        { key: "ENDED", label: "Ended" },*/}
-                    {/*                        { key: "NONE", label: "No contest" },*/}
-                    {/*                    ].map((opt) => {*/}
-                    {/*                        const active = statusFilter === opt.key;*/}
-                    {/*                        return (*/}
-                    {/*                            <button*/}
-                    {/*                                key={opt.key}*/}
-                    {/*                                type="button"*/}
-                    {/*                                onClick={() => {*/}
-                    {/*                                    setStatusFilter(opt.key as ContestStatus | "ALL");*/}
-                    {/*                                    setPage(1);*/}
-                    {/*                                }}*/}
-                    {/*                                className={[*/}
-                    {/*                                    "rounded-full border px-2.5 py-1",*/}
-                    {/*                                    "transition-colors",*/}
-                    {/*                                    active*/}
-                    {/*                                        ? "border-slate-900 bg-slate-900 text-white"*/}
-                    {/*                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",*/}
-                    {/*                                ].join(" ")}*/}
-                    {/*                            >*/}
-                    {/*                                {opt.label}*/}
-                    {/*                            </button>*/}
-                    {/*                        );*/}
-                    {/*                    })}*/}
-                    {/*                </div>*/}
-
-                    {/*                <button*/}
-                    {/*                    onClick={handleClearFilters}*/}
-                    {/*                    className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-xs md:text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-300"*/}
-                    {/*                >*/}
-                    {/*                    Clear*/}
-                    {/*                </button>*/}
-                    {/*            </div>*/}
-
-                    {/*            <div className="flex items-center gap-3 text-xs text-slate-500">*/}
-                    {/*<span className="rounded-full bg-slate-100 px-3 py-1">*/}
-                    {/*  Total: <span className="font-medium">{total}</span>*/}
-                    {/*</span>*/}
-                    {/*            </div>*/}
-                    {/*        </div>*/}
-                    {/*    </section>*/}
 
                     {/* Alerts / status */}
                     {loading && (
@@ -674,13 +531,11 @@ const CompetitionList: React.FC = () => {
                                                         <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                                                             Ongoing Contests
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">
-                                                            Live contests currently accepting submissions.
-                                                        </p>
+                                                        <p className="text-xs text-slate-500">Live contests currently
+                                                            accepting submissions.</p>
                                                     </div>
-                                                    <span className="text-xs text-emerald-700/80">
-                            {groupedChallenges.ongoing.length} live
-                          </span>
+                                                    <span
+                                                        className="text-xs text-emerald-700/80">{groupedChallenges.ongoing.length} live</span>
                                                 </div>
                                                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                                                     {groupedChallenges.ongoing.map((entry) => renderChallengeCard(entry))}
@@ -695,9 +550,8 @@ const CompetitionList: React.FC = () => {
                                                         <h2 className="text-xs font-semibold uppercase tracking-wide text-sky-700">
                                                             Upcoming Contests
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">
-                                                            Scheduled contests you can plan for in advance.
-                                                        </p>
+                                                        <p className="text-xs text-slate-500">Scheduled contests you can
+                                                            plan for in advance.</p>
                                                     </div>
                                                     <span className="text-xs text-sky-700/80">
                             {groupedChallenges.upcoming.length} upcoming
@@ -716,13 +570,11 @@ const CompetitionList: React.FC = () => {
                                                         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
                                                             Other Challenges
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">
-                                                            Practice and past contests you can still solve.
-                                                        </p>
+                                                        <p className="text-xs text-slate-500">Practice and past contests
+                                                            you can still solve.</p>
                                                     </div>
-                                                    <span className="text-xs text-slate-600/80">
-                            {groupedChallenges.others.length} listed
-                          </span>
+                                                    <span
+                                                        className="text-xs text-slate-600/80">{groupedChallenges.others.length} listed</span>
                                                 </div>
                                                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                                                     {groupedChallenges.others.map((entry) => renderChallengeCard(entry))}
@@ -775,14 +627,12 @@ const CompetitionList: React.FC = () => {
                                             </div>
                                             <div className="text-slate-500">
                                                 Showing{" "}
-                                                <span className="font-medium text-slate-900">
-                          {total === 0 ? 0 : (page - 1) * pageSize + 1}
-                        </span>{" "}
+                                                <span
+                                                    className="font-medium text-slate-900">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
                                                 –{" "}
-                                                <span className="font-medium text-slate-900">
-                          {Math.min(page * pageSize, total)}
-                        </span>{" "}
-                                                of <span className="font-medium text-slate-900">{total}</span>
+                                                <span
+                                                    className="font-medium text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="font-medium text-slate-900">{total}</span>
                                             </div>
                                         </div>
                                     </div>
