@@ -7,7 +7,7 @@ import {
     getTextSubmissions,
     deleteSubmission,
     AdminFlagSubmission,
-    AdminTextSubmission
+    AdminTextSubmission,
 } from "../../api/adminSubmissions";
 import { FiTrash2, FiEye } from "react-icons/fi";
 
@@ -56,8 +56,7 @@ const AdminSubmissionsList: React.FC = () => {
         return submissions.filter((s) => {
             if (typeFilter !== "ALL" && s.type !== typeFilter) return false;
 
-            if (statusFilter !== "ALL" && s.status?.status !== statusFilter)
-                return false;
+            if (statusFilter !== "ALL" && s.status?.status !== statusFilter) return false;
 
             if (!query) return true;
 
@@ -88,17 +87,14 @@ const AdminSubmissionsList: React.FC = () => {
     };
 
     return (
-        <>
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar />
-            <main className="min-h-screen bg-slate-50 px-4 py-6">
-                <div className="mx-auto max-w-6xl">
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <div className="w-full">
                     <header className="mb-5">
-                        <h1 className="text-2xl font-semibold text-slate-900">
-                            Submissions Overview
-                        </h1>
-                        <p className="text-sm text-slate-500">
-                            Monitor all flag + text submissions in the system.
-                        </p>
+                        <h1 className="text-2xl font-semibold text-slate-900">Submissions Overview</h1>
+                        <p className="text-sm text-slate-500">Monitor all flag + text submissions in the system.</p>
                     </header>
 
                     {/* Filters */}
@@ -114,9 +110,7 @@ const AdminSubmissionsList: React.FC = () => {
                         <select
                             className="rounded border border-slate-300 px-3 py-2 text-sm"
                             value={typeFilter}
-                            onChange={(e) =>
-                                setTypeFilter(e.target.value as "ALL" | "flag" | "text")
-                            }
+                            onChange={(e) => setTypeFilter(e.target.value as "ALL" | "flag" | "text")}
                         >
                             <option value="ALL">All Types</option>
                             <option value="flag">Flag</option>
@@ -129,30 +123,22 @@ const AdminSubmissionsList: React.FC = () => {
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
                             <option value="ALL">All Status</option>
-                            {Array.from(new Set(submissions.map((s) => s.status.status))).map(
-                                (st) => (
-                                    <option key={st} value={st}>
-                                        {st}
-                                    </option>
-                                )
-                            )}
+                            {Array.from(new Set(submissions.map((s) => s.status.status))).map((st) => (
+                                <option key={st} value={st}>
+                                    {st}
+                                </option>
+                            ))}
                         </select>
 
-                        <div className="ml-auto text-xs text-slate-500">
-                            Total: {filtered.length}
-                        </div>
+                        <div className="ml-auto text-xs text-slate-500">Total: {filtered.length}</div>
                     </div>
 
                     {/* Messages */}
                     {error && (
-                        <div className="mb-4 rounded-md bg-red-50 p-3 text-red-700 border border-red-200">
-                            {error}
-                        </div>
+                        <div className="mb-4 rounded-md bg-red-50 p-3 text-red-700 border border-red-200">{error}</div>
                     )}
                     {message && (
-                        <div className="mb-4 rounded-md bg-blue-50 p-3 text-blue-700 border border-blue-200">
-                            {message}
-                        </div>
+                        <div className="mb-4 rounded-md bg-blue-50 p-3 text-blue-700 border border-blue-200">{message}</div>
                     )}
 
                     {/* Table */}
@@ -172,29 +158,17 @@ const AdminSubmissionsList: React.FC = () => {
                             {filtered.map((s) => (
                                 <tr key={`${s.type}-${s.id}`}>
                                     <td className="px-4 py-2">
-                                        <div className="font-medium">
-                                            {s.user.username}
-                                        </div>
-                                        <div className="text-xs text-slate-500">
-                                            {s.user.email}
-                                        </div>
+                                        <div className="font-medium">{s.user.username}</div>
+                                        <div className="text-xs text-slate-500">{s.user.email}</div>
                                     </td>
 
-                                    <td className="px-4 py-2 text-slate-700">
-                                        {s.challenge.title}
-                                    </td>
+                                    <td className="px-4 py-2 text-slate-700">{s.challenge.title}</td>
 
-                                    <td className="px-4 py-2 capitalize text-slate-700">
-                                        {s.type}
-                                    </td>
+                                    <td className="px-4 py-2 capitalize text-slate-700">{s.type}</td>
 
-                                    <td className="px-4 py-2 text-slate-700">
-                                        {s.status.status}
-                                    </td>
+                                    <td className="px-4 py-2 text-slate-700">{s.status.status}</td>
 
-                                    <td className="px-4 py-2 text-slate-500">
-                                        {new Date(s.submitted_at).toLocaleString()}
-                                    </td>
+                                    <td className="px-4 py-2 text-slate-500">{new Date(s.submitted_at).toLocaleString()}</td>
 
                                     <td className="px-4 py-2">
                                         <div className="flex justify-end gap-2">
@@ -225,19 +199,14 @@ const AdminSubmissionsList: React.FC = () => {
                             <div className="max-w-lg w-full bg-white rounded-lg shadow-xl p-6">
                                 <h2 className="text-lg font-semibold mb-2">Submission</h2>
                                 <p className="text-xs text-slate-500 mb-4">
-                                    Submitted on:{" "}
-                                    {new Date(viewItem.submitted_at).toLocaleString()}
+                                    Submitted on: {new Date(viewItem.submitted_at).toLocaleString()}
                                 </p>
 
                                 <div className="border p-3 rounded bg-slate-50">
                                     {viewItem.type === "flag" ? (
-                                        <pre className="text-sm text-slate-800 whitespace-pre-wrap">
-                                            {viewItem.value}
-                                        </pre>
+                                        <pre className="text-sm text-slate-800 whitespace-pre-wrap">{viewItem.value}</pre>
                                     ) : (
-                                        <pre className="text-sm text-slate-800 whitespace-pre-wrap">
-                                            {viewItem.content}
-                                        </pre>
+                                        <pre className="text-sm text-slate-800 whitespace-pre-wrap">{viewItem.content}</pre>
                                     )}
                                 </div>
 
@@ -252,7 +221,7 @@ const AdminSubmissionsList: React.FC = () => {
                     )}
                 </div>
             </main>
-        </>
+        </div>
     );
 };
 

@@ -25,8 +25,8 @@ import CompetitionList from "./pages/CompetitionPage/CompetitionList";
 import CompetitionCreate from "./pages/CompetitionPage/CompetitionCreate";
 import AdminCompetitionList from "./pages/Admin/AdminCompetitionList";
 import AdminCompetitionEdit from "./pages/Admin/AdminCompetitionEdit";
-import AdminPracticeList from "./pages/PracticePage/AdminPracticeList";
-import AdminPracticeEdit from "./pages/PracticePage/AdminPracticeEdit";
+import AdminPracticeList from "./pages/Admin/AdminPracticeList";
+import AdminPracticeEdit from "./pages/Admin/AdminPracticeEdit";
 import AdminChallengeMetadata from "./pages/CategoryDifficultySolutionTypes/AdminChallengeMetadata";
 import AdminUserList from "./pages/Admin/AdminUserList";
 import AdminSubmissionsList from "./pages/Admin/AdminSubmissionsList";
@@ -76,7 +76,6 @@ const App: React.FC = () => {
                     />
                     <Route path="/practice" element={<PracticeList/>}/>
                     <Route path="/practice/:id" element={< PracticeDetail/>}/>
-                    <Route path="/practice/new" element={< PracticeCreate/>}/>
                     <Route path="/compete" element={< CompetitionList/>}/>
                     <Route path="/compete/:id" element={< CompetitionDetail/>}/>
                     {/*<Route path="/compete/new" element={< CompetitionCreate/>}/>*/}
@@ -85,7 +84,7 @@ const App: React.FC = () => {
                     // Later you can add:
                     <Route path="/admin/contests/:id" element={<AdminCompetitionEdit/>}/>
                     <Route path="/admin/challenges" element={<AdminPracticeList/>}/>
-                    <Route path="/admin/practice/new" element={<CompetitionCreate/>}/>
+                    <Route path="/admin/practice/new" element={<PracticeCreate/>}/>
                     <Route path="/admin/practice/:id" element={<AdminPracticeEdit/>}/>
                     <Route path="/admin/taxonomy" element={<AdminChallengeMetadata/>}/>
                     <Route path="/admin/users" element={<AdminUserList/>}/>

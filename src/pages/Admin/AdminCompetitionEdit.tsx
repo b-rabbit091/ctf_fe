@@ -137,9 +137,7 @@ const AdminCompetitionEdit: React.FC = () => {
                     setContestType((contest.contest_type as ContestType) || "custom");
 
                     const toLocalInput = (d: Date) =>
-                        new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-                            .toISOString()
-                            .slice(0, 16);
+                        new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
                     setContestStartTime(toLocalInput(new Date(contest.start_time)));
                     setContestEndTime(toLocalInput(new Date(contest.end_time)));
@@ -225,9 +223,7 @@ const AdminCompetitionEdit: React.FC = () => {
         setUploadFiles((prev) => [...prev, ...nextFiles]);
 
         if (rejected.length > 0) {
-            setError(
-                `Some files were rejected:\n${rejected.map((r) => `• ${r}`).join("\n")}`
-            );
+            setError(`Some files were rejected:\n${rejected.map((r) => `• ${r}`).join("\n")}`);
         }
     };
 
@@ -241,9 +237,7 @@ const AdminCompetitionEdit: React.FC = () => {
         resetMessages();
 
         if (!questionSaved) {
-            setError(
-                "Please validate and save the question draft before updating the competition."
-            );
+            setError("Please validate and save the question draft before updating the competition.");
             setActiveTab("question");
             return;
         }
@@ -307,10 +301,7 @@ const AdminCompetitionEdit: React.FC = () => {
             if (contestSlug.trim()) formData.append("contest_slug", contestSlug.trim());
             formData.append("contest_description", contestDescription);
             formData.append("contest_type", contestType);
-            formData.append(
-                "contest_start_time",
-                new Date(contestStartTime).toISOString()
-            );
+            formData.append("contest_start_time", new Date(contestStartTime).toISOString());
             formData.append("contest_end_time", new Date(contestEndTime).toISOString());
 
             uploadFiles.forEach((file) => {
@@ -332,73 +323,73 @@ const AdminCompetitionEdit: React.FC = () => {
         }
     };
 
+    // --- responsive full-screen shell for all states ---
     if (!user) {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar />
-                <div className="mx-auto max-w-3xl p-6 text-sm text-slate-500">
-                    Checking permissions…
-                </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+                </main>
             </div>
         );
     }
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar />
-                <div className="mx-auto max-w-3xl p-6">
-                    <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                         Unauthorized – admin access required.
                     </p>
-                </div>
+                </main>
             </div>
         );
     }
 
     if (initialLoading) {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar />
-                <div className="mx-auto max-w-3xl p-6 text-sm text-slate-500">
-                    Loading competition challenge…
-                </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Loading competition challenge…</div>
+                </main>
             </div>
         );
     }
 
     if (initialError || !loadedChallenge) {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar />
-                <div className="mx-auto max-w-3xl p-6">
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
                     <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                         {initialError || "Unable to load competition challenge."}
                     </p>
-                </div>
+                </main>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar />
-            <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <div className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                         <div className="min-w-0">
                             <h1 className="truncate text-xl font-semibold text-slate-900 md:text-2xl">
                                 Edit Competition Challenge
                             </h1>
                             <p className="mt-1 text-xs text-slate-500 md:text-sm">
-                                Update the competition problem, contest schedule, and reference
-                                files. All changes are validated both here and on the backend.
+                                Update the competition problem, contest schedule, and reference files. All changes are validated both
+                                here and on the backend.
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-1 text-[11px] text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">
-                Admin Panel
-              </span>
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">Admin Panel</span>
                             <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
                 Competition #{loadedChallenge.id}
               </span>
@@ -427,9 +418,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                     type="button"
                                     onClick={() => setActiveTab("question")}
                                     className={`relative pb-2 text-sm font-medium ${
-                                        activeTab === "question"
-                                            ? "text-slate-900"
-                                            : "text-slate-500 hover:text-slate-700"
+                                        activeTab === "question" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
                                     }`}
                                 >
                                     Question & Contest
@@ -474,9 +463,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Question Type
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Question Type</label>
                                         <input
                                             value="competition"
                                             disabled
@@ -496,8 +483,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                         onChange={(e) => setDescription(e.target.value)}
                                     />
                                     <p className="mt-1 text-xs text-slate-400">
-                                        Supports plain text. For code snippets, use backticks in the
-                                        description.
+                                        Supports plain text. For code snippets, use backticks in the description.
                                     </p>
                                 </div>
 
@@ -509,9 +495,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={category}
-                                            onChange={(e) =>
-                                                setCategory(e.target.value ? Number(e.target.value) : "")
-                                            }
+                                            onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Category</option>
                                             {categories.map((c) => (
@@ -529,11 +513,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={difficulty}
-                                            onChange={(e) =>
-                                                setDifficulty(
-                                                    e.target.value ? Number(e.target.value) : ""
-                                                )
-                                            }
+                                            onChange={(e) => setDifficulty(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Difficulty</option>
                                             {difficulties.map((d) => (
@@ -551,11 +531,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={solutionType}
-                                            onChange={(e) =>
-                                                setSolutionType(
-                                                    e.target.value ? Number(e.target.value) : ""
-                                                )
-                                            }
+                                            onChange={(e) => setSolutionType(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Solution Type</option>
                                             {solutionTypes.map((s) => (
@@ -569,9 +545,7 @@ const AdminCompetitionEdit: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Constraints
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Constraints</label>
                                         <textarea
                                             className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="e.g. 1 ≤ N ≤ 10^5"
@@ -582,9 +556,7 @@ const AdminCompetitionEdit: React.FC = () => {
 
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                Input Format
-                                            </label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Input Format</label>
                                             <textarea
                                                 className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 placeholder="Describe input specification..."
@@ -594,9 +566,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                         </div>
 
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                Output Format
-                                            </label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Output Format</label>
                                             <textarea
                                                 className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 placeholder="Describe output specification..."
@@ -609,9 +579,7 @@ const AdminCompetitionEdit: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Sample Input
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample Input</label>
                                         <textarea
                                             className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Example input..."
@@ -621,9 +589,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Sample Output
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample Output</label>
                                         <textarea
                                             className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Example output..."
@@ -636,12 +602,8 @@ const AdminCompetitionEdit: React.FC = () => {
                                 <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                                     <div className="flex items-center justify-between gap-2">
                                         <div>
-                                            <h2 className="text-sm font-semibold text-slate-800">
-                                                Contest Settings
-                                            </h2>
-                                            <p className="text-xs text-slate-500">
-                                                Update the contest this challenge is attached to.
-                                            </p>
+                                            <h2 className="text-sm font-semibold text-slate-800">Contest Settings</h2>
+                                            <p className="text-xs text-slate-500">Update the contest this challenge is attached to.</p>
                                         </div>
                                         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">
                       {contestId ? `Contest #${contestId}` : "New Contest"}
@@ -663,25 +625,19 @@ const AdminCompetitionEdit: React.FC = () => {
                                         </div>
 
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                Slug
-                                            </label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Slug</label>
                                             <input
                                                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 placeholder="weekly-web-ctf-12"
                                                 value={contestSlug}
                                                 onChange={(e) => setContestSlug(e.target.value)}
                                             />
-                                            <p className="mt-1 text-xs text-slate-400">
-                                                Optional. Auto-generated from name if left blank.
-                                            </p>
+                                            <p className="mt-1 text-xs text-slate-400">Optional. Auto-generated from name if left blank.</p>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Contest Description
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Contest Description</label>
                                         <textarea
                                             className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Summary, rules, scoring, eligibility, etc."
@@ -692,15 +648,11 @@ const AdminCompetitionEdit: React.FC = () => {
 
                                     <div className="grid gap-4 md:grid-cols-3">
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                Contest Type
-                                            </label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Contest Type</label>
                                             <select
                                                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 value={contestType}
-                                                onChange={(e) =>
-                                                    setContestType(e.target.value as ContestType)
-                                                }
+                                                onChange={(e) => setContestType(e.target.value as ContestType)}
                                             >
                                                 <option value="daily">Daily</option>
                                                 <option value="weekly">Weekly</option>
@@ -738,13 +690,10 @@ const AdminCompetitionEdit: React.FC = () => {
                                 <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
-                                            <p className="text-sm font-medium text-slate-700">
-                                                Attach Additional Reference Files
-                                            </p>
+                                            <p className="text-sm font-medium text-slate-700">Attach Additional Reference Files</p>
                                             <p className="mt-1 text-xs text-slate-500">
-                                                New uploads will be added to existing attachments for
-                                                this challenge. Max 20MB per file. Allowed types: images,
-                                                ZIP.
+                                                New uploads will be added to existing attachments for this challenge. Max 20MB per file. Allowed
+                                                types: images, ZIP.
                                             </p>
                                         </div>
 
@@ -769,9 +718,7 @@ const AdminCompetitionEdit: React.FC = () => {
                                                 >
                           <span className="max-w-xs truncate">
                             {file.name}{" "}
-                              <span className="text-slate-400">
-                              ({Math.round(file.size / 1024)} KB)
-                            </span>
+                              <span className="text-slate-400">({Math.round(file.size / 1024)} KB)</span>
                           </span>
                                                     <button
                                                         type="button"
@@ -808,17 +755,13 @@ const AdminCompetitionEdit: React.FC = () => {
                         {activeTab === "solution" && questionSaved && (
                             <div className="space-y-6 px-6 py-6">
                                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                                    These fields are for internal solution notes and official
-                                    answers. They should never be exposed to participants. When
-                                    the backend API is ready, these fields can be wired to
-                                    dedicated solution endpoints.
+                                    These fields are for internal solution notes and official answers. They should never be exposed to
+                                    participants. When the backend API is ready, these fields can be wired to dedicated solution endpoints.
                                 </div>
 
                                 {(solutionType === 1 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Flag Solution
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Flag Solution</label>
                                         <textarea
                                             className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="flag{example_flag_here}"
@@ -830,9 +773,7 @@ const AdminCompetitionEdit: React.FC = () => {
 
                                 {(solutionType === 2 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Procedure / Writeup
-                                        </label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Procedure / Writeup</label>
                                         <textarea
                                             className="block h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Step-by-step solution, hints, and reasoning..."
@@ -862,7 +803,7 @@ const AdminCompetitionEdit: React.FC = () => {
                         )}
                     </form>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

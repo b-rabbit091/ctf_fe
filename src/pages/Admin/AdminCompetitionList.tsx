@@ -1,16 +1,11 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import React, {useEffect, useMemo, useState, useCallback} from "react";
+import {useNavigate} from "react-router-dom";
+import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
-import { useAuth } from "../../contexts/AuthContext";
-import {
-    getChallenges,
-    getCategories,
-    getDifficulties,
-    deleteChallenge,
-} from "../../api/practice";
-import { Challenge } from "../CompetitionPage/types";
-import { FiPlus, FiEye, FiEdit2, FiTrash2 } from "react-icons/fi";
+import {useAuth} from "../../contexts/AuthContext";
+import {getChallenges, getCategories, getDifficulties, deleteChallenge} from "../../api/practice";
+import {Challenge} from "../CompetitionPage/types";
+import {FiPlus, FiEye, FiEdit2, FiTrash2} from "react-icons/fi";
 
 type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED" | "NONE";
 
@@ -22,7 +17,7 @@ interface ContestMeta {
 function getContestMeta(challenge: Challenge): ContestMeta {
     const activeContest = challenge.active_contest ?? null;
     if (!activeContest) {
-        return { label: "No Contest", status: "NONE" };
+        return {label: "No Contest", status: "NONE"};
     }
 
     const nowMs = Date.now();
@@ -30,25 +25,21 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     const end = new Date(activeContest.end_time).getTime();
 
     if (nowMs < start) {
-        return { label: "Upcoming", status: "UPCOMING" };
+        return {label: "Upcoming", status: "UPCOMING"};
     }
     if (nowMs >= start && nowMs < end) {
-        return { label: "Ongoing", status: "ONGOING" };
+        return {label: "Ongoing", status: "ONGOING"};
     }
-    return { label: "Ended", status: "ENDED" };
+    return {label: "Ended", status: "ENDED"};
 }
 
 const AdminCompetitionList: React.FC = () => {
-    const { user } = useAuth();
+    const {user} = useAuth();
     const navigate = useNavigate();
 
     const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
-    const [categories, setCategories] = useState<{ id: number; name: string }[]>(
-        []
-    );
-    const [difficulties, setDifficulties] = useState<
-        { id: number; level: string }[]
-    >([]);
+    const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+    const [difficulties, setDifficulties] = useState<{ id: number; level: string }[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -79,7 +70,7 @@ const AdminCompetitionList: React.FC = () => {
                 const [cats, diffs, chals] = await Promise.all([
                     getCategories(),
                     getDifficulties(),
-                    getChallenges({ type: "competition" }),
+                    getChallenges({type: "competition"}),
                 ]);
                 if (!mounted) return;
                 setCategories(cats || []);
@@ -105,8 +96,7 @@ const AdminCompetitionList: React.FC = () => {
         const searchLower = search.trim().toLowerCase();
         return allChallenges.filter((c) => {
             if (categoryFilter && c.category?.name !== categoryFilter) return false;
-            if (difficultyFilter && c.difficulty?.level !== difficultyFilter)
-                return false;
+            if (difficultyFilter && c.difficulty?.level !== difficultyFilter) return false;
 
             const meta = getContestMeta(c);
             if (statusFilter !== "ALL" && meta.status !== statusFilter) return false;
@@ -116,19 +106,9 @@ const AdminCompetitionList: React.FC = () => {
             const title = (c.title || "").toLowerCase();
             const desc = (c.description || "").toLowerCase();
             const cat = (c.category?.name || "").toLowerCase();
-            return (
-                title.includes(searchLower) ||
-                desc.includes(searchLower) ||
-                cat.includes(searchLower)
-            );
+            return title.includes(searchLower) || desc.includes(searchLower) || cat.includes(searchLower);
         });
-    }, [
-        allChallenges,
-        categoryFilter,
-        difficultyFilter,
-        statusFilter,
-        search,
-    ]);
+    }, [allChallenges, categoryFilter, difficultyFilter, statusFilter, search]);
 
     const total = filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -144,12 +124,7 @@ const AdminCompetitionList: React.FC = () => {
                 return;
             }
 
-            if (
-                !window.confirm(
-                    "Are you sure you want to delete this competition challenge? This cannot be undone."
-                )
-            )
-                return;
+            if (!window.confirm("Are you sure you want to delete this competition challenge? This cannot be undone.")) return;
 
             const backup = allChallenges;
             setAllChallenges((prev) => prev.filter((c) => c.id !== id));
@@ -177,49 +152,44 @@ const AdminCompetitionList: React.FC = () => {
         setPage(1);
     };
 
+    // --- full-screen responsive shell for all states ---
     if (!user) {
         return (
-            <>
-                <Navbar />
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div className="mx-auto max-w-6xl text-sm text-slate-500">
-                        Checking permissions…
-                    </div>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+                <Navbar/>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
                 </main>
-            </>
+            </div>
         );
     }
 
     if (user.role !== "admin") {
         return (
-            <>
-                <Navbar />
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div className="mx-auto max-w-4xl rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+                <Navbar/>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         Unauthorized – admin access required.
                     </div>
                 </main>
-            </>
+            </div>
         );
     }
 
     return (
-        <>
-            <Navbar />
-            <main className="min-h-screen bg-slate-50 px-4 py-6 md:py-8">
-                <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mx-auto max-w-6xl"
-                >
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <Navbar/>
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                Manage Competition Challenges
-                            </h1>
+                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Manage Competition
+                                Challenges</h1>
                             <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                Admin view of all competition-type challenges. Create, review,
-                                and maintain contests from here.
+                                Admin view of all competition-type challenges. Create, review, and maintain contests
+                                from here.
                             </p>
                         </div>
                         <button
@@ -227,7 +197,7 @@ const AdminCompetitionList: React.FC = () => {
                             onClick={() => navigate("/admin/contests/new")}
                             className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
                         >
-                            <FiPlus size={16} />
+                            <FiPlus size={16}/>
                             <span>New Competition</span>
                         </button>
                     </header>
@@ -246,7 +216,6 @@ const AdminCompetitionList: React.FC = () => {
                                         placeholder="Search challenges..."
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     />
-
                                 </div>
                             </div>
 
@@ -295,21 +264,22 @@ const AdminCompetitionList: React.FC = () => {
                                     Reset
                                 </button>
 
-                                <span className="ml-1 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
-        <span className="text-slate-500">Total:</span>
-        <span className="ml-1 font-semibold text-slate-900">{total}</span>
-      </span>
+                                <span
+                                    className="ml-1 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                  <span className="text-slate-500">Total:</span>
+                  <span className="ml-1 font-semibold text-slate-900">{total}</span>
+                </span>
                             </div>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2.5">
                             {(
                                 [
-                                    { key: "ALL", label: "All" },
-                                    { key: "ONGOING", label: "Ongoing" },
-                                    { key: "UPCOMING", label: "Upcoming" },
-                                    { key: "ENDED", label: "Ended" },
-                                    { key: "NONE", label: "No contest" },
+                                    {key: "ALL", label: "All"},
+                                    {key: "ONGOING", label: "Ongoing"},
+                                    {key: "UPCOMING", label: "Upcoming"},
+                                    {key: "ENDED", label: "Ended"},
+                                    {key: "NONE", label: "No contest"},
                                 ] as { key: ContestStatus | "ALL"; label: string }[]
                             ).map((opt) => {
                                 const active = statusFilter === opt.key;
@@ -335,18 +305,22 @@ const AdminCompetitionList: React.FC = () => {
                             })}
                         </div>
                     </section>
+
                     {loading && (
-                        <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div
+                            className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                             Loading competition challenges…
                         </div>
                     )}
                     {error && (
-                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                        <div
+                            className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
                             {error}
                         </div>
                     )}
                     {message && (
-                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
+                        <div
+                            className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
                             {message}
                         </div>
                     )}
@@ -354,7 +328,8 @@ const AdminCompetitionList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-slate-500 shadow-sm">
+                                <div
+                                    className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-slate-500 shadow-sm">
                                     No competition challenges found.
                                 </div>
                             ) : (
@@ -387,43 +362,31 @@ const AdminCompetitionList: React.FC = () => {
                                                 <tr key={c.id}>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="max-w-xs">
-                                                            <div className="truncate font-medium text-slate-900">
-                                                                {c.title}
-                                                            </div>
-                                                            <div className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-                                                                {c.description}
-                                                            </div>
+                                                            <div
+                                                                className="truncate font-medium text-slate-900">{c.title}</div>
+                                                            <div
+                                                                className="mt-0.5 line-clamp-2 text-xs text-slate-500">{c.description}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {c.category?.name || "—"}
-                                                    </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {difficulty}
-                                                    </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {meta.label}
-                                                    </td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{c.category?.name || "—"}</td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{difficulty}</td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{meta.label}</td>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="flex justify-end gap-2 text-xs">
                                                             <button
                                                                 type="button"
-                                                                onClick={() =>
-                                                                    navigate(`/compete/${c.id}`)
-                                                                }
+                                                                onClick={() => navigate(`/compete/${c.id}`)}
                                                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEye size={14} />
+                                                                <FiEye size={14}/>
                                                                 <span>View</span>
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() =>
-                                                                    navigate(`/admin/contests/${c.id}`)
-                                                                }
+                                                                onClick={() => navigate(`/admin/contests/${c.id}`)}
                                                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEdit2 size={14} />
+                                                                <FiEdit2 size={14}/>
                                                                 <span>Edit</span>
                                                             </button>
                                                             <button
@@ -431,7 +394,7 @@ const AdminCompetitionList: React.FC = () => {
                                                                 onClick={() => handleDelete(c.id)}
                                                                 className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                                                             >
-                                                                <FiTrash2 size={14} />
+                                                                <FiTrash2 size={14}/>
                                                                 <span>Delete</span>
                                                             </button>
                                                         </div>
@@ -445,16 +408,11 @@ const AdminCompetitionList: React.FC = () => {
                             )}
 
                             {total > 0 && (
-                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                                <div
+                                    className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
                                     <div>
-                                        Page{" "}
-                                        <span className="font-semibold text-slate-900">
-                                            {page}
-                                        </span>{" "}
-                                        of{" "}
-                                        <span className="font-semibold text-slate-900">
-                                            {pageCount}
-                                        </span>
+                                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
+                                        <span className="font-semibold text-slate-900">{pageCount}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
@@ -468,9 +426,7 @@ const AdminCompetitionList: React.FC = () => {
                                         <button
                                             type="button"
                                             disabled={page >= pageCount}
-                                            onClick={() =>
-                                                setPage((p) => Math.min(pageCount, p + 1))
-                                            }
+                                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                                             className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Next
@@ -482,7 +438,7 @@ const AdminCompetitionList: React.FC = () => {
                     )}
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 

@@ -5,19 +5,9 @@ import { motion } from "framer-motion";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../contexts/AuthContext";
 
-import {
-    FiUsers,
-    FiFlag,
-    FiBookOpen,
-    FiLayers,
-    FiActivity,
-    FiGrid,
-} from "react-icons/fi";
+import { FiUsers, FiFlag, FiBookOpen, FiLayers, FiActivity, FiGrid } from "react-icons/fi";
 
-import {
-    getAdminDashboardTotals,
-    AdminDashboardTotalsResponse,
-} from "../../api/dashboard";
+import { getAdminDashboardTotals, AdminDashboardTotalsResponse } from "../../api/dashboard";
 
 const AdminDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -48,9 +38,7 @@ const AdminDashboard: React.FC = () => {
                 setTotals(data);
             } catch (err: any) {
                 console.error("Failed to load admin dashboard totals:", err);
-                setStatsError(
-                    "Failed to load dashboard statistics. Please refresh or try again later."
-                );
+                setStatsError("Failed to load dashboard statistics. Please refresh or try again later.");
             } finally {
                 setStatsLoading(false);
             }
@@ -61,14 +49,12 @@ const AdminDashboard: React.FC = () => {
 
     if (!user) {
         return (
-            <>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar />
-                <main className="min-h-screen bg-slate-50 px-3 py-4 md:px-5 md:py-6">
-                    <div className="mx-auto max-w-7xl text-sm text-slate-500">
-                        Checking permissions…
-                    </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
                 </main>
-            </>
+            </div>
         );
     }
 
@@ -86,9 +72,7 @@ const AdminDashboard: React.FC = () => {
                     {icon}
                 </div>
             </div>
-            <div className="text-xl font-semibold text-slate-900">
-                {loading ? "…" : value}
-            </div>
+            <div className="text-xl font-semibold text-slate-900">{loading ? "…" : value}</div>
             {helper && <p className="text-[10px] text-slate-500">{helper}</p>}
         </div>
     );
@@ -108,28 +92,21 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="min-w-0">
                 <p className="font-medium text-slate-900">{label}</p>
-                <p className="mt-0.5 text-[11px] md:text-xs text-slate-500 line-clamp-2">
-                    {description}
-                </p>
+                <p className="mt-0.5 text-[11px] md:text-xs text-slate-500 line-clamp-2">{description}</p>
             </div>
         </Link>
     );
 
     return (
-        <>
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar />
-            <main className="min-h-screen bg-slate-50 px-3 py-4 md:px-5 md:py-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mx-auto max-w-7xl"
-                >
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="w-full">
                     {/* Header */}
                     <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-                                Admin Console
-                            </h1>
+                            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Admin Console</h1>
                             <p className="mt-1 text-xs md:text-sm text-slate-500">
                                 Manage challenges, contests, users, and platform settings from a single, secure interface.
                             </p>
@@ -185,9 +162,7 @@ const AdminDashboard: React.FC = () => {
                         {/* Content management */}
                         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                             <div className="mb-3">
-                                <h2 className="text-base md:text-lg font-semibold text-slate-900">
-                                    Content Management
-                                </h2>
+                                <h2 className="text-base md:text-lg font-semibold text-slate-900">Content Management</h2>
                                 <p className="mt-1 text-xs md:text-sm text-slate-500">
                                     Create and maintain challenges, contests, and supporting metadata.
                                 </p>
@@ -218,9 +193,7 @@ const AdminDashboard: React.FC = () => {
                         {/* Users & submissions */}
                         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                             <div className="mb-3">
-                                <h2 className="text-base md:text-lg font-semibold text-slate-900">
-                                    Users & Submissions
-                                </h2>
+                                <h2 className="text-base md:text-lg font-semibold text-slate-900">Users & Submissions</h2>
                                 <p className="mt-1 text-xs md:text-sm text-slate-500">
                                     Monitor user accounts, roles, groups, and submission activity.
                                 </p>
@@ -250,7 +223,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 

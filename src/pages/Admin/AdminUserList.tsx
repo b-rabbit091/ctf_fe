@@ -4,13 +4,7 @@ import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
-import {
-    AdminUser,
-    getUsers,
-    updateUser,
-    deleteUser,
-    inviteAdmin,
-} from "../../api/usersAdmin";
+import {AdminUser, getUsers, updateUser, deleteUser, inviteAdmin} from "../../api/usersAdmin";
 import {FiTrash2, FiUserX, FiUserCheck, FiSend} from "react-icons/fi";
 
 type RoleFilter = "ALL" | "ADMIN" | "STUDENT" | "UNKNOWN";
@@ -100,16 +94,10 @@ const AdminUserList: React.FC = () => {
         const backup = [...users];
 
         try {
-            setUsers((prev) =>
-                prev.map((x) =>
-                    x.id === u.id ? {...x, is_active: !u.is_active} : x
-                )
-            );
+            setUsers((prev) => prev.map((x) => (x.id === u.id ? {...x, is_active: !u.is_active} : x)));
             const updated = await updateUser(u.id, {is_active: !u.is_active});
             setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
-            setMessage(
-                `User ${u.username} has been ${updated.is_active ? "activated" : "deactivated"}.`
-            );
+            setMessage(`User ${u.username} has been ${updated.is_active ? "activated" : "deactivated"}.`);
         } catch (e: any) {
             console.error(e);
             setUsers(backup);
@@ -158,8 +146,7 @@ const AdminUserList: React.FC = () => {
         } catch (err: any) {
             console.error(err);
             setError(
-                err?.response?.data?.error ||
-                "Failed to send admin invite. Please check the email and try again."
+                err?.response?.data?.error || "Failed to send admin invite. Please check the email and try again."
             );
         } finally {
             setInviteLoading(false);
@@ -170,60 +157,52 @@ const AdminUserList: React.FC = () => {
 
     if (!user) {
         return (
-            <>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div className="mx-auto max-w-6xl text-sm text-slate-500">
-                        Checking permissions…
-                    </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
                 </main>
-            </>
+            </div>
         );
     }
 
     if (user.role !== "admin") {
         return (
-            <>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div
-                        className="mx-auto max-w-4xl rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         Unauthorized – admin access required.
                     </div>
                 </main>
-            </>
+            </div>
         );
     }
 
     // -------- Main UI --------
 
     return (
-        <>
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar/>
-            <main className="min-h-screen bg-slate-50 px-4 py-6 md:py-8">
-                <motion.div
-                    initial={{opacity: 0, y: 6}}
-                    animate={{opacity: 1, y: 0}}
-                    className="mx-auto max-w-6xl"
-                >
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     {/* Header */}
                     <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                Manage Users
-                            </h1>
+                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Manage Users</h1>
                             <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                Admin view of all registered users. Review, deactivate, or remove
-                                accounts. New admins are added via secure email invites.
+                                Admin view of all registered users. Review, deactivate, or remove accounts. New admins
+                                are added via
+                                secure email invites.
                             </p>
                         </div>
 
                         {/* Invite new admin card (compact) */}
                         <div
                             className="w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Invite New Admin
-                            </p>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Invite New
+                                Admin</p>
                             <form onSubmit={handleInviteAdmin} className="space-y-2">
                                 <div>
                                     <input
@@ -252,8 +231,9 @@ const AdminUserList: React.FC = () => {
                                     <span>{inviteLoading ? "Sending…" : "Send Invite"}</span>
                                 </button>
                                 <p className="text-[10px] text-slate-400">
-                                    An email with a secure verification link will be sent. The new
-                                    admin sets their own password after verifying.
+                                    An email with a secure verification link will be sent. The new admin sets their own
+                                    password after
+                                    verifying.
                                 </p>
                             </form>
                         </div>
@@ -311,9 +291,7 @@ const AdminUserList: React.FC = () => {
                                         <button
                                             key={opt.key}
                                             type="button"
-                                            onClick={() =>
-                                                setStatusFilter(opt.key as StatusFilter)
-                                            }
+                                            onClick={() => setStatusFilter(opt.key as StatusFilter)}
                                             className={[
                                                 "rounded-full border px-2.5 py-1 transition-colors",
                                                 active
@@ -328,8 +306,7 @@ const AdminUserList: React.FC = () => {
                             </div>
 
                             <div className="ml-auto text-xs text-slate-500">
-                                Total:{" "}
-                                <span className="font-medium text-slate-800">{total}</span>
+                                Total: <span className="font-medium text-slate-800">{total}</span>
                             </div>
                         </div>
                     </section>
@@ -391,33 +368,25 @@ const AdminUserList: React.FC = () => {
                                         {filteredUsers.map((u) => {
                                             const roleName = u.role_name?.toLowerCase() || "";
 
-                                            const statusLabel = u.is_active
-                                                ? "Active"
-                                                : "Pending verification";
+                                            const statusLabel = u.is_active ? "Active" : "Pending verification";
                                             const statusClass = u.is_active
                                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                 : "bg-amber-50 text-amber-700 border-amber-200";
 
                                             const joined = new Date(u.date_joined).toLocaleString();
-                                            const lastLogin = u.last_login
-                                                ? new Date(u.last_login).toLocaleString()
-                                                : "—";
+                                            const lastLogin = u.last_login ? new Date(u.last_login).toLocaleString() : "—";
 
                                             return (
                                                 <tr key={u.id}>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="max-w-xs">
-                                                            <div className="truncate font-medium text-slate-900">
-                                                                {u.username}
-                                                            </div>
-                                                            <div className="truncate text-xs text-slate-500">
-                                                                {u.email}
-                                                            </div>
+                                                            <div
+                                                                className="truncate font-medium text-slate-900">{u.username}</div>
+                                                            <div
+                                                                className="truncate text-xs text-slate-500">{u.email}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {roleName}
-                                                    </td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{roleName}</td>
                                                     <td className="px-4 py-2 align-top">
                               <span
                                   className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${statusClass}`}
@@ -425,12 +394,8 @@ const AdminUserList: React.FC = () => {
                                 {statusLabel}
                               </span>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {joined}
-                                                    </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {lastLogin}
-                                                    </td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{joined}</td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{lastLogin}</td>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="flex justify-end gap-2 text-xs">
                                                             <button
@@ -471,7 +436,7 @@ const AdminUserList: React.FC = () => {
                     )}
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 

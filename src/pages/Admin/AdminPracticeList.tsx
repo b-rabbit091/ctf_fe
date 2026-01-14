@@ -1,4 +1,3 @@
-// src/pages/PracticePage/AdminPracticeList.tsx
 import React, {useEffect, useMemo, useState, useCallback} from "react";
 import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
@@ -6,18 +5,9 @@ import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 
-import {
-    getPracticeChallenges,
-    deletePracticeChallenge,
-    getCategories,
-    getDifficulties,
-} from "./practice";
+import {getPracticeChallenges, deletePracticeChallenge, getCategories, getDifficulties} from "../PracticePage/practice";
 
-import {
-    Challenge,
-    CategoryTypes,
-    DifficultyTypes,
-} from "./types";
+import {Challenge, CategoryTypes, DifficultyTypes} from "../PracticePage/types";
 
 import {FiPlus, FiEye, FiEdit2, FiTrash2} from "react-icons/fi";
 
@@ -84,8 +74,7 @@ const AdminPracticeList: React.FC = () => {
         const searchLower = search.trim().toLowerCase();
         return allChallenges.filter((c) => {
             if (categoryFilter && c.category?.name !== categoryFilter) return false;
-            if (difficultyFilter && c.difficulty?.level !== difficultyFilter)
-                return false;
+            if (difficultyFilter && c.difficulty?.level !== difficultyFilter) return false;
 
             if (!searchLower) return true;
 
@@ -93,11 +82,7 @@ const AdminPracticeList: React.FC = () => {
             const desc = (c.description || "").toLowerCase();
             const cat = (c.category?.name || "").toLowerCase();
 
-            return (
-                title.includes(searchLower) ||
-                desc.includes(searchLower) ||
-                cat.includes(searchLower)
-            );
+            return title.includes(searchLower) || desc.includes(searchLower) || cat.includes(searchLower);
         });
     }, [allChallenges, categoryFilter, difficultyFilter, search]);
 
@@ -115,12 +100,7 @@ const AdminPracticeList: React.FC = () => {
                 return;
             }
 
-            if (
-                !window.confirm(
-                    "Are you sure you want to delete this practice challenge? This cannot be undone."
-                )
-            )
-                return;
+            if (!window.confirm("Are you sure you want to delete this practice challenge? This cannot be undone.")) return;
 
             const backup = allChallenges;
             setAllChallenges((prev) => prev.filter((c) => c.id !== id));
@@ -147,51 +127,45 @@ const AdminPracticeList: React.FC = () => {
         setPage(1);
     };
 
+    // --- responsive full-screen shell for guard states ---
     if (!user) {
         return (
-            <>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div className="mx-auto max-w-6xl text-sm text-slate-500">
-                        Checking permissions…
-                    </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
                 </main>
-            </>
+            </div>
         );
     }
 
     if (user.role !== "admin") {
         return (
-            <>
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div
-                        className="mx-auto max-w-4xl rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         Unauthorized – admin access required.
                     </div>
                 </main>
-            </>
+            </div>
         );
     }
 
     return (
-        <>
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar/>
-            <main className="min-h-screen bg-slate-50 px-4 py-6 md:py-8">
-                <motion.div
-                    initial={{opacity: 0, y: 6}}
-                    animate={{opacity: 1, y: 0}}
-                    className="mx-auto max-w-6xl"
-                >
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     {/* Header – same style as AdminCompetitionList */}
                     <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                Manage Practice Challenges
-                            </h1>
+                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Manage Practice
+                                Challenges</h1>
                             <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                Admin view of all practice-type challenges. Create, review,
-                                and maintain practice problems from here.
+                                Admin view of all practice-type challenges. Create, review, and maintain practice
+                                problems from here.
                             </p>
                         </div>
                         <button
@@ -260,8 +234,7 @@ const AdminPracticeList: React.FC = () => {
                             </button>
 
                             <div className="ml-auto text-xs text-slate-500">
-                                Total:{" "}
-                                <span className="font-medium text-slate-800">{total}</span>
+                                Total: <span className="font-medium text-slate-800">{total}</span>
                             </div>
                         </div>
                     </section>
@@ -320,20 +293,14 @@ const AdminPracticeList: React.FC = () => {
                                                 <tr key={c.id}>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="max-w-xs">
-                                                            <div className="truncate font-medium text-slate-900">
-                                                                {c.title}
-                                                            </div>
-                                                            <div className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-                                                                {c.description}
-                                                            </div>
+                                                            <div
+                                                                className="truncate font-medium text-slate-900">{c.title}</div>
+                                                            <div
+                                                                className="mt-0.5 line-clamp-2 text-xs text-slate-500">{c.description}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {c.category?.name || "—"}
-                                                    </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">
-                                                        {difficulty}
-                                                    </td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{c.category?.name || "—"}</td>
+                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{difficulty}</td>
                                                     <td className="px-4 py-2 align-top">
                                                         <div className="flex justify-end gap-2 text-xs">
                                                             <button
@@ -346,9 +313,7 @@ const AdminPracticeList: React.FC = () => {
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() =>
-                                                                    navigate(`/admin/practice/${c.id}/edit`)
-                                                                }
+                                                                onClick={() => navigate(`/admin/practice/${c.id}/edit`)}
                                                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                                             >
                                                                 <FiEdit2 size={14}/>
@@ -377,14 +342,8 @@ const AdminPracticeList: React.FC = () => {
                                 <div
                                     className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
                                     <div>
-                                        Page{" "}
-                                        <span className="font-semibold text-slate-900">
-                      {page}
-                    </span>{" "}
-                                        of{" "}
-                                        <span className="font-semibold text-slate-900">
-                      {pageCount}
-                    </span>
+                                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
+                                        <span className="font-semibold text-slate-900">{pageCount}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
@@ -398,9 +357,7 @@ const AdminPracticeList: React.FC = () => {
                                         <button
                                             type="button"
                                             disabled={page >= pageCount}
-                                            onClick={() =>
-                                                setPage((p) => Math.min(pageCount, p + 1))
-                                            }
+                                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                                             className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Next
@@ -412,7 +369,7 @@ const AdminPracticeList: React.FC = () => {
                     )}
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 
