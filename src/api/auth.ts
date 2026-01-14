@@ -1,7 +1,7 @@
 // src/api/auth.ts
 import api from "./axios";
 
-const API_URL = "/api/users/";
+const API_URL = "/users/";
 
 export interface LoginPayload {
     username: string;

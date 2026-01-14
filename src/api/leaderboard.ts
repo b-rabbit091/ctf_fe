@@ -92,7 +92,7 @@ export async function fetchLeaderboard(opts: {
         params.contest_id = contestId;
     }
 
-    const resp = await api.get("/api/submissions/leaderboard/", {
+    const resp = await api.get("/submissions/leaderboard/", {
         params: {
             mode,
             ...(mode === "competition" && contestId ? { contest_id: contestId } : {}),
@@ -115,6 +115,6 @@ export interface ContestDTO {
 }
 
 export const getContests = async (): Promise<ContestDTO[]> => {
-    const resp = await api.get("/api/challenges/contests/");
+    const resp = await api.get("/challenges/contests/");
     return resp.data ?? [];
 };

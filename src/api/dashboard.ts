@@ -2,6 +2,7 @@
 import api from "./axios";
 import axios, {AxiosError} from "axios";
 
+const API_URL = '/dashboard/'
 /* ==== Types that match the backend payload ==== */
 
 export interface DifficultyBreakdown {
@@ -91,7 +92,7 @@ export class DashboardError extends Error {
 
 export const getDashboardOverview = async (): Promise<DashboardOverview> => {
     try {
-        const resp = await api.get<DashboardOverview>("/api/dashboard/overview/");
+        const resp = await api.get<DashboardOverview>(`${API_URL}overview/`);
         return resp.data;
     } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
@@ -158,12 +159,12 @@ export interface AdminDashboardTotalsResponse {
 
 /**
  * Admin-only totals endpoint for dashboard summary cards.
- * Backend: GET /api/dashboard/admin/totals/
+ * Backend: GET {API_URL}admin/totals/
  */
 export const getAdminDashboardTotals =
     async (): Promise<AdminDashboardTotalsResponse> => {
         const resp = await api.get<AdminDashboardTotalsResponse>(
-            "/api/dashboard/admin/totals/"
+            `${API_URL}admin/totals/`
         );
         return resp.data;
     };

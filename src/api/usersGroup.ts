@@ -47,7 +47,7 @@ export interface UserSearchResult {
 
 // GET /api/groups/me/dashboard/
 export async function getMyGroupDashboard(): Promise<GroupDashboardResponse> {
-    const res = await api.get("api/users/groups/me/dashboard/");
+    const res = await api.get("/users/groups/me/dashboard/");
     return res.data;
 }
 export type CreateGroupPayload = {
@@ -57,7 +57,7 @@ export type CreateGroupPayload = {
 };
 
 export const createGroup = async (payload: CreateGroupPayload) => {
-    const resp = await api.post("api/users/groups/", payload, {
+    const resp = await api.post("/users/groups/", payload, {
         headers: { "Content-Type": "application/json" },
     });
     return resp.data;
@@ -79,7 +79,7 @@ export async function searchUsersForGroup(
     query: string
 ): Promise<UserSearchResult[]> {
     if (!query.trim()) return [];
-    const res = await api.get("api/users/groups/search-users/", {
+    const res = await api.get("/users/groups/search-users/", {
         params: { q: query },
     });
     return res.data;
@@ -99,7 +99,7 @@ export async function sendGroupInvite(payload: {
 
 // DELETE /api/groups/:group_id/
 export async function deleteGroup(groupId: number): Promise<void> {
-    await api.delete(`api/users/groups/${groupId}/`);
+    await api.delete(`/users/groups/${groupId}/`);
 }
 
 // POST /api/groups/:group_id/remove-member/  { user_id }
@@ -108,7 +108,7 @@ export async function removeGroupMember(payload: {
     user_id: number;
 }): Promise<void> {
     const { group_id, user_id } = payload;
-    await api.post(`api/users/groups/${group_id}/remove-member/`, { user_id });
+    await api.post(`/users/groups/${group_id}/remove-member/`, { user_id });
 }
 
 // POST /api/groups/:group_id/set-admin/  { user_id }
@@ -117,7 +117,7 @@ export async function setGroupAdmin(payload: {
     user_id: number;
 }): Promise<GroupSummary> {
     const { group_id, user_id } = payload;
-    const res = await api.post(`api/users/groups/${group_id}/set-admin/`, { user_id });
+    const res = await api.post(`/users/groups/${group_id}/set-admin/`, { user_id });
     return res.data;
 }
 
@@ -130,16 +130,16 @@ export type IncomingInvite = {
 };
 
 export async function getMyIncomingGroupInvites(): Promise<IncomingInvite[]> {
-    const res = await api.get("api/users/groups/me/invitations/");
+    const res = await api.get("/users/groups/me/invitations/");
     return res.data;
 }
 
 export async function acceptGroupInvite(inviteId: number): Promise<any> {
-    const res = await api.post(`api/users/groups/invitations/${inviteId}/accept/`);
+    const res = await api.post(`/users/groups/invitations/${inviteId}/accept/`);
     return res.data;
 }
 
 export async function declineGroupInvite(inviteId: number): Promise<any> {
-    const res = await api.post(`/api/groups/invitations/${inviteId}/decline/`);
+    const res = await api.post(`/groups/invitations/${inviteId}/decline/`);
     return res.data;
 }
