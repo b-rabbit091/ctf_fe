@@ -478,9 +478,120 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* (rest unchanged…) */}
-                                {/* Attachments + validate button remain same */}
-                                {/* ... */}
+                                {/* IO + examples */}
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            Constraints
+                                        </label>
+                                        <textarea
+                                            className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="e.g. 1 ≤ N ≤ 10^5"
+                                            value={constraints}
+                                            onChange={(e) => setConstraints(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                Input Format
+                                            </label>
+                                            <textarea
+                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                placeholder="Describe input specification..."
+                                                value={inputFormat}
+                                                onChange={(e) => setInputFormat(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                Output Format
+                                            </label>
+                                            <textarea
+                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                placeholder="Describe output specification..."
+                                                value={outputFormat}
+                                                onChange={(e) => setOutputFormat(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            Sample Input
+                                        </label>
+                                        <textarea
+                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="Example input..."
+                                            value={sampleInput}
+                                            onChange={(e) => setSampleInput(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            Sample Output
+                                        </label>
+                                        <textarea
+                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            placeholder="Example output..."
+                                            value={sampleOutput}
+                                            onChange={(e) => setSampleOutput(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Attachments */}
+                                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-700">
+                                                Attach Additional Reference Files
+                                            </p>
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                New uploads will be added to existing attachments for this
+                                                challenge. Max 20MB per file. Allowed types: images, ZIP.
+                                            </p>
+                                        </div>
+                                        <label
+                                            className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                            <span>Upload files</span>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept=".zip,image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleFilesChange(e.target.files)}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    {uploadFiles.length > 0 && (
+                                        <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                                            {uploadFiles.map((file, idx) => (
+                                                <li
+                                                    key={`${file.name}-${idx}`}
+                                                    className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-1.5"
+                                                >
+                          <span className="max-w-xs truncate">
+                            {file.name}{" "}
+                              <span className="text-slate-400">
+                              ({Math.round(file.size / 1024)} KB)
+                            </span>
+                          </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveFile(idx)}
+                                                        className="text-xs text-red-500 hover:text-red-600"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
 
                                 <div className="flex items-center justify-between border-t border-slate-100 pt-4">
                                     <button

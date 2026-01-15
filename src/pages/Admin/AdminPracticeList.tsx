@@ -313,7 +313,7 @@ const AdminPracticeList: React.FC = () => {
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => navigate(`/admin/practice/${c.id}/edit`)}
+                                                                onClick={() => navigate(`/admin/practice/${c.id}`)}
                                                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                                                             >
                                                                 <FiEdit2 size={14}/>
