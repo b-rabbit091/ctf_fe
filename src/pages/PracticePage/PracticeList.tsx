@@ -194,9 +194,7 @@ const PracticeList: React.FC = () => {
                         <span>Solve</span>
                     </button>
 
-                    <span className="text-xs sm:text-sm md:text-base text-slate-700">
-            Mode: <span className="font-semibold">Practice</span>
-          </span>
+
                 </div>
             </article>
         );
