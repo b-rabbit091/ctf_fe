@@ -158,7 +158,7 @@ const AdminCompetitionList: React.FC = () => {
             <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
                 <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+                    <div className="w-full text-base md:text-lg text-slate-500">Checking permissions…</div>
                 </main>
             </div>
         );
@@ -169,7 +169,7 @@ const AdminCompetitionList: React.FC = () => {
             <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
                 <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-base md:text-lg text-red-700">
                         Unauthorized – admin access required.
                     </div>
                 </main>
@@ -185,9 +185,10 @@ const AdminCompetitionList: React.FC = () => {
                 <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Manage Competition
-                                Challenges</h1>
-                            <p className="mt-1 text-xs md:text-sm text-slate-500">
+                            <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">
+                                Manage Competition Challenges
+                            </h1>
+                            <p className="mt-1 text-sm sm:text-base md:text-lg text-slate-500">
                                 Admin view of all competition-type challenges. Create, review, and maintain contests
                                 from here.
                             </p>
@@ -195,9 +196,9 @@ const AdminCompetitionList: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate("/admin/contests/new")}
-                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm sm:text-base font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
                         >
-                            <FiPlus size={16}/>
+                            <FiPlus size={18}/>
                             <span>New Competition</span>
                         </button>
                     </header>
@@ -214,7 +215,7 @@ const AdminCompetitionList: React.FC = () => {
                                             setPage(1);
                                         }}
                                         placeholder="Search challenges..."
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     />
                                 </div>
                             </div>
@@ -227,7 +228,7 @@ const AdminCompetitionList: React.FC = () => {
                                             setDifficultyFilter(e.target.value);
                                             setPage(1);
                                         }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm sm:text-base text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     >
                                         <option value="">Difficulty</option>
                                         {difficulties.map((d) => (
@@ -245,7 +246,7 @@ const AdminCompetitionList: React.FC = () => {
                                             setCategoryFilter(e.target.value);
                                             setPage(1);
                                         }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm sm:text-base text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     >
                                         <option value="">Category</option>
                                         {categories.map((c) => (
@@ -259,16 +260,15 @@ const AdminCompetitionList: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={handleClearFilters}
-                                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 >
                                     Reset
                                 </button>
 
-                                <span
-                                    className="ml-1 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
-                  <span className="text-slate-500">Total:</span>
-                  <span className="ml-1 font-semibold text-slate-900">{total}</span>
-                </span>
+                                <span className="ml-1 inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm sm:text-base text-slate-700">
+                                    <span className="text-slate-500">Total:</span>
+                                    <span className="ml-1 font-semibold text-slate-900">{total}</span>
+                                </span>
                             </div>
                         </div>
 
@@ -293,7 +293,7 @@ const AdminCompetitionList: React.FC = () => {
                                             setPage(1);
                                         }}
                                         className={[
-                                            "rounded-full border px-3 py-1 text-xs",
+                                            "rounded-full border px-4 py-2 text-sm sm:text-base",
                                             active
                                                 ? "border-slate-900 bg-slate-900 text-white"
                                                 : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
@@ -307,20 +307,17 @@ const AdminCompetitionList: React.FC = () => {
                     </section>
 
                     {loading && (
-                        <div
-                            className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm">
                             Loading competition challenges…
                         </div>
                     )}
                     {error && (
-                        <div
-                            className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm sm:text-base text-red-700 shadow-sm">
                             {error}
                         </div>
                     )}
                     {message && (
-                        <div
-                            className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
+                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm sm:text-base text-blue-800 shadow-sm">
                             {message}
                         </div>
                     )}
@@ -328,28 +325,27 @@ const AdminCompetitionList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div
-                                    className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-slate-500 shadow-sm">
+                                <div className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-base md:text-lg text-slate-500 shadow-sm">
                                     No competition challenges found.
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm sm:text-base">
                                         <thead className="bg-slate-50">
                                         <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Title
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Category
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Difficulty
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Contest Status
                                             </th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-right text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Actions
                                             </th>
                                         </tr>
@@ -360,41 +356,49 @@ const AdminCompetitionList: React.FC = () => {
                                             const difficulty = c.difficulty?.level || "N/A";
                                             return (
                                                 <tr key={c.id}>
-                                                    <td className="px-4 py-2 align-top">
+                                                    <td className="px-4 py-3 align-top">
                                                         <div className="max-w-xs">
-                                                            <div
-                                                                className="truncate font-medium text-slate-900">{c.title}</div>
-                                                            <div
-                                                                className="mt-0.5 line-clamp-2 text-xs text-slate-500">{c.description}</div>
+                                                            <div className="truncate font-medium text-slate-900 text-sm sm:text-base">
+                                                                {c.title}
+                                                            </div>
+                                                            <div className="mt-1 line-clamp-2 text-sm text-slate-500">
+                                                                {c.description}
+                                                            </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{c.category?.name || "—"}</td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{difficulty}</td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{meta.label}</td>
-                                                    <td className="px-4 py-2 align-top">
-                                                        <div className="flex justify-end gap-2 text-xs">
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {c.category?.name || "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {difficulty}
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {meta.label}
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="flex justify-end gap-2 text-sm">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/compete/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEye size={14}/>
+                                                                <FiEye size={16}/>
                                                                 <span>View</span>
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/admin/contests/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEdit2 size={14}/>
+                                                                <FiEdit2 size={16}/>
                                                                 <span>Edit</span>
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDelete(c.id)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                                                             >
-                                                                <FiTrash2 size={14}/>
+                                                                <FiTrash2 size={16}/>
                                                                 <span>Delete</span>
                                                             </button>
                                                         </div>
@@ -408,8 +412,7 @@ const AdminCompetitionList: React.FC = () => {
                             )}
 
                             {total > 0 && (
-                                <div
-                                    className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
                                     <div>
                                         Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
                                         <span className="font-semibold text-slate-900">{pageCount}</span>
@@ -419,7 +422,7 @@ const AdminCompetitionList: React.FC = () => {
                                             type="button"
                                             disabled={page <= 1}
                                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Prev
                                         </button>
@@ -427,7 +430,7 @@ const AdminCompetitionList: React.FC = () => {
                                             type="button"
                                             disabled={page >= pageCount}
                                             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Next
                                         </button>

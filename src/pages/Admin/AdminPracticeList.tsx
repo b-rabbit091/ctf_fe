@@ -133,7 +133,7 @@ const AdminPracticeList: React.FC = () => {
             <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
                 <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+                    <div className="w-full text-base md:text-lg text-slate-500">Checking permissions…</div>
                 </main>
             </div>
         );
@@ -144,7 +144,7 @@ const AdminPracticeList: React.FC = () => {
             <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
                 <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-base md:text-lg text-red-700">
                         Unauthorized – admin access required.
                     </div>
                 </main>
@@ -161,9 +161,10 @@ const AdminPracticeList: React.FC = () => {
                     {/* Header – same style as AdminCompetitionList */}
                     <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Manage Practice
-                                Challenges</h1>
-                            <p className="mt-1 text-xs md:text-sm text-slate-500">
+                            <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">
+                                Manage Practice Challenges
+                            </h1>
+                            <p className="mt-1 text-sm sm:text-base md:text-lg text-slate-500">
                                 Admin view of all practice-type challenges. Create, review, and maintain practice
                                 problems from here.
                             </p>
@@ -171,16 +172,15 @@ const AdminPracticeList: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate("/admin/practice/new")}
-                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm sm:text-base font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
                         >
-                            <FiPlus size={16}/>
+                            <FiPlus size={18}/>
                             <span>New Practice Challenge</span>
                         </button>
                     </header>
 
                     {/* Filters – same card style, minus contest status buttons */}
-                    <section
-                        className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-4 shadow-sm">
+                    <section className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-4 shadow-sm">
                         <div className="flex flex-wrap items-center gap-3">
                             <input
                                 type="search"
@@ -190,7 +190,7 @@ const AdminPracticeList: React.FC = () => {
                                     setPage(1);
                                 }}
                                 placeholder="Search by title, description, category…"
-                                className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
 
                             <select
@@ -199,7 +199,7 @@ const AdminPracticeList: React.FC = () => {
                                     setCategoryFilter(e.target.value);
                                     setPage(1);
                                 }}
-                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                                 <option value="">All Categories</option>
                                 {categories.map((c) => (
@@ -215,7 +215,7 @@ const AdminPracticeList: React.FC = () => {
                                     setDifficultyFilter(e.target.value);
                                     setPage(1);
                                 }}
-                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                                 <option value="">All Difficulties</option>
                                 {difficulties.map((d) => (
@@ -228,12 +228,12 @@ const AdminPracticeList: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={handleClearFilters}
-                                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-xs md:text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm sm:text-base text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-300"
                             >
                                 Clear
                             </button>
 
-                            <div className="ml-auto text-xs text-slate-500">
+                            <div className="ml-auto text-sm sm:text-base text-slate-500">
                                 Total: <span className="font-medium text-slate-800">{total}</span>
                             </div>
                         </div>
@@ -241,20 +241,17 @@ const AdminPracticeList: React.FC = () => {
 
                     {/* Alerts – same pattern */}
                     {loading && (
-                        <div
-                            className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm">
                             Loading practice challenges…
                         </div>
                     )}
                     {error && (
-                        <div
-                            className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm sm:text-base text-red-700 shadow-sm">
                             {error}
                         </div>
                     )}
                     {message && (
-                        <div
-                            className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
+                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm sm:text-base text-blue-800 shadow-sm">
                             {message}
                         </div>
                     )}
@@ -263,25 +260,24 @@ const AdminPracticeList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div
-                                    className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-slate-500 shadow-sm">
+                                <div className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-base md:text-lg text-slate-500 shadow-sm">
                                     No practice challenges found.
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm sm:text-base">
                                         <thead className="bg-slate-50">
                                         <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Title
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Category
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Difficulty
                                             </th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-right text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
                                                 Actions
                                             </th>
                                         </tr>
@@ -291,40 +287,46 @@ const AdminPracticeList: React.FC = () => {
                                             const difficulty = c.difficulty?.level || "N/A";
                                             return (
                                                 <tr key={c.id}>
-                                                    <td className="px-4 py-2 align-top">
+                                                    <td className="px-4 py-3 align-top">
                                                         <div className="max-w-xs">
-                                                            <div
-                                                                className="truncate font-medium text-slate-900">{c.title}</div>
-                                                            <div
-                                                                className="mt-0.5 line-clamp-2 text-xs text-slate-500">{c.description}</div>
+                                                            <div className="truncate font-medium text-slate-900 text-sm sm:text-base">
+                                                                {c.title}
+                                                            </div>
+                                                            <div className="mt-1 line-clamp-2 text-sm text-slate-500">
+                                                                {c.description}
+                                                            </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{c.category?.name || "—"}</td>
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{difficulty}</td>
-                                                    <td className="px-4 py-2 align-top">
-                                                        <div className="flex justify-end gap-2 text-xs">
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {c.category?.name || "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {difficulty}
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="flex justify-end gap-2 text-sm">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/practice/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEye size={14}/>
+                                                                <FiEye size={16}/>
                                                                 <span>View</span>
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/admin/practice/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                                             >
-                                                                <FiEdit2 size={14}/>
+                                                                <FiEdit2 size={16}/>
                                                                 <span>Edit</span>
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDelete(c.id)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                                className="inline-flex items-center gap-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                                                             >
-                                                                <FiTrash2 size={14}/>
+                                                                <FiTrash2 size={16}/>
                                                                 <span>Delete</span>
                                                             </button>
                                                         </div>
@@ -339,8 +341,7 @@ const AdminPracticeList: React.FC = () => {
 
                             {/* Pagination – identical styling */}
                             {total > 0 && (
-                                <div
-                                    className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
                                     <div>
                                         Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
                                         <span className="font-semibold text-slate-900">{pageCount}</span>
@@ -350,7 +351,7 @@ const AdminPracticeList: React.FC = () => {
                                             type="button"
                                             disabled={page <= 1}
                                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Prev
                                         </button>
@@ -358,7 +359,7 @@ const AdminPracticeList: React.FC = () => {
                                             type="button"
                                             disabled={page >= pageCount}
                                             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Next
                                         </button>

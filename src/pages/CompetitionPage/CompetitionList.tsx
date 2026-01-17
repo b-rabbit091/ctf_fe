@@ -3,7 +3,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 import Navbar from "../../components/Navbar";
 import {getChallenges, getCategories, getDifficulties} from "./api";
 import {useNavigate} from "react-router-dom";
-import {FiEye, FiUsers} from "react-icons/fi";
+import {FiEye, FiUsers, FiTag, FiFilter} from "react-icons/fi";
 import {Challenge} from "./types";
 
 /** Truncate text safely */
@@ -22,6 +22,7 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 
 type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED" | "NONE";
 type GroupFilter = "ALL" | "GROUP_ONLY" | "SOLO_ONLY";
+type ContestTypeFilter = "ALL" | "daily" | "weekly" | "monthly" | "custom";
 
 interface ContestMeta {
     label: string;
@@ -29,6 +30,23 @@ interface ContestMeta {
     timingPrimary: string | null;
     timingSecondary: string | null;
     status: ContestStatus;
+    contestId: string | null;
+    contestName: string | null;
+    contestType: string | null;
+    startIso: string | null;
+    endIso: string | null;
+}
+
+function formatDateTimeLocal(iso: string) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "N/A";
+    return d.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 }
 
 function getContestMeta(challenge: Challenge): ContestMeta {
@@ -36,45 +54,139 @@ function getContestMeta(challenge: Challenge): ContestMeta {
 
     const baseNone: ContestMeta = {
         label: "NO CONTEST",
-        badgeClass: "bg-slate-50 text-slate-500 border-slate-100",
+        badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
         timingPrimary: null,
         timingSecondary: null,
         status: "NONE",
+        contestId: null,
+        contestName: null,
+        contestType: null,
+        startIso: null,
+        endIso: null,
     };
 
     if (!activeContest) return baseNone;
 
     const nowMs = Date.now();
-    const start = new Date(activeContest.start_time);
-    const end = new Date(activeContest.end_time);
+    const startIso = activeContest.start_time ?? null;
+    const endIso = activeContest.end_time ?? null;
+
+    const start = startIso ? new Date(startIso) : new Date("invalid");
+    const end = endIso ? new Date(endIso) : new Date("invalid");
+
     const startMs = start.getTime();
     const endMs = end.getTime();
+
+    const contestName = activeContest.name ?? null;
+    const contestType = activeContest.contest_type ?? null;
+    const contestId = String(activeContest.id ?? activeContest.slug ?? activeContest.name ?? "contest");
+
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+        return {
+            label: "SCHEDULED",
+            badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
+            timingPrimary: startIso ? `Opens: ${formatDateTimeLocal(startIso)}` : null,
+            timingSecondary: endIso ? `Ends: ${formatDateTimeLocal(endIso)}` : null,
+            status: "UPCOMING",
+            contestId,
+            contestName,
+            contestType,
+            startIso,
+            endIso,
+        };
+    }
 
     if (nowMs < startMs) {
         return {
             label: "UPCOMING",
-            badgeClass: "bg-sky-50 text-sky-700 border-sky-200",
-            timingPrimary: `Contest Opens: ${start.toLocaleString()}`,
-            timingSecondary: `Contest Ends: ${end.toLocaleString()}`,
+            badgeClass: "bg-sky-100/70 text-sky-800 border-sky-200",
+            timingPrimary: `Opens: ${formatDateTimeLocal(startIso!)}`,
+            timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "UPCOMING",
+            contestId,
+            contestName,
+            contestType,
+            startIso,
+            endIso,
         };
-    } else if (nowMs >= startMs && nowMs < endMs) {
+    }
+
+    if (nowMs >= startMs && nowMs < endMs) {
         return {
             label: "ONGOING",
-            badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            badgeClass: "bg-emerald-100/70 text-emerald-800 border-emerald-200",
             timingPrimary: null,
-            timingSecondary: null,
+            timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "ONGOING",
+            contestId,
+            contestName,
+            contestType,
+            startIso,
+            endIso,
         };
     }
 
     return {
         label: "ENDED",
-        badgeClass: "bg-slate-50 text-slate-600 border-slate-200",
+        badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
         timingPrimary: null,
-        timingSecondary: null,
+        timingSecondary: `Ended: ${formatDateTimeLocal(endIso!)}`,
         status: "ENDED",
+        contestId,
+        contestName,
+        contestType,
+        startIso,
+        endIso,
     };
+}
+
+type ContestGroup = {
+    contestId: string;
+    contestName: string;
+    contestType: string | null;
+    timingPrimary: string | null;
+    timingSecondary: string | null;
+    entries: { challenge: Challenge; contest: ContestMeta }[];
+};
+
+function groupByContestName(items: { challenge: Challenge; contest: ContestMeta }[]): ContestGroup[] {
+    const map = new Map<string, ContestGroup>();
+
+    items.forEach((it) => {
+        const c = it.contest;
+        const contestId = c.contestId ?? "no-contest";
+        const contestName = c.contestName ?? "No Contest";
+        const key = contestId;
+
+        if (!map.has(key)) {
+            map.set(key, {
+                contestId,
+                contestName,
+                contestType: c.contestType ?? null,
+                timingPrimary: c.timingPrimary ?? null,
+                timingSecondary: c.timingSecondary ?? null,
+                entries: [],
+            });
+        }
+
+        const g = map.get(key)!;
+        g.entries.push(it);
+
+        g.timingPrimary = g.timingPrimary || c.timingPrimary || null;
+        g.timingSecondary = g.timingSecondary || c.timingSecondary || null;
+    });
+
+    const groups = Array.from(map.values());
+    const rank = (name: string) => (name === "No Contest" ? 1 : 0);
+
+    groups.sort((a, b) => {
+        const ra = rank(a.contestName);
+        const rb = rank(b.contestName);
+        if (ra !== rb) return ra - rb;
+        return a.contestName.localeCompare(b.contestName);
+    });
+
+    return groups;
 }
 
 const CompetitionList: React.FC = () => {
@@ -93,22 +205,15 @@ const CompetitionList: React.FC = () => {
     const debouncedSearch = useDebouncedValue(search, 350);
 
     const [statusFilter, setStatusFilter] = useState<ContestStatus | "ALL">("ALL");
-
-    // NEW: group competition filter
     const [groupFilter, setGroupFilter] = useState<GroupFilter>("ALL");
 
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(9);
-    const pageSizeOptions = [6, 9, 12, 24];
-    const STATUS_OPTIONS: { key: ContestStatus | "ALL"; label: string }[] = [
-        {key: "ALL", label: "All"},
-        {key: "ONGOING", label: "Ongoing"},
-        {key: "UPCOMING", label: "Upcoming"},
-        {key: "ENDED", label: "Ended"},
-        {key: "NONE", label: "No contest"},
-    ];
+    const [contestNameFilter, setContestNameFilter] = useState<string>("ALL");
+    const [contestTypeFilter, setContestTypeFilter] = useState<ContestTypeFilter>("ALL");
 
-    /** Fetch initial data */
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+    const pageSizeOptions = [6, 9, 12, 24];
+
     useEffect(() => {
         let mounted = true;
 
@@ -141,37 +246,71 @@ const CompetitionList: React.FC = () => {
         };
     }, []);
 
-    /** Filtered + searched challenges */
+    const contestOptions = useMemo(() => {
+        const seen = new Map<string, { name: string; type: string | null; slug?: string | null; id?: any }>();
+        allChallenges.forEach((c: any) => {
+            const ac = c?.active_contest;
+            if (!ac?.name) return;
+            const key = String(ac.id ?? ac.slug ?? ac.name);
+            if (!seen.has(key)) seen.set(key, {
+                name: ac.name,
+                type: ac.contest_type ?? null,
+                slug: ac.slug ?? null,
+                id: ac.id
+            });
+        });
+        return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [allChallenges]);
+
     const filteredChallenges = useMemo(() => {
         const searchLower = debouncedSearch.trim().toLowerCase();
 
         return allChallenges.filter((c: any) => {
-            // existing filters
             if (categoryFilter && c.category?.name !== categoryFilter) return false;
             if (difficultyFilter && c.difficulty?.level !== difficultyFilter) return false;
 
-            // existing status filter
-            if (statusFilter !== "ALL") {
-                const meta = getContestMeta(c);
-                if (meta.status !== statusFilter) return false;
-            }
+            const meta = getContestMeta(c);
 
-            // NEW: group filter
+            if (statusFilter !== "ALL" && meta.status !== statusFilter) return false;
+
             if (groupFilter === "GROUP_ONLY" && !c.group_only) return false;
             if (groupFilter === "SOLO_ONLY" && c.group_only) return false;
 
-            // existing search
+            if (contestNameFilter !== "ALL") {
+                const activeName = meta.contestName || "NO CONTEST";
+                if (activeName !== contestNameFilter) return false;
+            }
+
+            if (contestTypeFilter !== "ALL") {
+                const t = (meta.contestType || "").toLowerCase();
+                if (t !== contestTypeFilter) return false;
+            }
+
             if (!searchLower) return true;
 
             const title = (c.title || "").toLowerCase();
             const desc = (c.description || "").toLowerCase();
             const cat = (c.category?.name || "").toLowerCase();
+            const contestName = (meta.contestName || "").toLowerCase();
 
-            return title.includes(searchLower) || desc.includes(searchLower) || cat.includes(searchLower);
+            return (
+                title.includes(searchLower) ||
+                desc.includes(searchLower) ||
+                cat.includes(searchLower) ||
+                contestName.includes(searchLower)
+            );
         });
-    }, [allChallenges, categoryFilter, difficultyFilter, debouncedSearch, statusFilter, groupFilter]);
+    }, [
+        allChallenges,
+        categoryFilter,
+        difficultyFilter,
+        debouncedSearch,
+        statusFilter,
+        groupFilter,
+        contestNameFilter,
+        contestTypeFilter,
+    ]);
 
-    /** Pagination */
     const total = filteredChallenges.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -184,30 +323,34 @@ const CompetitionList: React.FC = () => {
         return filteredChallenges.slice(start, start + pageSize);
     }, [filteredChallenges, page, pageSize]);
 
-    /** Group current page by contest status (for layout only) */
-    const groupedChallenges = useMemo(() => {
-        const result = {
-            ongoing: [] as { challenge: Challenge; contest: ContestMeta }[],
-            upcoming: [] as { challenge: Challenge; contest: ContestMeta }[],
-            others: [] as { challenge: Challenge; contest: ContestMeta }[],
-        };
+    const byStatus = useMemo(() => {
+        const ongoing: { challenge: Challenge; contest: ContestMeta }[] = [];
+        const upcoming: { challenge: Challenge; contest: ContestMeta }[] = [];
+        const others: { challenge: Challenge; contest: ContestMeta }[] = [];
 
         currentPageItems.forEach((c) => {
             const meta = getContestMeta(c);
-            if (meta.status === "ONGOING") result.ongoing.push({challenge: c, contest: meta});
-            else if (meta.status === "UPCOMING") result.upcoming.push({challenge: c, contest: meta});
-            else result.others.push({challenge: c, contest: meta});
+            const entry = {challenge: c, contest: meta};
+            if (meta.status === "ONGOING") ongoing.push(entry);
+            else if (meta.status === "UPCOMING") upcoming.push(entry);
+            else others.push(entry);
         });
 
-        return result;
+        return {ongoing, upcoming, others};
     }, [currentPageItems]);
+
+    const groupedOngoing = useMemo(() => groupByContestName(byStatus.ongoing), [byStatus.ongoing]);
+    const groupedUpcoming = useMemo(() => groupByContestName(byStatus.upcoming), [byStatus.upcoming]);
+    const groupedOthers = useMemo(() => groupByContestName(byStatus.others), [byStatus.others]);
 
     const handleClearFilters = useCallback(() => {
         setCategoryFilter("");
         setDifficultyFilter("");
         setSearch("");
         setStatusFilter("ALL");
-        setGroupFilter("ALL"); // reset
+        setGroupFilter("ALL");
+        setContestNameFilter("ALL");
+        setContestTypeFilter("ALL");
         setPage(1);
     }, []);
 
@@ -217,367 +360,443 @@ const CompetitionList: React.FC = () => {
         window.scrollTo({top: 0, behavior: "smooth"});
     };
 
-    const renderChallengeCard = ({
-                                     challenge: c,
-                                     contest,
-                                 }: {
-        challenge: Challenge;
-        contest: ContestMeta;
-    }) => {
-        const cc: any = c; // to access backend-added fields safely
+    const renderChallengeCard = ({challenge: c, contest}: { challenge: Challenge; contest: ContestMeta }) => {
+        const cc: any = c;
+
         const difficulty = cc.difficulty?.level || "N/A";
         const category = cc.category?.name || "N/A";
 
         const isGroupOnly = !!cc.group_only;
         const canParticipate = cc.can_participate !== undefined ? !!cc.can_participate : true;
 
+        const difficultyLower = String(difficulty || "").toLowerCase();
+
         const difficultyColor =
-            difficulty.toLowerCase() === "easy"
-                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                : difficulty.toLowerCase() === "Moderate"
-                    ? "bg-amber-50 text-amber-700 border-amber-100"
-                    : difficulty.toLowerCase() === "hard"
-                        ? "bg-rose-50 text-rose-700 border-rose-100"
-                        : "bg-slate-50 text-slate-600 border-slate-100";
+            difficultyLower === "easy"
+                ? "bg-emerald-100/70 text-emerald-900 border-emerald-200"
+                : difficultyLower === "medium"
+                    ? "bg-amber-100/70 text-amber-900 border-amber-200"
+                    : difficultyLower === "hard"
+                        ? "bg-rose-100/70 text-rose-900 border-rose-200"
+                        : "bg-slate-100/70 text-slate-800 border-slate-200";
 
         const groupBadgeClass = isGroupOnly
-            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-            : "bg-slate-50 text-slate-600 border-slate-100";
+            ? "bg-indigo-100/70 text-indigo-900 border-indigo-200"
+            : "bg-slate-100/70 text-slate-800 border-slate-200";
+
+        // Bigger card (more padding + slightly larger type), still glassy + responsive
+        const cardShell =
+            "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl " +
+            "ring-1 ring-slate-200/50 transition hover:bg-white/70 hover:shadow-md";
 
         return (
-            <article
-                key={cc.id}
-                className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-            >
-                <div className="flex flex-1 flex-col p-4">
+            <article key={cc.id} className={`flex flex-col ${cardShell}`}>
+                <div className="flex flex-1 flex-col p-6 md:p-7">
                     <div className="flex items-start justify-between gap-3">
-                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">{cc.title}</h2>
+                        <h3 className="line-clamp-2 text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 leading-snug">
+                            {cc.title}
+                        </h3>
+
+                        <span
+                            className={`hidden sm:inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-semibold ${contest.badgeClass}`}
+                            title="Contest status"
+                        >
+                            {contest.label}
+                        </span>
                     </div>
 
-                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">{truncateText(cc.description || "", 200)}</p>
+                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-700 leading-relaxed">
+                        {truncateText(cc.description || "", 260)}
+                    </p>
 
-                    <div className="mt-3 flex flex-col gap-1 text-[11px]">
-                        <div className="flex flex-wrap items-center gap-2">
-              <span
-                  className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
-                <span className="mr-1 font-medium">Category:</span>
-                  {category}
-              </span>
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                        <span
+                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-800">
+                            <FiTag size={14}/>
+                            <span className="font-semibold">Category:</span>
+                            <span className="font-medium">{category}</span>
+                        </span>
 
-                            <span
-                                className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}>
-                <span className="mr-1 font-medium">Difficulty:</span>
-                                {difficulty}
-              </span>
+                        <span
+                            className={`inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base ${difficultyColor}`}>
+                            <span className="font-semibold mr-1">Difficulty:</span>
+                            <span className="font-medium">{difficulty}</span>
+                        </span>
 
-                            <span
-                                className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold tracking-wide ${contest.badgeClass}`}
-                            >
-                {contest.label}
-              </span>
+                        <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-semibold ${groupBadgeClass}`}
+                            title={isGroupOnly ? "Group-only competition" : "Open competition"}
+                        >
+                            <FiUsers size={16}/>
+                            {isGroupOnly ? "GROUP" : "INDIVIDUAL"}
+                        </span>
 
-                            {/* Group-only badge */}
-                            <span
-                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${groupBadgeClass}`}
-                                title={isGroupOnly ? "Group-only competition" : "Open competition"}
-                            >
-                <FiUsers size={14}/>
-                                {isGroupOnly ? "GROUP" : "INDIVIDUAL"}
-              </span>
-                        </div>
-
-                        {(contest.timingPrimary || contest.timingSecondary) && (
-                            <div className="mt-1 flex flex-col text-[11px] text-slate-500">
-                                {contest.timingPrimary && <span>{contest.timingPrimary}</span>}
-                                {contest.timingSecondary && <span>{contest.timingSecondary}</span>}
-                            </div>
-                        )}
+                        <span
+                            className={`sm:hidden inline-flex items-center rounded-full border px-3.5 py-2 text-xs font-semibold ${contest.badgeClass}`}>
+                            {contest.label}
+                        </span>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
-                    {/* RULE:
-              - if group_only && !can_participate -> show "Group competition" text, no View button
-              - else -> show View button (existing behavior)
-          */}
+                <div
+                    className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
                     {isGroupOnly && !canParticipate ? (
-                        <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
-                            <FiUsers size={16}/>
-                            <span>Please create or a join a group.</span>
+                        <div
+                            className="inline-flex items-center gap-2 text-sm sm:text-base md:text-lg font-medium text-slate-800">
+                            <FiUsers size={18}/>
+                            <span>Please create or join a group to participate.</span>
                         </div>
                     ) : (
                         <button
                             onClick={() => navigate(`/compete/${cc.id}`)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
-                            aria-label={`View competition challenge ${cc.title}`}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            aria-label={`Participate in competition challenge ${cc.title}`}
                         >
-                            <FiEye size={16}/>
-                            <span>PARTICIPATE</span>
+                            <FiEye size={18}/>
+                            <span>Participate</span>
                         </button>
                     )}
+
+                    <span className="text-xs sm:text-sm md:text-base text-slate-700">
+                        Access: <span className="font-semibold">{isGroupOnly ? "Group" : "Open"}</span>
+                    </span>
                 </div>
             </article>
         );
     };
 
+    const filtersActive = useMemo(() => {
+        return Boolean(
+            categoryFilter ||
+            difficultyFilter ||
+            debouncedSearch.trim() ||
+            statusFilter !== "ALL" ||
+            groupFilter !== "ALL" ||
+            contestNameFilter !== "ALL" ||
+            contestTypeFilter !== "ALL"
+        );
+    }, [
+        categoryFilter,
+        difficultyFilter,
+        debouncedSearch,
+        statusFilter,
+        groupFilter,
+        contestNameFilter,
+        contestTypeFilter,
+    ]);
+
+    const renderContestGroup = (g: ContestGroup, accent: "emerald" | "sky" | "slate") => {
+        const chip =
+            accent === "emerald"
+                ? "border-emerald-200 bg-emerald-100/70 text-emerald-900"
+                : accent === "sky"
+                    ? "border-sky-200 bg-sky-100/70 text-sky-900"
+                    : "border-slate-200 bg-slate-100/70 text-slate-900";
+
+        return (
+            <section key={g.contestId} className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 truncate">
+                                {g.contestName}
+                            </h3>
+                            <span
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs sm:text-sm md:text-base font-semibold ${chip}`}>
+                                {g.entries.length} challenge{g.entries.length === 1 ? "" : "s"}
+                            </span>
+                            {g.contestType && (
+                                <span
+                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-slate-800">
+                                    {(g.contestType || "").toUpperCase()}
+                                </span>
+                            )}
+                        </div>
+
+                        {(g.timingPrimary || g.timingSecondary) && (
+                            <div className="mt-1 text-sm sm:text-base text-slate-700">
+                                {g.timingPrimary ? <span className="mr-3">{g.timingPrimary}</span> : null}
+                                {g.timingSecondary ? <span>{g.timingSecondary}</span> : null}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bigger cards grid: fewer columns on large screens so each card is larger */}
+                <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {g.entries.map((e) => renderChallengeCard(e))}
+                </div>
+            </section>
+        );
+    };
+
     return (
-        <div className="min-h-screen w-full bg-slate-50 font-sans flex flex-col">
+        <div
+            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
             <Navbar/>
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
                 <div className="w-full">
                     <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Competition
-                                Challenges</h1>
-                            <p className="mt-1 text-sm text-slate-500">Join time-bound contests and compete on curated
-                                problems.</p>
+                        <div className="min-w-0">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
+                                Competition Challenges
+                            </h1>
                         </div>
+
+                        {filtersActive && (
+                            <div
+                                className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                <FiFilter/>
+                                <span className="font-semibold">Filters active</span>
+                                <button
+                                    type="button"
+                                    onClick={handleClearFilters}
+                                    className="ml-1 rounded-xl border border-slate-200 bg-white/60 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        )}
                     </header>
 
-                    {/* Filters panel */}
-                    <section className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
-                        {/* Top row: LeetCode-like toolbar */}
-                        <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                            {/* Left: Search */}
-                            <div className="flex w-full items-center gap-3 md:w-auto">
-                                <div className="relative w-full md:w-[360px]">
+                    {/* Filters panel (LeetCode-like: search on left, compact filter row that wraps, mobile drawer-like stacking) */}
+                    <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        <div className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                                {/* Search (fixed-ish, keeps left) */}
+                                <div className="min-w-[260px] flex-1 max-w-[680px]">
+                                    <label className="sr-only" htmlFor="competition-search">
+                                        Search competition challenges
+                                    </label>
                                     <input
+                                        id="competition-search"
                                         type="search"
-                                        placeholder="Search challenges..."
+                                        placeholder="Search title, description, category, contest..."
                                         value={search}
                                         onChange={(e) => {
                                             setSearch(e.target.value);
                                             setPage(1);
                                         }}
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        aria-label="Search competition challenges"
                                     />
                                 </div>
+
+                                {/* Filters: ALWAYS horizontal. If not enough space -> horizontal scroll */}
+                                <div className="min-w-0 flex-1">
+                                    <div
+                                        className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                        role="group"
+                                        aria-label="Competition filters"
+                                    >
+                                        <label className="sr-only" htmlFor="difficulty-filter">Difficulty filter</label>
+                                        <select
+                                            id="difficulty-filter"
+                                            value={difficultyFilter}
+                                            onChange={(e) => {
+                                                setDifficultyFilter(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[160px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="">Difficulty</option>
+                                            {difficulties.map((diff) => (
+                                                <option key={diff.id} value={diff.level}>{diff.level}</option>
+                                            ))}
+                                        </select>
+
+                                        <label className="sr-only" htmlFor="category-filter">Category filter</label>
+                                        <select
+                                            id="category-filter"
+                                            value={categoryFilter}
+                                            onChange={(e) => {
+                                                setCategoryFilter(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[170px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="">Category</option>
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                            ))}
+                                        </select>
+
+                                        <label className="sr-only" htmlFor="status-filter">Status filter</label>
+                                        <select
+                                            id="status-filter"
+                                            value={statusFilter}
+                                            onChange={(e) => {
+                                                setStatusFilter(e.target.value as ContestStatus | "ALL");
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[150px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="ALL">Status</option>
+                                            <option value="ONGOING">Ongoing</option>
+                                            <option value="UPCOMING">Upcoming</option>
+                                            <option value="ENDED">Ended</option>
+                                            <option value="NONE">No contest</option>
+                                        </select>
+
+                                        <label className="sr-only" htmlFor="contest-type-filter">Contest type filter</label>
+                                        <select
+                                            id="contest-type-filter"
+                                            value={contestTypeFilter}
+                                            onChange={(e) => {
+                                                setContestTypeFilter(e.target.value as ContestTypeFilter);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[170px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="ALL">Contest type</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+
+                                        <label className="sr-only" htmlFor="contest-name-filter">Contest name filter</label>
+                                        <select
+                                            id="contest-name-filter"
+                                            value={contestNameFilter}
+                                            onChange={(e) => {
+                                                setContestNameFilter(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[210px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="ALL">Contest</option>
+                                            {contestOptions.map((c) => (
+                                                <option key={`${c.name}-${c.type ?? ""}`} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+
+                                        <label className="sr-only" htmlFor="participation-filter">Participation filter</label>
+                                        <select
+                                            id="participation-filter"
+                                            value={groupFilter}
+                                            onChange={(e) => {
+                                                setGroupFilter(e.target.value as GroupFilter);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 w-[180px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="ALL">Participation</option>
+                                            <option value="GROUP_ONLY">Group only</option>
+                                            <option value="SOLO_ONLY">Open</option>
+                                        </select>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleClearFilters}
+                                            className="h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            Reset
+                                        </button>
+
+                                        <div
+                                            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm sm:text-base text-slate-800"
+                                            aria-live="polite"
+                                        >
+                                            <span className="text-slate-600">Total:</span>
+                                            <span className="ml-2 font-semibold text-slate-900">{total}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-
-                            {/* Right: dropdowns + reset + total */}
-                            <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                                {/* Difficulty */}
-                                <div className="relative">
-                                    <select
-                                        value={difficultyFilter}
-                                        onChange={(e) => {
-                                            setDifficultyFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="">Difficulty</option>
-                                        {difficulties.map((diff) => (
-                                            <option key={diff.id} value={diff.level}>
-                                                {diff.level}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Category */}
-                                <div className="relative">
-                                    <select
-                                        value={categoryFilter}
-                                        onChange={(e) => {
-                                            setCategoryFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="">Category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>
-                                                {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Status */}
-                                <div className="relative">
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(e) => {
-                                            setStatusFilter(e.target.value as ContestStatus | "ALL");
-                                            setPage(1);
-                                        }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="ALL">Status</option>
-                                        <option value="ONGOING">Ongoing</option>
-                                        <option value="UPCOMING">Upcoming</option>
-                                        <option value="ENDED">Ended</option>
-                                        <option value="NONE">No contest</option>
-                                    </select>
-                                </div>
-
-                                {/* Group */}
-                                <div className="relative">
-                                    <select
-                                        value={groupFilter}
-                                        onChange={(e) => {
-                                            setGroupFilter(e.target.value as GroupFilter);
-                                            setPage(1);
-                                        }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="ALL">Participation</option>
-                                        <option value="GROUP_ONLY">Group only</option>
-                                        <option value="SOLO_ONLY">Open</option>
-                                    </select>
-                                </div>
-
-                                {/* Clear */}
-                                <button
-                                    type="button"
-                                    onClick={handleClearFilters}
-                                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                >
-                                    Reset
-                                </button>
-
-                                {/* Total */}
-                                <span
-                                    className="ml-1 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
-                  <span className="text-slate-500">Total:</span>
-                  <span className="ml-1 font-semibold text-slate-900">{total}</span>
-                </span>
-                            </div>
-                        </div>
-
-                        {/* Bottom row: chips */}
-                        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2.5">
-                            {/* Difficulty chips */}
-                            {["Easy", "Moderate", "Hard"].map((lvl) => {
-                                const active = difficultyFilter === lvl;
-                                return (
-                                    <button
-                                        key={lvl}
-                                        type="button"
-                                        onClick={() => {
-                                            setDifficultyFilter(active ? "" : lvl);
-                                            setPage(1);
-                                        }}
-                                        className={[
-                                            "rounded-full border px-3 py-1 text-xs",
-                                            active
-                                                ? "border-slate-900 bg-slate-900 text-white"
-                                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                                        ].join(" ")}
-                                    >
-                                        {lvl}
-                                    </button>
-                                );
-                            })}
-
-                            <span className="mx-1 h-5 w-px bg-slate-200"/>
-
-                            {STATUS_OPTIONS.map((opt) => {
-                                const active = statusFilter === opt.key;
-
-                                return (
-                                    <button
-                                        key={opt.key}
-                                        type="button"
-                                        onClick={() => {
-                                            setStatusFilter(opt.key);
-                                            setPage(1);
-                                        }}
-                                        className={[
-                                            "rounded-full border px-3 py-1 text-xs",
-                                            active
-                                                ? "border-slate-900 bg-slate-900 text-white"
-                                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                                        ].join(" ")}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                );
-                            })}
                         </div>
                     </section>
 
-                    {/* Alerts / status */}
                     {loading && (
                         <div
-                            className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                            className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                             Loading competition challenges...
                         </div>
                     )}
                     {error && (
                         <div
-                            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+                            className="mb-4 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-red-900 shadow-sm backdrop-blur-xl">
                             {error}
                         </div>
                     )}
 
-                    {/* List */}
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
                                 <div
-                                    className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
-                                    No competition challenges match your filters.
+                                    className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-700 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="text-base md:text-lg font-semibold text-slate-900">No matches</div>
+                                    <div className="mt-1 text-sm md:text-base text-slate-700">
+                                        No competition challenges match your filters. Try resetting or broadening your
+                                        search.
+                                    </div>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="space-y-8">
-                                        {groupedChallenges.ongoing.length > 0 && (
-                                            <section>
-                                                <div className="mb-2 flex items-center justify-between gap-2">
-                                                    <div>
-                                                        <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                                    <div className="space-y-12">
+                                        {groupedOngoing.length > 0 && (
+                                            <section className="space-y-6">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-emerald-800">
                                                             Ongoing Contests
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">Live contests currently
-                                                            accepting submissions.</p>
+                                                        <span
+                                                            className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-emerald-900">
+                                                            LIVE: {byStatus.ongoing.length}
+                                                        </span>
                                                     </div>
-                                                    <span
-                                                        className="text-xs text-emerald-700/80">{groupedChallenges.ongoing.length} live</span>
+                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
+                                                        contest name.</p>
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                                    {groupedChallenges.ongoing.map((entry) => renderChallengeCard(entry))}
+
+                                                <div className="space-y-10">
+                                                    {groupedOngoing.map((g) => renderContestGroup(g, "emerald"))}
                                                 </div>
                                             </section>
                                         )}
 
-                                        {groupedChallenges.upcoming.length > 0 && (
-                                            <section>
-                                                <div className="mb-2 flex items-center justify-between gap-2">
-                                                    <div>
-                                                        <h2 className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                                        {groupedUpcoming.length > 0 && (
+                                            <section className="space-y-6">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-sky-800">
                                                             Upcoming Contests
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">Scheduled contests you can
-                                                            plan for in advance.</p>
+                                                        <span
+                                                            className="inline-flex items-center rounded-full border border-sky-200 bg-sky-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-sky-900">
+                                                            {byStatus.upcoming.length} upcoming
+                                                        </span>
                                                     </div>
-                                                    <span className="text-xs text-sky-700/80">
-                            {groupedChallenges.upcoming.length} upcoming
-                          </span>
+                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
+                                                        contest name.</p>
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                                    {groupedChallenges.upcoming.map((entry) => renderChallengeCard(entry))}
+
+                                                <div className="space-y-10">
+                                                    {groupedUpcoming.map((g) => renderContestGroup(g, "sky"))}
                                                 </div>
                                             </section>
                                         )}
 
-                                        {groupedChallenges.others.length > 0 && (
-                                            <section>
-                                                <div className="mb-2 flex items-center justify-between gap-2">
-                                                    <div>
-                                                        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                                        {groupedOthers.length > 0 && (
+                                            <section className="space-y-6">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-slate-800">
                                                             Other Challenges
                                                         </h2>
-                                                        <p className="text-xs text-slate-500">Practice and past contests
-                                                            you can still solve.</p>
+                                                        <span
+                                                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-slate-900">
+                                                            {byStatus.others.length} listed
+                                                        </span>
                                                     </div>
-                                                    <span
-                                                        className="text-xs text-slate-600/80">{groupedChallenges.others.length} listed</span>
+                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
+                                                        contest name.</p>
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                                    {groupedChallenges.others.map((entry) => renderChallengeCard(entry))}
+
+                                                <div className="space-y-10">
+                                                    {groupedOthers.map((g) => renderContestGroup(g, "slate"))}
                                                 </div>
                                             </section>
                                         )}
@@ -585,38 +804,43 @@ const CompetitionList: React.FC = () => {
 
                                     {/* Pagination */}
                                     <div
-                                        className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                                        className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => onPageChange(page - 1)}
                                                 disabled={page <= 1}
-                                                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                             >
                                                 Prev
                                             </button>
-                                            <span className="text-xs md:text-sm">
-                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
-                                                <span className="font-semibold text-slate-900">{pageCount}</span>
-                      </span>
+                                            <span className="text-sm sm:text-base md:text-lg">
+                                                Page <span
+                                                className="font-extrabold text-slate-900">{page}</span> of{" "}
+                                                <span className="font-extrabold text-slate-900">{pageCount}</span>
+                                            </span>
                                             <button
                                                 onClick={() => onPageChange(page + 1)}
                                                 disabled={page >= pageCount}
-                                                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                             >
                                                 Next
                                             </button>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                                        <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span>Per page</span>
+                                                <span className="font-semibold">Per page</span>
+                                                <label className="sr-only" htmlFor="page-size">
+                                                    Items per page
+                                                </label>
                                                 <select
+                                                    id="page-size"
                                                     value={pageSize}
                                                     onChange={(e) => {
                                                         setPageSize(Number(e.target.value));
                                                         setPage(1);
                                                     }}
-                                                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                                 >
                                                     {pageSizeOptions.map((opt) => (
                                                         <option key={opt} value={opt}>
@@ -625,14 +849,16 @@ const CompetitionList: React.FC = () => {
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="text-slate-500">
+
+                                            <div className="text-slate-700">
                                                 Showing{" "}
-                                                <span
-                                                    className="font-medium text-slate-900">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                                <span className="font-extrabold text-slate-900">
+                                                    {total === 0 ? 0 : (page - 1) * pageSize + 1}
+                                                </span>{" "}
                                                 –{" "}
                                                 <span
-                                                    className="font-medium text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
-                                                <span className="font-medium text-slate-900">{total}</span>
+                                                    className="font-extrabold text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="font-extrabold text-slate-900">{total}</span>
                                             </div>
                                         </div>
                                     </div>

@@ -150,7 +150,7 @@ export const submitSolution = async (
 };
 
 export const submitFlag = async (challengeId: number, value: string) =>
-    submitSolution(challengeId, {value});
+     submitSolution(challengeId, {value});
 
 export const submitTextSolution = async (challengeId: number, content: string) =>
     submitSolution(challengeId, {content});

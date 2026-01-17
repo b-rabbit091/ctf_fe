@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/Navbar";
 import { fetchLeaderboard, getContests } from "./api";
-
 import { LeaderboardEntry, LeaderboardContest, LeaderboardMode } from "./types";
 
 const LeaderboardPage: React.FC = () => {
@@ -99,29 +98,31 @@ const LeaderboardPage: React.FC = () => {
     }, [entries, search]);
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
             <Navbar />
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
                 <div className="w-full">
                     {/* Header */}
-                    <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
+                    <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Leaderboard</h1>
-                            <p className="mt-1 text-xs md:text-sm text-slate-500">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
+                                Leaderboard
+                            </h1>
+                            <p className="mt-1 text-sm sm:text-base text-slate-600">
                                 See who is leading in practice and competition challenges.
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
+                        <div className="flex flex-wrap items-center gap-2 text-sm sm:text-base">
                             <button
                                 type="button"
                                 onClick={() => setMode("practice")}
                                 className={[
-                                    "rounded-full border px-3 py-1.5 transition-colors",
+                                    "rounded-full border px-4 py-2 transition-colors",
                                     mode === "practice"
                                         ? "border-emerald-600 bg-emerald-600 text-white"
-                                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+                                        : "border-slate-200 bg-white/70 text-slate-700 hover:bg-white",
                                 ].join(" ")}
                             >
                                 Practice
@@ -130,10 +131,10 @@ const LeaderboardPage: React.FC = () => {
                                 type="button"
                                 onClick={() => setMode("competition")}
                                 className={[
-                                    "rounded-full border px-3 py-1.5 transition-colors",
+                                    "rounded-full border px-4 py-2 transition-colors",
                                     mode === "competition"
                                         ? "border-sky-600 bg-sky-600 text-white"
-                                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+                                        : "border-slate-200 bg-white/70 text-slate-700 hover:bg-white",
                                 ].join(" ")}
                             >
                                 Competition
@@ -142,21 +143,21 @@ const LeaderboardPage: React.FC = () => {
                     </header>
 
                     {/* Filters */}
-                    <section className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-4 md:px-5 md:py-4 shadow-sm">
+                    <section className="mb-5 rounded-2xl border border-white/30 bg-white/55 px-4 py-4 md:px-5 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                         <div className="flex flex-wrap items-center gap-3">
                             <input
                                 type="search"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Search by username or email…"
-                                className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="h-10 w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
 
                             {mode === "competition" && (
                                 <select
                                     value={selectedContestId ?? ""}
                                     onChange={(e) => setSelectedContestId(e.target.value ? Number(e.target.value) : null)}
-                                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 >
                                     <option value="">All Contests</option>
                                     {contests.map((c) => (
@@ -167,20 +168,20 @@ const LeaderboardPage: React.FC = () => {
                                 </select>
                             )}
 
-                            <div className="ml-auto text-xs text-slate-500">
-                                Showing <span className="font-medium text-slate-800">{filteredEntries.length}</span> players
+                            <div className="ml-auto text-sm sm:text-base text-slate-700">
+                                Showing <span className="font-semibold text-slate-900">{filteredEntries.length}</span> players
                             </div>
                         </div>
                     </section>
 
                     {/* Loading / error */}
                     {loading && (
-                        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                             Loading leaderboard…
                         </div>
                     )}
                     {error && (
-                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4 text-sm sm:text-base text-red-900 shadow-sm backdrop-blur-xl">
                             {error}
                         </div>
                     )}
@@ -189,50 +190,62 @@ const LeaderboardPage: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {filteredEntries.length === 0 ? (
-                                <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-slate-500 shadow-sm">
-                                    No leaderboard data available.
+                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-700 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="text-base md:text-lg font-semibold text-slate-900">No leaderboard data</div>
+                                    <div className="mt-1 text-sm md:text-base text-slate-700">
+                                        Try switching mode or adjusting your search.
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                        <thead className="bg-slate-50">
+                                <div className="overflow-x-auto rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm sm:text-base">
+                                        <thead className="bg-slate-50/60">
                                         <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                 Rank
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                 Player
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                 Score
                                             </th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                 Solved
                                             </th>
                                             {mode === "competition" && (
-                                                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                     Contest
                                                 </th>
                                             )}
-                                            <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-5 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-600">
                                                 Last Submission
                                             </th>
                                         </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100 bg-white">
+
+                                        <tbody className="divide-y divide-slate-100 bg-white/40">
                                         {filteredEntries.map((e) => (
-                                            <tr key={`${e.userId ?? e.username}-${e.rank}`}>
-                                                <td className="px-4 py-2 align-top text-sm font-semibold text-slate-900">#{e.rank}</td>
-                                                <td className="px-4 py-2 align-top">
-                                                    <div className="font-medium text-slate-900">{e.username}</div>
-                                                    {e.email && <div className="text-xs text-slate-500">{e.email}</div>}
+                                            <tr key={`${e.userId ?? e.username}-${e.rank}`} className="hover:bg-white/60">
+                                                <td className="px-5 py-3 align-top text-sm sm:text-base font-semibold text-slate-900 whitespace-nowrap">
+                                                    #{e.rank}
                                                 </td>
-                                                <td className="px-4 py-2 align-top text-sm text-slate-800">{e.score}</td>
-                                                <td className="px-4 py-2 align-top text-sm text-slate-800">{e.solved}</td>
+
+                                                <td className="px-5 py-3 align-top">
+                                                    <div className="text-sm sm:text-base font-medium text-slate-900">{e.username}</div>
+                                                    {e.email && <div className="text-xs sm:text-sm text-slate-600">{e.email}</div>}
+                                                </td>
+
+                                                <td className="px-5 py-3 align-top text-sm sm:text-base text-slate-800">{e.score}</td>
+                                                <td className="px-5 py-3 align-top text-sm sm:text-base text-slate-800">{e.solved}</td>
+
                                                 {mode === "competition" && (
-                                                    <td className="px-4 py-2 align-top text-xs text-slate-700">{e.contest_name || "—"}</td>
+                                                    <td className="px-5 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                        {e.contest_name || "—"}
+                                                    </td>
                                                 )}
-                                                <td className="px-4 py-2 align-top text-xs text-slate-500">
+
+                                                <td className="px-5 py-3 align-top text-xs sm:text-sm text-slate-600 whitespace-nowrap">
                                                     {e.last_submission_at ? new Date(e.last_submission_at).toLocaleString() : "—"}
                                                 </td>
                                             </tr>

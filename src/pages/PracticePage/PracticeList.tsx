@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Navbar from "../../components/Navbar";
 import { getChallenges, getCategories, getDifficulties } from "./practice";
 import { useNavigate } from "react-router-dom";
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiFilter, FiTag } from "react-icons/fi";
 import type { Challenge } from "./types";
 
 /** Truncate text safely */
@@ -131,56 +131,72 @@ const PracticeList: React.FC = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    /** Card renderer (same as your original) */
+    const filtersActive = useMemo(() => {
+        return Boolean(categoryFilter || difficultyTag || debouncedSearch.trim());
+    }, [categoryFilter, difficultyTag, debouncedSearch]);
+
+    /** Card renderer (same functionality; bigger type + glassy like CompetitionList) */
     const renderChallengeCard = (c: Challenge) => {
         const difficulty = c.difficulty?.level || "N/A";
         const category = c.category?.name || "N/A";
 
+        const difficultyLower = String(difficulty || "").toLowerCase();
+
         const difficultyColor =
-            difficulty.toLowerCase() === "easy"
-                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                : difficulty.toLowerCase() === "moderate"
-                    ? "bg-amber-50 text-amber-700 border-amber-100"
-                    : difficulty.toLowerCase() === "hard"
-                        ? "bg-rose-50 text-rose-700 border-rose-100"
-                        : "bg-slate-50 text-slate-600 border-slate-100";
+            difficultyLower === "easy"
+                ? "bg-emerald-100/70 text-emerald-900 border-emerald-200"
+                : difficultyLower === "moderate" || difficultyLower === "medium"
+                    ? "bg-amber-100/70 text-amber-900 border-amber-200"
+                    : difficultyLower === "hard"
+                        ? "bg-rose-100/70 text-rose-900 border-rose-200"
+                        : "bg-slate-100/70 text-slate-800 border-slate-200";
+
+        const cardShell =
+            "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl " +
+            "ring-1 ring-slate-200/50 transition hover:bg-white/70 hover:shadow-md";
 
         return (
-            <article
-                key={c.id}
-                className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-            >
-                <div className="flex flex-1 flex-col p-4">
+            <article key={c.id} className={`flex flex-col ${cardShell}`}>
+                <div className="flex flex-1 flex-col p-6 md:p-7">
                     <div className="flex items-start justify-between gap-3">
-                        <h2 className="line-clamp-2 text-sm md:text-base font-semibold text-slate-900">{c.title}</h2>
+                        <h2 className="line-clamp-2 text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 leading-snug">
+                            {c.title}
+                        </h2>
                     </div>
 
-                    <p className="mt-2 line-clamp-4 text-xs text-slate-600">{truncateText(c.description || "", 200)}</p>
+                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-700 leading-relaxed">
+                        {truncateText(c.description || "", 240)}
+                    </p>
 
-                    <div className="mt-3 flex flex-col gap-1 text-[11px]">
-                        <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-slate-100 bg-slate-50 px-2 py-1 text-slate-600">
-                <span className="mr-1 font-medium">Category:</span>
-                  {category}
-              </span>
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-800">
+              <FiTag size={14} />
+              <span className="font-semibold">Category:</span>
+              <span className="font-medium">{category}</span>
+            </span>
 
-                            <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${difficultyColor}`}>
-                <span className="mr-1 font-medium">Difficulty:</span>
-                                {difficulty}
-              </span>
-                        </div>
+                        <span
+                            className={`inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base ${difficultyColor}`}
+                        >
+              <span className="font-semibold mr-1">Difficulty:</span>
+              <span className="font-medium">{difficulty}</span>
+            </span>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
+                <div className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
                     <button
                         onClick={() => navigate(`/practice/${c.id}`)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+                        className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         aria-label={`View challenge ${c.title}`}
                     >
-                        <FiEye size={16} />
-                        <span>SOLVE</span>
+                        <FiEye size={18} />
+                        <span>Solve</span>
                     </button>
+
+                    <span className="text-xs sm:text-sm md:text-base text-slate-700">
+            Mode: <span className="font-semibold">Practice</span>
+          </span>
                 </div>
             </article>
         );
@@ -189,98 +205,126 @@ const PracticeList: React.FC = () => {
     const activeFiltersCount = (search.trim() ? 1 : 0) + (categoryFilter ? 1 : 0) + (difficultyTag ? 1 : 0);
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 font-sans flex flex-col">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
             <Navbar />
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
                 <div className="w-full">
                     {/* Header */}
-                    <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Practice Challenges</h1>
+                    <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
+                                Practice Challenges
+                            </h1>
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">
-                <span className="text-slate-500">Total:</span>
+                        <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm sm:text-base text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                <span className="text-slate-600">Total:</span>
                 <span className="ml-2 font-semibold text-slate-900">{total}</span>
               </span>
-                            <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
-                <span className="text-slate-500">Filters:</span>
+
+                            <span className="inline-flex items-center rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm sm:text-base text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                <span className="text-slate-600">Filters:</span>
                 <span className="ml-2 font-semibold text-slate-900">{activeFiltersCount}</span>
               </span>
-                        </div>
-                    </header>
 
-                    {/* Minimal toolbar: search + difficulty chips + (one) category dropdown + reset */}
-                    <section className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex flex-col gap-3 p-4">
-                            {/* Search on top */}
-                            <div className="w-full">
-                                <input
-                                    type="search"
-                                    placeholder="Search by title, description, category…"
-                                    value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                />
-                            </div>
-
-                            {/* Controls row */}
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                {/* Difficulty chips (no dropdown) */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {["Easy", "Moderate", "Hard"].map((lvl) => {
-                                        const active = difficultyTag === (lvl as any);
-                                        return (
-                                            <button
-                                                key={lvl}
-                                                type="button"
-                                                onClick={() => {
-                                                    setDifficultyTag(active ? "" : (lvl as any));
-                                                    setPage(1);
-                                                }}
-                                                className={[
-                                                    "rounded-full border px-3 py-1 text-xs",
-                                                    active
-                                                        ? "border-slate-900 bg-slate-900 text-white"
-                                                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                                                ].join(" ")}
-                                            >
-                                                {lvl}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Right side: only one dropdown (Category) + Reset */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <select
-                                        value={categoryFilter}
-                                        onChange={(e) => {
-                                            setCategoryFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="">All categories</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>
-                                                {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-
+                            {filtersActive && (
+                                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm sm:text-base text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <FiFilter />
+                                    <span className="font-semibold">Filters active</span>
                                     <button
                                         type="button"
                                         onClick={handleClearFilters}
-                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="ml-1 rounded-xl border border-slate-200 bg-white/60 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                     >
                                         Reset
                                     </button>
+                                </div>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Toolbar: search + chips + category + reset (bigger type, glassy, responsive like CompetitionList) */}
+                    <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        <div className="px-4 py-4">
+                            <div className="flex flex-col gap-3">
+                                {/* Search */}
+                                <div className="w-full">
+                                    <label className="sr-only" htmlFor="practice-search">
+                                        Search practice challenges
+                                    </label>
+                                    <input
+                                        id="practice-search"
+                                        type="search"
+                                        placeholder="Search title, description, category…"
+                                        value={search}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        aria-label="Search practice challenges"
+                                    />
+                                </div>
+
+                                {/* Controls row */}
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    {/* Difficulty chips */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {(["Easy", "Moderate", "Hard"] as const).map((lvl) => {
+                                            const active = difficultyTag === lvl;
+                                            return (
+                                                <button
+                                                    key={lvl}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDifficultyTag(active ? "" : lvl);
+                                                        setPage(1);
+                                                    }}
+                                                    className={[
+                                                        "rounded-full border px-4 py-2 text-sm sm:text-base font-semibold transition",
+                                                        active
+                                                            ? "border-slate-900 bg-slate-900 text-white"
+                                                            : "border-slate-200 bg-white/70 text-slate-800 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                                                    ].join(" ")}
+                                                >
+                                                    {lvl}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Right side: Category + Reset */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <label className="sr-only" htmlFor="practice-category-filter">
+                                            Category filter
+                                        </label>
+                                        <select
+                                            id="practice-category-filter"
+                                            value={categoryFilter}
+                                            onChange={(e) => {
+                                                setCategoryFilter(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            className="h-10 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            <option value="">All categories</option>
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.name}>
+                                                    {cat.name}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleClearFilters}
+                                            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -288,12 +332,12 @@ const PracticeList: React.FC = () => {
 
                     {/* Alerts */}
                     {loading && (
-                        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                             Loading challenges...
                         </div>
                     )}
                     {error && (
-                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-red-900 shadow-sm backdrop-blur-xl">
                             {error}
                         </div>
                     )}
@@ -302,48 +346,56 @@ const PracticeList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div className="rounded-lg border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
-                                    No challenges match your filters.
+                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-700 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="text-base md:text-lg font-semibold text-slate-900">No matches</div>
+                                    <div className="mt-1 text-sm md:text-base text-slate-700">
+                                        No practice challenges match your filters. Try resetting or broadening your search.
+                                    </div>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                    {/* Bigger cards grid like CompetitionList */}
+                                    <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                                         {currentPageItems.map((c) => renderChallengeCard(c))}
                                     </div>
 
                                     {/* Pagination */}
-                                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => onPageChange(page - 1)}
                                                 disabled={page <= 1}
-                                                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                             >
                                                 Prev
                                             </button>
-                                            <span className="text-xs md:text-sm">
-                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
-                                                <span className="font-semibold text-slate-900">{pageCount}</span>
+                                            <span className="text-sm sm:text-base md:text-lg">
+                        Page <span className="font-extrabold text-slate-900">{page}</span> of{" "}
+                                                <span className="font-extrabold text-slate-900">{pageCount}</span>
                       </span>
                                             <button
                                                 onClick={() => onPageChange(page + 1)}
                                                 disabled={page >= pageCount}
-                                                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                             >
                                                 Next
                                             </button>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                                        <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span>Per page</span>
+                                                <span className="font-semibold">Per page</span>
+                                                <label className="sr-only" htmlFor="practice-page-size">
+                                                    Items per page
+                                                </label>
                                                 <select
+                                                    id="practice-page-size"
                                                     value={pageSize}
                                                     onChange={(e) => {
                                                         setPageSize(Number(e.target.value));
                                                         setPage(1);
                                                     }}
-                                                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                                 >
                                                     {pageSizeOptions.map((opt) => (
                                                         <option key={opt} value={opt}>
@@ -353,12 +405,14 @@ const PracticeList: React.FC = () => {
                                                 </select>
                                             </div>
 
-                                            <div className="text-slate-500">
+                                            <div className="text-slate-700">
                                                 Showing{" "}
-                                                <span className="font-medium text-slate-900">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                                <span className="font-extrabold text-slate-900">
+                          {total === 0 ? 0 : (page - 1) * pageSize + 1}
+                        </span>{" "}
                                                 –{" "}
-                                                <span className="font-medium text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
-                                                <span className="font-medium text-slate-900">{total}</span>
+                                                <span className="font-extrabold text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="font-extrabold text-slate-900">{total}</span>
                                             </div>
                                         </div>
                                     </div>
