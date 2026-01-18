@@ -1,15 +1,13 @@
-import React, {useEffect, useRef, useState} from "react";
-import {useParams} from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import {getChallengeById} from "./api";
-import {Challenge} from "./types";
+import { getChallengeById } from "./api";
+import { Challenge } from "./types";
 import CompetitionDescription from "./CompetitionDescription";
 import CompetitionAnswerSection from "./CompetitionAnswerSection";
 import CompetitionPreviousSubmissions from "./CompetitionPreviousSubmissions";
 
-
-const clamp = (v: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, v));
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 const STORAGE_KEY = "competition_split_right_ratio_v1";
 const LG_BREAKPOINT = 1024; // Tailwind lg
@@ -50,23 +48,16 @@ const readStoredRatio = (): number | null => {
     }
 };
 
-/* ---------- component ---------- */
-
 const CompetitionPage: React.FC = () => {
-    const {id} = useParams<{ id: string }>();
+    const { id } = useParams<{ id: string }>();
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] =
-        useState<"description" | "submissions">("description");
+    const [activeTab, setActiveTab] = useState<"description" | "submissions">("description");
 
     const isDesktop = useIsDesktop();
-
-    // same split behavior as PracticePage
-    const [rightRatio, setRightRatio] = useState<number>(
-        () => readStoredRatio() ?? 0.5
-    );
+    const [rightRatio, setRightRatio] = useState<number>(() => readStoredRatio() ?? 0.5);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
     const dragRef = useRef({
@@ -97,10 +88,7 @@ const CompetitionPage: React.FC = () => {
     /* ---------- persist splitter ratio ---------- */
     useEffect(() => {
         try {
-            localStorage.setItem(
-                STORAGE_KEY,
-                String(clamp(rightRatio, 0.25, 0.6))
-            );
+            localStorage.setItem(STORAGE_KEY, String(clamp(rightRatio, 0.25, 0.6)));
         } catch {
             /* ignore */
         }
@@ -128,9 +116,7 @@ const CompetitionPage: React.FC = () => {
             const dx = e.clientX - dragRef.current.startX;
             const delta = dx / total;
 
-            setRightRatio(
-                clamp(dragRef.current.startRatio - delta, 0.25, 0.6)
-            );
+            setRightRatio(clamp(dragRef.current.startRatio - delta, 0.25, 0.6));
         };
 
         const onUp = () => {
@@ -151,61 +137,79 @@ const CompetitionPage: React.FC = () => {
     const navHeightPx = 64;
 
     /* ---------- states ---------- */
-    if (loading)
-        return <p className="p-6 text-gray-500">Loading challenge...</p>;
-    if (error || !challenge)
-        return <p className="p-6 text-red-500">{error}</p>;
+    if (loading) {
+        return (
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
+                <Navbar />
+                <main className="flex-1 w-full p-0">
+                    <div className="border border-white/30 bg-white/55 p-0 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        Loading challenge...
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (error || !challenge) {
+        return (
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
+                <Navbar />
+                <main className="flex-1 w-full p-0">
+                    <div className="border border-rose-200 bg-rose-50/80 p-0 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
+                        {error}
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     const leftPct = `${((1 - rightRatio) * 100).toFixed(1)}%`;
     const rightPct = `${(rightRatio * 100).toFixed(1)}%`;
 
+    const pageShell =
+        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 text-sm font-sans flex flex-col";
+
+    // NOTE: rounded-none + p-0 so panels touch edge-to-edge with no gaps.
+    const paneShell =
+        "flex min-w-0 flex-col overflow-hidden rounded-none border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50";
+
+    const tabBtn = (active: boolean) =>
+        [
+            "rounded-full border px-2 py-0.5 text-[11px] sm:text-xs font-normal transition leading-snug",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-0",
+            active
+                ? "border-blue-200/70 bg-blue-50 text-blue-700"
+                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
+        ].join(" ");
+
     return (
-        <div className="min-h-screen w-full bg-[#f5f5f5] text-sm font-sans">
-            <Navbar/>
+        <div className={pageShell}>
+            <Navbar />
 
             <div
                 ref={containerRef}
-                className="w-full flex flex-col lg:flex-row gap-3 lg:gap-0"
-                style={isDesktop ? {height: `calc(100vh - ${navHeightPx}px)`} : undefined}
+                className="w-full flex flex-col lg:flex-row gap-0 p-0"
+                style={isDesktop ? { height: `calc(100vh - ${navHeightPx}px)` } : undefined}
             >
                 {/* LEFT PANE */}
-                <div
-                    className="flex min-w-0 flex-col overflow-hidden border border-gray-200 bg-white"
-                    style={isDesktop ? {width: leftPct} : undefined}
-                >
-                    {/* Tabs */}
-                    <div className="flex shrink-0 border-b border-gray-200">
-                        <button
-                            className={`px-6 py-3 font-medium ${
-                                activeTab === "description"
-                                    ? "border-b-2 border-blue-600 text-blue-600"
-                                    : "text-gray-500 hover:text-gray-700"
-                            }`}
-                            onClick={() => setActiveTab("description")}
-                        >
-                            Description
-                        </button>
+                <div className={paneShell} style={isDesktop ? { width: leftPct } : undefined}>
+                    <div className="shrink-0 p-0 bg-white/40 backdrop-blur-xl">
+                        <div className="flex flex-wrap items-center gap-1 p-1">
+                            <button className={tabBtn(activeTab === "description")} onClick={() => setActiveTab("description")}>
+                                Description
+                            </button>
 
-                        <button
-                            className={`ml-4 px-6 py-3 font-medium ${
-                                activeTab === "submissions"
-                                    ? "border-b-2 border-blue-600 text-blue-600"
-                                    : "text-gray-500 hover:text-gray-700"
-                            }`}
-                            onClick={() => setActiveTab("submissions")}
-                        >
-                            Previous Submissions
-                        </button>
+                            <button className={tabBtn(activeTab === "submissions")} onClick={() => setActiveTab("submissions")}>
+                                Previous Submissions
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Scroll area */}
-                    <div className={isDesktop ? "min-h-0 flex-1 overflow-y-auto p-4" : "p-4"}>
-                        {activeTab === "description" && (
-                            <CompetitionDescription challenge={challenge}/>
-                        )}
-                        {activeTab === "submissions" && (
-                            <CompetitionPreviousSubmissions challengeId={challenge.id}/>
-                        )}
+                    <div className="h-px w-full bg-slate-200/70" />
+
+                    <div className={isDesktop ? "min-h-0 flex-1 overflow-y-auto p-0" : "p-0"}>
+                        {activeTab === "description" && <CompetitionDescription challenge={challenge} />}
+                        {activeTab === "submissions" && <CompetitionPreviousSubmissions challengeId={challenge.id} />}
                     </div>
                 </div>
 
@@ -214,28 +218,28 @@ const CompetitionPage: React.FC = () => {
                     <div className="hidden lg:flex items-stretch">
                         <div
                             onMouseDown={startDrag}
-                            className="group relative w-3 cursor-col-resize"
+                            className="group relative w-2 cursor-col-resize"
                             role="separator"
                             aria-orientation="vertical"
+                            aria-label="Resize panels"
+                            title="Drag to resize"
                         >
-                            <div
-                                className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gray-200 group-hover:bg-blue-400"/>
-                            <div className="absolute inset-0"/>
+                            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-slate-200/70 group-hover:bg-blue-300/70" />
+                            <div className="absolute inset-0" />
                         </div>
                     </div>
                 )}
 
                 {/* RIGHT PANE */}
-                <div
-                    className="flex min-w-0 flex-col overflow-hidden border border-gray-200 bg-white"
-                    style={isDesktop ? {width: rightPct} : undefined}
-                >
-                    <div className="shrink-0 border-b border-gray-200 px-4 py-3 font-medium text-gray-700">
-                        Submit
+                <div className={paneShell} style={isDesktop ? { width: rightPct } : undefined}>
+                    <div className="shrink-0 p-0 bg-white/40 backdrop-blur-xl">
+                        <div className="text-sm sm:text-base font-normal text-slate-700 p-1">Submit</div>
                     </div>
 
-                    <div className={isDesktop ? "min-h-0 flex-1 overflow-y-auto p-4" : "p-4"}>
-                        <CompetitionAnswerSection challenge={challenge}/>
+                    <div className="h-px w-full bg-slate-200/70" />
+
+                    <div className={isDesktop ? "min-h-0 flex-1 overflow-y-auto p-0" : "p-0"}>
+                        <CompetitionAnswerSection challenge={challenge} />
                     </div>
                 </div>
             </div>

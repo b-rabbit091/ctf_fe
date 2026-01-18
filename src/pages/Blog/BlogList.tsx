@@ -85,16 +85,21 @@ const BlogList: React.FC = () => {
         });
     }, [blogs]);
 
+    const glassCard =
+        "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50";
+
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col font-sans">
             <Navbar />
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+            <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 xl:px-5 py-4 md:py-5">
                 {/* Header */}
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Blog</h1>
-                        <p className="mt-1 text-sm text-slate-500">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight">
+                            Blog
+                        </h1>
+                        <p className="mt-1 text-sm sm:text-base text-slate-600">
                             Articles, writeups, and updates. Open a post to read the full story.
                         </p>
                     </div>
@@ -103,7 +108,7 @@ const BlogList: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => navigate("/blogs/new")}
-                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm sm:text-base font-normal text-emerald-700 shadow-sm backdrop-blur-xl transition hover:bg-emerald-50/85 focus:outline-none focus:ring-2 focus:ring-emerald-300/60"
                             title="Create New Blog"
                         >
                             <FiPlus size={16} />
@@ -114,43 +119,47 @@ const BlogList: React.FC = () => {
 
                 {/* Status */}
                 {error && (
-                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
                         {error}
                     </div>
                 )}
 
                 {loading && (
-                    <div className="rounded-lg border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700 shadow-sm">
-                        Loading blogs...
+                    <div className={glassCard}>
+                        <div className="px-4 md:px-5 py-4 text-sm sm:text-base text-slate-600">
+                            Loading blogs…
+                        </div>
                     </div>
                 )}
 
                 {!loading && !error && (
                     <>
                         {items.length === 0 ? (
-                            <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
-                                <p className="text-sm text-slate-500">
-                                    No blog posts yet.{" "}
-                                    {isAdmin && (
-                                        <button
-                                            onClick={() => navigate("/blogs/new")}
-                                            className="font-medium text-emerald-600 hover:text-emerald-700"
-                                        >
-                                            Write the first one.
-                                        </button>
-                                    )}
-                                </p>
+                            <div className={glassCard}>
+                                <div className="px-6 py-10 text-center">
+                                    <p className="text-sm sm:text-base text-slate-600">
+                                        No blog posts yet.{" "}
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => navigate("/blogs/new")}
+                                                className="text-emerald-700 hover:text-emerald-800 underline underline-offset-4 decoration-emerald-300/70"
+                                            >
+                                                Write the first one.
+                                            </button>
+                                        )}
+                                    </p>
+                                </div>
                             </div>
                         ) : (
-                            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                 {items.map((blog) => (
                                     <article
                                         key={blog.id}
-                                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                                        className={`${glassCard} group flex h-full flex-col overflow-hidden transition hover:bg-white/70`}
                                     >
                                         {/* Cover */}
                                         {blog.cover_image && typeof blog.cover_image === "string" && (
-                                            <div className="relative h-40 overflow-hidden bg-slate-100">
+                                            <div className="relative h-40 overflow-hidden bg-slate-100/70">
                                                 <img
                                                     src={blog.cover_image}
                                                     alt={blog.title}
@@ -161,21 +170,25 @@ const BlogList: React.FC = () => {
                                         )}
 
                                         {/* Content */}
-                                        <div className="flex flex-1 flex-col px-4 py-3">
-                                            <div className="mb-2">
-                                                <h2 className="line-clamp-2 text-base font-semibold text-slate-900">{blog.title}</h2>
-                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
+                                        <div className="flex flex-1 flex-col px-4 md:px-5 py-4">
+                                            <div className="mb-2 min-w-0">
+                                                <h2 className="line-clamp-2 text-base md:text-lg font-normal text-slate-700">
+                                                    {blog.title}
+                                                </h2>
+                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-slate-500">
                                                     {blog.formattedDate}
                                                 </div>
                                             </div>
 
-                                            <p className="mt-1 flex-1 text-sm text-slate-600 line-clamp-4">{blog.excerpt}</p>
+                                            <p className="mt-1 flex-1 text-sm sm:text-base text-slate-600 line-clamp-4">
+                                                {blog.excerpt}
+                                            </p>
 
                                             {/* Actions */}
-                                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
+                                            <div className="mt-3 flex items-center justify-between border-t border-slate-200/70 pt-3">
                                                 <Link
                                                     to={`/blogs/${blog.id}`}
-                                                    className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+                                                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/50 px-3 py-2 text-sm font-normal text-slate-700 shadow-sm transition hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-slate-300/60"
                                                     title="Read Full Blog"
                                                 >
                                                     <FiEye size={16} />
@@ -187,7 +200,7 @@ const BlogList: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => navigate(`/blogs/edit/${blog.id}`)}
-                                                            className="inline-flex items-center text-xs text-amber-600 hover:text-amber-700 focus:outline-none"
+                                                            className="inline-flex items-center justify-center rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-sm font-normal text-amber-700 shadow-sm transition hover:bg-amber-50/85 focus:outline-none focus:ring-2 focus:ring-amber-300/60"
                                                             title="Edit Blog"
                                                         >
                                                             <FiEdit size={16} />
@@ -195,7 +208,7 @@ const BlogList: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => onDelete(blog.id)}
-                                                            className="inline-flex items-center text-xs text-red-600 hover:text-red-700 focus:outline-none"
+                                                            className="inline-flex items-center justify-center rounded-2xl border border-rose-200/70 bg-rose-50/70 px-3 py-2 text-sm font-normal text-rose-700 shadow-sm transition hover:bg-rose-50/85 focus:outline-none focus:ring-2 focus:ring-rose-300/60"
                                                             title="Delete Blog"
                                                         >
                                                             <FiTrash2 size={16} />

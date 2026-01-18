@@ -9,7 +9,6 @@ export interface DifficultyBreakdown {
     Easy: number;
     Medium: number;
     Hard: number;
-    Unknown: number;
 }
 
 export interface CategoryStat {

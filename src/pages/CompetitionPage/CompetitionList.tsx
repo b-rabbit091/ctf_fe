@@ -1,10 +1,10 @@
 // src/pages/CompetePage/CompetitionList.tsx
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/Navbar";
-import {getChallenges, getCategories, getDifficulties} from "./api";
-import {useNavigate} from "react-router-dom";
-import {FiEye, FiUsers, FiTag, FiFilter} from "react-icons/fi";
-import {Challenge} from "./types";
+import { getChallenges, getCategories, getDifficulties } from "./api";
+import { useNavigate } from "react-router-dom";
+import { FiEye, FiUsers, FiTag, FiFilter } from "react-icons/fi";
+import { Challenge } from "./types";
 
 /** Truncate text safely */
 const truncateText = (text: string, maxLength: number) =>
@@ -23,6 +23,31 @@ function useDebouncedValue<T>(value: T, delay = 300) {
 type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED" | "NONE";
 type GroupFilter = "ALL" | "GROUP_ONLY" | "SOLO_ONLY";
 type ContestTypeFilter = "ALL" | "daily" | "weekly" | "monthly" | "custom";
+
+/** LeetCode-like tag options */
+const DIFFICULTY_TAGS = ["Easy", "Medium", "Hard"] as const;
+
+const STATUS_TAGS: Array<{ label: string; value: ContestStatus | "ALL" }> = [
+    { label: "All", value: "ALL" },
+    { label: "Ongoing", value: "ONGOING" },
+    { label: "Upcoming", value: "UPCOMING" },
+    { label: "Ended", value: "ENDED" },
+    { label: "No contest", value: "NONE" },
+];
+
+const CONTEST_TYPE_TAGS: Array<{ label: string; value: ContestTypeFilter }> = [
+    { label: "All", value: "ALL" },
+    { label: "Daily", value: "daily" },
+    { label: "Weekly", value: "weekly" },
+    { label: "Monthly", value: "monthly" },
+    { label: "Custom", value: "custom" },
+];
+
+const PARTICIPATION_TAGS: Array<{ label: string; value: GroupFilter }> = [
+    { label: "All", value: "ALL" },
+    { label: "Group only", value: "GROUP_ONLY" },
+    { label: "Open", value: "SOLO_ONLY" },
+];
 
 interface ContestMeta {
     label: string;
@@ -54,7 +79,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
 
     const baseNone: ContestMeta = {
         label: "NO CONTEST",
-        badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
+        badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
         timingPrimary: null,
         timingSecondary: null,
         status: "NONE",
@@ -84,7 +109,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
         return {
             label: "SCHEDULED",
-            badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
+            badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
             timingPrimary: startIso ? `Opens: ${formatDateTimeLocal(startIso)}` : null,
             timingSecondary: endIso ? `Ends: ${formatDateTimeLocal(endIso)}` : null,
             status: "UPCOMING",
@@ -99,7 +124,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (nowMs < startMs) {
         return {
             label: "UPCOMING",
-            badgeClass: "bg-sky-100/70 text-sky-800 border-sky-200",
+            badgeClass: "bg-sky-100/70 text-sky-700 border-sky-200/70",
             timingPrimary: `Opens: ${formatDateTimeLocal(startIso!)}`,
             timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "UPCOMING",
@@ -114,7 +139,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (nowMs >= startMs && nowMs < endMs) {
         return {
             label: "ONGOING",
-            badgeClass: "bg-emerald-100/70 text-emerald-800 border-emerald-200",
+            badgeClass: "bg-emerald-100/70 text-emerald-700 border-emerald-200/70",
             timingPrimary: null,
             timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "ONGOING",
@@ -128,7 +153,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
 
     return {
         label: "ENDED",
-        badgeClass: "bg-slate-100/70 text-slate-700 border-slate-200",
+        badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
         timingPrimary: null,
         timingSecondary: `Ended: ${formatDateTimeLocal(endIso!)}`,
         status: "ENDED",
@@ -224,7 +249,7 @@ const CompetitionList: React.FC = () => {
                 const [cats, diffs, chals] = await Promise.all([
                     getCategories(),
                     getDifficulties(),
-                    getChallenges({type: "competition"}),
+                    getChallenges({ type: "competition" }),
                 ]);
                 if (!mounted) return;
                 setCategories(cats || []);
@@ -252,12 +277,13 @@ const CompetitionList: React.FC = () => {
             const ac = c?.active_contest;
             if (!ac?.name) return;
             const key = String(ac.id ?? ac.slug ?? ac.name);
-            if (!seen.has(key)) seen.set(key, {
-                name: ac.name,
-                type: ac.contest_type ?? null,
-                slug: ac.slug ?? null,
-                id: ac.id
-            });
+            if (!seen.has(key))
+                seen.set(key, {
+                    name: ac.name,
+                    type: ac.contest_type ?? null,
+                    slug: ac.slug ?? null,
+                    id: ac.id,
+                });
         });
         return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
     }, [allChallenges]);
@@ -330,13 +356,13 @@ const CompetitionList: React.FC = () => {
 
         currentPageItems.forEach((c) => {
             const meta = getContestMeta(c);
-            const entry = {challenge: c, contest: meta};
+            const entry = { challenge: c, contest: meta };
             if (meta.status === "ONGOING") ongoing.push(entry);
             else if (meta.status === "UPCOMING") upcoming.push(entry);
             else others.push(entry);
         });
 
-        return {ongoing, upcoming, others};
+        return { ongoing, upcoming, others };
     }, [currentPageItems]);
 
     const groupedOngoing = useMemo(() => groupByContestName(byStatus.ongoing), [byStatus.ongoing]);
@@ -357,10 +383,10 @@ const CompetitionList: React.FC = () => {
     const onPageChange = (newPage: number) => {
         if (newPage < 1 || newPage > pageCount) return;
         setPage(newPage);
-        window.scrollTo({top: 0, behavior: "smooth"});
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const renderChallengeCard = ({challenge: c, contest}: { challenge: Challenge; contest: ContestMeta }) => {
+    const renderChallengeCard = ({ challenge: c, contest }: { challenge: Challenge; contest: ContestMeta }) => {
         const cc: any = c;
 
         const difficulty = cc.difficulty?.level || "N/A";
@@ -373,18 +399,17 @@ const CompetitionList: React.FC = () => {
 
         const difficultyColor =
             difficultyLower === "easy"
-                ? "bg-emerald-100/70 text-emerald-900 border-emerald-200"
+                ? "bg-emerald-100/70 text-emerald-700 border-emerald-200/70"
                 : difficultyLower === "medium"
-                    ? "bg-amber-100/70 text-amber-900 border-amber-200"
+                    ? "bg-amber-100/70 text-amber-700 border-amber-200/70"
                     : difficultyLower === "hard"
-                        ? "bg-rose-100/70 text-rose-900 border-rose-200"
-                        : "bg-slate-100/70 text-slate-800 border-slate-200";
+                        ? "bg-rose-100/70 text-rose-700 border-rose-200/70"
+                        : "bg-slate-100/70 text-slate-600 border-slate-200/70";
 
         const groupBadgeClass = isGroupOnly
-            ? "bg-indigo-100/70 text-indigo-900 border-indigo-200"
-            : "bg-slate-100/70 text-slate-800 border-slate-200";
+            ? "bg-indigo-100/70 text-indigo-700 border-indigo-200/70"
+            : "bg-slate-100/70 text-slate-600 border-slate-200/70";
 
-        // Bigger card (more padding + slightly larger type), still glassy + responsive
         const cardShell =
             "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl " +
             "ring-1 ring-slate-200/50 transition hover:bg-white/70 hover:shadow-md";
@@ -393,72 +418,70 @@ const CompetitionList: React.FC = () => {
             <article key={cc.id} className={`flex flex-col ${cardShell}`}>
                 <div className="flex flex-1 flex-col p-6 md:p-7">
                     <div className="flex items-start justify-between gap-3">
-                        <h3 className="line-clamp-2 text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 leading-snug">
+                        {/* Title is the ONLY thing that is bigger; keep it normal weight */}
+                        <h3 className="line-clamp-2 text-lg sm:text-xl md:text-2xl font-normal text-slate-700 leading-snug">
                             {cc.title}
                         </h3>
 
                         <span
-                            className={`hidden sm:inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-semibold ${contest.badgeClass}`}
+                            className={`hidden sm:inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${contest.badgeClass}`}
                             title="Contest status"
                         >
                             {contest.label}
                         </span>
                     </div>
 
-                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-700 leading-relaxed">
+                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-600 leading-relaxed">
                         {truncateText(cc.description || "", 260)}
                     </p>
 
                     <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                        <span
-                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-800">
-                            <FiTag size={14}/>
-                            <span className="font-semibold">Category:</span>
-                            <span className="font-medium">{category}</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
+                            <FiTag size={14} />
+                            <span>Category:</span>
+                            <span>{category}</span>
                         </span>
 
                         <span
-                            className={`inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base ${difficultyColor}`}>
-                            <span className="font-semibold mr-1">Difficulty:</span>
-                            <span className="font-medium">{difficulty}</span>
+                            className={`inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${difficultyColor}`}
+                        >
+                            <span className="mr-1">Difficulty:</span>
+                            <span>{difficulty}</span>
                         </span>
 
                         <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-semibold ${groupBadgeClass}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${groupBadgeClass}`}
                             title={isGroupOnly ? "Group-only competition" : "Open competition"}
                         >
-                            <FiUsers size={16}/>
+                            <FiUsers size={16} />
                             {isGroupOnly ? "GROUP" : "INDIVIDUAL"}
                         </span>
 
-                        <span
-                            className={`sm:hidden inline-flex items-center rounded-full border px-3.5 py-2 text-xs font-semibold ${contest.badgeClass}`}>
+                        <span className={`sm:hidden inline-flex items-center rounded-full border px-3.5 py-2 text-xs font-normal ${contest.badgeClass}`}>
                             {contest.label}
                         </span>
                     </div>
                 </div>
 
-                <div
-                    className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
                     {isGroupOnly && !canParticipate ? (
-                        <div
-                            className="inline-flex items-center gap-2 text-sm sm:text-base md:text-lg font-medium text-slate-800">
-                            <FiUsers size={18}/>
+                        <div className="inline-flex items-center gap-2 text-sm sm:text-base md:text-lg font-normal text-slate-600">
+                            <FiUsers size={18} />
                             <span>Please create or join a group to participate.</span>
                         </div>
                     ) : (
                         <button
                             onClick={() => navigate(`/compete/${cc.id}`)}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-blue-200/70 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                             aria-label={`Participate in competition challenge ${cc.title}`}
                         >
-                            <FiEye size={18}/>
+                            <FiEye size={18} />
                             <span>Participate</span>
                         </button>
                     )}
 
-                    <span className="text-xs sm:text-sm md:text-base text-slate-700">
-                        Access: <span className="font-semibold">{isGroupOnly ? "Group" : "Open"}</span>
+                    <span className="text-xs sm:text-sm md:text-base text-slate-600">
+                        Access: <span className="text-slate-600">{isGroupOnly ? "Group" : "Open"}</span>
                     </span>
                 </div>
             </article>
@@ -485,36 +508,48 @@ const CompetitionList: React.FC = () => {
         contestTypeFilter,
     ]);
 
+    // Tag chip: no bold, no black backgrounds; pleasant blue when active
+    const tagClass = (active: boolean) =>
+        [
+            "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
+            active
+                ? "border-blue-200/70 bg-blue-50 text-blue-700"
+                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
+        ].join(" ");
+
     const renderContestGroup = (g: ContestGroup, accent: "emerald" | "sky" | "slate") => {
         const chip =
             accent === "emerald"
-                ? "border-emerald-200 bg-emerald-100/70 text-emerald-900"
+                ? "border-emerald-200/70 bg-emerald-100/70 text-emerald-700"
                 : accent === "sky"
-                    ? "border-sky-200 bg-sky-100/70 text-sky-900"
-                    : "border-slate-200 bg-slate-100/70 text-slate-900";
+                    ? "border-sky-200/70 bg-sky-100/70 text-sky-700"
+                    : "border-slate-200/70 bg-slate-100/70 text-slate-600";
 
         return (
-            <section key={g.contestId} className="space-y-4">
+            <section key={g.contestId} className="space-y-6">
+                <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-90" />
+
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 truncate">
+                            <h3 className="text-lg sm:text-xl md:text-2xl font-normal text-slate-700 tracking-tight">
                                 {g.contestName}
                             </h3>
-                            <span
-                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs sm:text-sm md:text-base font-semibold ${chip}`}>
+
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs sm:text-sm md:text-base font-normal ${chip}`}>
                                 {g.entries.length} challenge{g.entries.length === 1 ? "" : "s"}
                             </span>
+
                             {g.contestType && (
-                                <span
-                                    className="inline-flex items-center rounded-full border border-slate-200 bg-white/60 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-slate-800">
+                                <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/60 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600">
                                     {(g.contestType || "").toUpperCase()}
                                 </span>
                             )}
                         </div>
 
                         {(g.timingPrimary || g.timingSecondary) && (
-                            <div className="mt-1 text-sm sm:text-base text-slate-700">
+                            <div className="mt-1 text-sm sm:text-base text-slate-600">
                                 {g.timingPrimary ? <span className="mr-3">{g.timingPrimary}</span> : null}
                                 {g.timingSecondary ? <span>{g.timingSecondary}</span> : null}
                             </div>
@@ -522,7 +557,6 @@ const CompetitionList: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Bigger cards grid: fewer columns on large screens so each card is larger */}
                 <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {g.entries.map((e) => renderChallengeCard(e))}
                 </div>
@@ -531,28 +565,27 @@ const CompetitionList: React.FC = () => {
     };
 
     return (
-        <div
-            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
+            <Navbar />
 
             <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
                 <div className="w-full">
                     <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
+                            {/* Title only: bigger; no bold; avoid slate-900 */}
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight">
                                 Competition Challenges
                             </h1>
                         </div>
 
                         {filtersActive && (
-                            <div
-                                className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                <FiFilter/>
-                                <span className="font-semibold">Filters active</span>
+                            <div className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                <FiFilter />
+                                <span>Filters active</span>
                                 <button
                                     type="button"
                                     onClick={handleClearFilters}
-                                    className="ml-1 rounded-xl border border-slate-200 bg-white/60 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="ml-1 rounded-xl border border-slate-200/70 bg-white/70 px-2 py-1 text-xs font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                 >
                                     Reset
                                 </button>
@@ -560,12 +593,12 @@ const CompetitionList: React.FC = () => {
                         )}
                     </header>
 
-                    {/* Filters panel (LeetCode-like: search on left, compact filter row that wraps, mobile drawer-like stacking) */}
+                    {/* Filters panel */}
                     <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                        <div className="px-4 py-4">
-                            <div className="flex items-center gap-3">
-                                {/* Search (fixed-ish, keeps left) */}
-                                <div className="min-w-[260px] flex-1 max-w-[680px]">
+                        <div className="px-4 py-4 space-y-3">
+                            {/* Row 1 */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="min-w-[260px] flex-1 max-w-[720px]">
                                     <label className="sr-only" htmlFor="competition-search">
                                         Search competition challenges
                                     </label>
@@ -578,145 +611,165 @@ const CompetitionList: React.FC = () => {
                                             setSearch(e.target.value);
                                             setPage(1);
                                         }}
-                                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                         aria-label="Search competition challenges"
                                     />
                                 </div>
 
-                                {/* Filters: ALWAYS horizontal. If not enough space -> horizontal scroll */}
-                                <div className="min-w-0 flex-1">
-                                    <div
-                                        className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                                        role="group"
-                                        aria-label="Competition filters"
+                                <div className="shrink-0">
+                                    <label className="sr-only" htmlFor="category-filter">
+                                        Category filter
+                                    </label>
+                                    <select
+                                        id="category-filter"
+                                        value={categoryFilter}
+                                        onChange={(e) => {
+                                            setCategoryFilter(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="h-10 w-[190px] rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                     >
-                                        <label className="sr-only" htmlFor="difficulty-filter">Difficulty filter</label>
-                                        <select
-                                            id="difficulty-filter"
-                                            value={difficultyFilter}
-                                            onChange={(e) => {
-                                                setDifficultyFilter(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[160px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="">Difficulty</option>
-                                            {difficulties.map((diff) => (
-                                                <option key={diff.id} value={diff.level}>{diff.level}</option>
-                                            ))}
-                                        </select>
+                                        <option value="">Category</option>
+                                        {categories.map((cat) => (
+                                            <option key={cat.id} value={cat.name}>
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                        <label className="sr-only" htmlFor="category-filter">Category filter</label>
-                                        <select
-                                            id="category-filter"
-                                            value={categoryFilter}
-                                            onChange={(e) => {
-                                                setCategoryFilter(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[170px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="">Category</option>
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                            ))}
-                                        </select>
+                                <button
+                                    type="button"
+                                    onClick={handleClearFilters}
+                                    className="h-10 shrink-0 rounded-xl border border-slate-200/70 bg-white/80 px-4 text-sm sm:text-base font-normal text-slate-600 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                >
+                                    Reset
+                                </button>
 
-                                        <label className="sr-only" htmlFor="status-filter">Status filter</label>
-                                        <select
-                                            id="status-filter"
-                                            value={statusFilter}
-                                            onChange={(e) => {
-                                                setStatusFilter(e.target.value as ContestStatus | "ALL");
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[150px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="ALL">Status</option>
-                                            <option value="ONGOING">Ongoing</option>
-                                            <option value="UPCOMING">Upcoming</option>
-                                            <option value="ENDED">Ended</option>
-                                            <option value="NONE">No contest</option>
-                                        </select>
-
-                                        <label className="sr-only" htmlFor="contest-type-filter">Contest type filter</label>
-                                        <select
-                                            id="contest-type-filter"
-                                            value={contestTypeFilter}
-                                            onChange={(e) => {
-                                                setContestTypeFilter(e.target.value as ContestTypeFilter);
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[170px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="ALL">Contest type</option>
-                                            <option value="daily">Daily</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                            <option value="custom">Custom</option>
-                                        </select>
-
-                                        <label className="sr-only" htmlFor="contest-name-filter">Contest name filter</label>
-                                        <select
-                                            id="contest-name-filter"
-                                            value={contestNameFilter}
-                                            onChange={(e) => {
-                                                setContestNameFilter(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[210px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="ALL">Contest</option>
-                                            {contestOptions.map((c) => (
-                                                <option key={`${c.name}-${c.type ?? ""}`} value={c.name}>{c.name}</option>
-                                            ))}
-                                        </select>
-
-                                        <label className="sr-only" htmlFor="participation-filter">Participation filter</label>
-                                        <select
-                                            id="participation-filter"
-                                            value={groupFilter}
-                                            onChange={(e) => {
-                                                setGroupFilter(e.target.value as GroupFilter);
-                                                setPage(1);
-                                            }}
-                                            className="h-10 w-[180px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-sm sm:text-base text-slate-900 shadow-sm hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            <option value="ALL">Participation</option>
-                                            <option value="GROUP_ONLY">Group only</option>
-                                            <option value="SOLO_ONLY">Open</option>
-                                        </select>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleClearFilters}
-                                            className="h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-4 text-sm sm:text-base font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                        >
-                                            Reset
-                                        </button>
-
-                                        <div
-                                            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm sm:text-base text-slate-800"
-                                            aria-live="polite"
-                                        >
-                                            <span className="text-slate-600">Total:</span>
-                                            <span className="ml-2 font-semibold text-slate-900">{total}</span>
-                                        </div>
-                                    </div>
+                                <div
+                                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-slate-50/60 px-3 text-sm sm:text-base text-slate-600"
+                                    aria-live="polite"
+                                >
+                                    <span className="text-slate-500">Total:</span>
+                                    <span className="ml-2 text-slate-600">{total}</span>
                                 </div>
                             </div>
+
+                            {/* Row 2: Tag filters */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                {/* Difficulty */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Difficulty</span>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setDifficultyFilter("");
+                                            setPage(1);
+                                        }}
+                                        className={tagClass(!difficultyFilter)}
+                                    >
+                                        All
+                                    </button>
+
+                                    {DIFFICULTY_TAGS.map((d) => {
+                                        const active = difficultyFilter === d;
+                                        return (
+                                            <button
+                                                key={d}
+                                                type="button"
+                                                onClick={() => {
+                                                    setDifficultyFilter(active ? "" : d);
+                                                    setPage(1);
+                                                }}
+                                                className={tagClass(active)}
+                                            >
+                                                {d}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
+
+                                {/* Status */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Status</span>
+                                    {STATUS_TAGS.map((t) => {
+                                        const active = statusFilter === t.value;
+                                        return (
+                                            <button
+                                                key={t.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setStatusFilter(t.value);
+                                                    setPage(1);
+                                                }}
+                                                className={tagClass(active)}
+                                            >
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Contest type</span>
+                                    {CONTEST_TYPE_TAGS.map((t) => {
+                                        const active = contestTypeFilter === t.value;
+                                        return (
+                                            <button
+                                                key={t.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setContestTypeFilter(t.value);
+                                                    setPage(1);
+                                                }}
+                                                className={tagClass(active)}
+                                            >
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
+
+                                {/* Participation */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Participation</span>
+                                    {PARTICIPATION_TAGS.map((t) => {
+                                        const active = groupFilter === t.value;
+                                        return (
+                                            <button
+                                                key={t.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setGroupFilter(t.value);
+                                                    setPage(1);
+                                                }}
+                                                className={tagClass(active)}
+                                            >
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+
                         </div>
                     </section>
 
                     {loading && (
-                        <div
-                            className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                             Loading competition challenges...
                         </div>
                     )}
                     {error && (
-                        <div
-                            className="mb-4 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-red-900 shadow-sm backdrop-blur-xl">
+                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-rose-700 shadow-sm backdrop-blur-xl">
                             {error}
                         </div>
                     )}
@@ -724,12 +777,10 @@ const CompetitionList: React.FC = () => {
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div
-                                    className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-700 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    <div className="text-base md:text-lg font-semibold text-slate-900">No matches</div>
-                                    <div className="mt-1 text-sm md:text-base text-slate-700">
-                                        No competition challenges match your filters. Try resetting or broadening your
-                                        search.
+                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="text-base md:text-lg font-normal text-slate-700">No matches</div>
+                                    <div className="mt-1 text-sm md:text-base text-slate-600">
+                                        No competition challenges match your filters. Try resetting or broadening your search.
                                     </div>
                                 </div>
                             ) : (
@@ -739,21 +790,17 @@ const CompetitionList: React.FC = () => {
                                             <section className="space-y-6">
                                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-emerald-800">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-emerald-700">
                                                             Ongoing Contests
                                                         </h2>
-                                                        <span
-                                                            className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-emerald-900">
+                                                        <span className="inline-flex items-center rounded-full border border-emerald-200/70 bg-emerald-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-emerald-700">
                                                             LIVE: {byStatus.ongoing.length}
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
-                                                        contest name.</p>
+                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
                                                 </div>
 
-                                                <div className="space-y-10">
-                                                    {groupedOngoing.map((g) => renderContestGroup(g, "emerald"))}
-                                                </div>
+                                                <div className="space-y-10">{groupedOngoing.map((g) => renderContestGroup(g, "emerald"))}</div>
                                             </section>
                                         )}
 
@@ -761,21 +808,17 @@ const CompetitionList: React.FC = () => {
                                             <section className="space-y-6">
                                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-sky-800">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-sky-700">
                                                             Upcoming Contests
                                                         </h2>
-                                                        <span
-                                                            className="inline-flex items-center rounded-full border border-sky-200 bg-sky-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-sky-900">
+                                                        <span className="inline-flex items-center rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-sky-700">
                                                             {byStatus.upcoming.length} upcoming
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
-                                                        contest name.</p>
+                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
                                                 </div>
 
-                                                <div className="space-y-10">
-                                                    {groupedUpcoming.map((g) => renderContestGroup(g, "sky"))}
-                                                </div>
+                                                <div className="space-y-10">{groupedUpcoming.map((g) => renderContestGroup(g, "sky"))}</div>
                                             </section>
                                         )}
 
@@ -783,45 +826,39 @@ const CompetitionList: React.FC = () => {
                                             <section className="space-y-6">
                                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-extrabold uppercase tracking-wide text-slate-800">
+                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-slate-600">
                                                             Other Challenges
                                                         </h2>
-                                                        <span
-                                                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-semibold text-slate-900">
+                                                        <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600">
                                                             {byStatus.others.length} listed
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm sm:text-base text-slate-700">Grouped by
-                                                        contest name.</p>
+                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
                                                 </div>
 
-                                                <div className="space-y-10">
-                                                    {groupedOthers.map((g) => renderContestGroup(g, "slate"))}
-                                                </div>
+                                                <div className="space-y-10">{groupedOthers.map((g) => renderContestGroup(g, "slate"))}</div>
                                             </section>
                                         )}
                                     </div>
 
                                     {/* Pagination */}
-                                    <div
-                                        className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-800 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => onPageChange(page - 1)}
                                                 disabled={page <= 1}
-                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             >
                                                 Prev
                                             </button>
-                                            <span className="text-sm sm:text-base md:text-lg">
-                                                Page <span
-                                                className="font-extrabold text-slate-900">{page}</span> of{" "}
-                                                <span className="font-extrabold text-slate-900">{pageCount}</span>
+                                            <span className="text-sm sm:text-base md:text-lg text-slate-600">
+                                                Page <span className="text-slate-600">{page}</span> of{" "}
+                                                <span className="text-slate-600">{pageCount}</span>
                                             </span>
                                             <button
                                                 onClick={() => onPageChange(page + 1)}
                                                 disabled={page >= pageCount}
-                                                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-sm sm:text-base font-semibold text-slate-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             >
                                                 Next
                                             </button>
@@ -829,7 +866,7 @@ const CompetitionList: React.FC = () => {
 
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold">Per page</span>
+                                                <span className="font-normal text-slate-600">Per page</span>
                                                 <label className="sr-only" htmlFor="page-size">
                                                     Items per page
                                                 </label>
@@ -840,7 +877,7 @@ const CompetitionList: React.FC = () => {
                                                         setPageSize(Number(e.target.value));
                                                         setPage(1);
                                                     }}
-                                                    className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                                 >
                                                     {pageSizeOptions.map((opt) => (
                                                         <option key={opt} value={opt}>
@@ -850,15 +887,14 @@ const CompetitionList: React.FC = () => {
                                                 </select>
                                             </div>
 
-                                            <div className="text-slate-700">
+                                            <div className="text-slate-600">
                                                 Showing{" "}
-                                                <span className="font-extrabold text-slate-900">
+                                                <span className="text-slate-600">
                                                     {total === 0 ? 0 : (page - 1) * pageSize + 1}
                                                 </span>{" "}
                                                 –{" "}
-                                                <span
-                                                    className="font-extrabold text-slate-900">{Math.min(page * pageSize, total)}</span> of{" "}
-                                                <span className="font-extrabold text-slate-900">{total}</span>
+                                                <span className="text-slate-600">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="text-slate-600">{total}</span>
                                             </div>
                                         </div>
                                     </div>

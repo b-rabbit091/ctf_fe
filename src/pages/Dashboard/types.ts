@@ -3,7 +3,7 @@
 export type ISODateString = string;
 
 /* ==== Difficulty ==== */
-export type DifficultyKey = "Easy" | "Medium" | "Hard" | "Unknown";
+export type DifficultyKey = "Easy" | "Medium" | "Hard" ;
 export type DifficultyMap = Record<DifficultyKey, number>;
 
 export interface DifficultyBreakdown extends DifficultyMap {
@@ -29,7 +29,6 @@ export interface SubmissionItem {
     submitted_at: ISODateString; // ISO
 }
 
-/** ✅ utils.ts expects this name */
 export type RecentSubmission = SubmissionItem;
 
 /* ==== Contests ==== */
@@ -82,7 +81,6 @@ export interface DashboardOverview {
     contests: ContestsBlock;
 }
 
-/** ✅ utils.ts expects this name */
 export type DashboardOverviewResponse = DashboardOverview;
 
 /* ==== Admin totals types ==== */
@@ -112,7 +110,6 @@ export interface AdminDashboardTotalsResponse {
     };
 }
 
-/* (Optional) if your UI also expects these */
 export type LoadingState = "idle" | "loading" | "success" | "error";
 export type LoadResult =
     | { ok: true; data: DashboardOverviewResponse }

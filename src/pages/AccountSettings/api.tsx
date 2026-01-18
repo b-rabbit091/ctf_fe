@@ -1,7 +1,7 @@
 import api from "../../api/axios";
 import type {AccountUser, ChangePasswordPayload, UpdateAccountPayload} from "./types";
 
-const API_URL = "/api/users/";
+const API_URL = "/users/";
 
 /**
  * Sample:

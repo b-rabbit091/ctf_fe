@@ -22,7 +22,7 @@ import ResetPassword from "./pages/Auth/ResetPassword";
 import DashboardOverview from "./pages/Dashboard/DashboardOverview";
 import BlogList from "./pages/Blog/BlogList";
 import BlogDetail from "./pages/Blog/BlogDetail";
-import BlogEditor from "./pages/Blog/BlogEditor";
+import AdminBlogEditor from "./pages/Admin/AdminBlogEditor";
 
 import PracticeList from "./pages/PracticePage/PracticeList";
 import PracticeDetail from "./pages/PracticePage";
@@ -48,6 +48,7 @@ import AdminGroupList from "./pages/Admin/AdminGroupList";
 // Keep as-is if that's your project structure.
 import CompetitionCreate from "./pages/CompetitionPage/CompetitionCreate";
 import PracticeCreate from "./pages/PracticePage/PracticeCreate";
+import AdminBlogList from "./pages/Admin/AdminBlogList";
 
 const App: React.FC = () => {
     return (
@@ -68,9 +69,6 @@ const App: React.FC = () => {
 
                             {/* Blogs */}
                             <Route path="/blogs" element={<BlogList />} />
-                            <Route path="/blogs/:id" element={<BlogDetail />} />
-                            <Route path="/blogs/new" element={<BlogEditor />} />
-                            <Route path="/blogs/edit/:id" element={<BlogEditor />} />
 
                             {/* User pages */}
                             <Route path="/dashboard" element={<DashboardOverview />} />
@@ -93,6 +91,10 @@ const App: React.FC = () => {
                                 <Route path="/admin/practice" element={<AdminPracticeList />} />
                                 <Route path="/admin/practice/new" element={<PracticeCreate />} />
                                 <Route path="/admin/practice/:id" element={<AdminPracticeEdit />} />
+
+                                <Route path="/admin/blogs" element={<AdminBlogList />} />
+                                <Route path="/admin/blogs/new" element={<AdminBlogEditor />} />
+                                <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor />} />
 
                                 <Route path="/admin/taxonomy" element={<AdminChallengeMetadata />} />
                                 <Route path="/admin/users" element={<AdminUserList />} />

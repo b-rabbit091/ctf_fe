@@ -1,8 +1,8 @@
-// src/pages/blogs/BlogEditor.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+// src/pages/blogs/AdminBlogEditor.tsx
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import { useAuth } from "../../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
 import {
     FiEye,
     FiSave,
@@ -18,9 +18,10 @@ import {
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
-import { createBlog, updateBlog, getBlogById } from "./api";
+import {createBlog, getBlogById, updateBlog} from "../Blog/api";
 
-export interface BlogEditorProps {}
+export interface BlogEditorProps {
+}
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -51,9 +52,7 @@ const sanitizeHtmlForPreview = (unsafeHtml: string) => {
         const doc = new DOMParser().parseFromString(unsafeHtml || "", "text/html");
 
         // remove dangerous nodes
-        doc
-            .querySelectorAll("script, style, iframe, object, embed, link, meta")
-            .forEach((n) => n.remove());
+        doc.querySelectorAll("script, style, iframe, object, embed, link, meta").forEach((n) => n.remove());
 
         // strip dangerous attrs
         doc.querySelectorAll<HTMLElement>("*").forEach((el) => {
@@ -80,10 +79,10 @@ const sanitizeHtmlForPreview = (unsafeHtml: string) => {
     }
 };
 
-const BlogEditor: React.FC<BlogEditorProps> = () => {
-    const { user } = useAuth();
+const AdminBlogEditor: React.FC<BlogEditorProps> = () => {
+    const {user} = useAuth();
     const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
+    const {id} = useParams<{ id: string }>();
 
     const isEdit = !!id;
     const blogId = isEdit ? Number(id) : null;
@@ -103,13 +102,16 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const [dirty, setDirty] = useState(false);
-    const lastSavedSnapshot = useRef<{ title: string; content: string }>({ title: "", content: "" });
+    const lastSavedSnapshot = useRef<{ title: string; content: string }>({title: "", content: ""});
     const autosaveTimer = useRef<number | null>(null);
 
     const draftKey = useMemo(() => {
         // separate drafts for create vs edit
         return blogId ? `blog_draft_${blogId}` : "blog_draft_new";
     }, [blogId]);
+
+    const glassCard =
+        "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50";
 
     // --- Guard: only admins can edit/create ---
     useEffect(() => {
@@ -149,12 +151,17 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                 if (rawDraft) {
                     const parsed = JSON.parse(rawDraft) as { title?: string; content?: string; updatedAt?: string };
                     const useDraft = window.confirm(
-                        `A local draft exists${parsed?.updatedAt ? ` (saved ${new Date(parsed.updatedAt).toLocaleString()})` : ""}.\n\nRestore it?`
+                        `A local draft exists${
+                            parsed?.updatedAt ? ` (saved ${new Date(parsed.updatedAt).toLocaleString()})` : ""
+                        }.\n\nRestore it?`
                     );
                     if (useDraft) {
                         setTitle(parsed.title || data.title || "");
                         setContent(parsed.content || data.content || "");
-                        lastSavedSnapshot.current = { title: parsed.title || data.title || "", content: parsed.content || data.content || "" };
+                        lastSavedSnapshot.current = {
+                            title: parsed.title || data.title || "",
+                            content: parsed.content || data.content || "",
+                        };
                         setDirty(false);
                         setSaveState("idle");
                         return;
@@ -163,7 +170,7 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
 
                 setTitle(data.title || "");
                 setContent(data.content || "");
-                lastSavedSnapshot.current = { title: data.title || "", content: data.content || "" };
+                lastSavedSnapshot.current = {title: data.title || "", content: data.content || ""};
                 setDirty(false);
                 setSaveState("idle");
             } catch (e) {
@@ -191,12 +198,14 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
         try {
             const parsed = JSON.parse(rawDraft) as { title?: string; content?: string; updatedAt?: string };
             const useDraft = window.confirm(
-                `A local draft exists${parsed?.updatedAt ? ` (saved ${new Date(parsed.updatedAt).toLocaleString()})` : ""}.\n\nRestore it?`
+                `A local draft exists${
+                    parsed?.updatedAt ? ` (saved ${new Date(parsed.updatedAt).toLocaleString()})` : ""
+                }.\n\nRestore it?`
             );
             if (useDraft) {
                 setTitle(parsed.title || "");
                 setContent(parsed.content || "");
-                lastSavedSnapshot.current = { title: parsed.title || "", content: parsed.content || "" };
+                lastSavedSnapshot.current = {title: parsed.title || "", content: parsed.content || ""};
                 setDirty(false);
             } else {
                 // keep it (user might want later). Don’t delete.
@@ -245,13 +254,13 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
         return {
             toolbar: {
                 container: [
-                    [{ header: [1, 2, 3, 4, false] }],
-                    [{ font: [] }, { size: ["small", false, "large", "huge"] }],
+                    [{header: [1, 2, 3, 4, false]}],
+                    [{font: []}, {size: ["small", false, "large", "huge"]}],
                     ["bold", "italic", "underline", "strike"],
-                    [{ color: [] }, { background: [] }],
-                    [{ script: "sub" }, { script: "super" }],
-                    [{ list: "ordered" }, { list: "bullet" }, { indent: "-1" }, { indent: "+1" }],
-                    [{ direction: "rtl" }, { align: [] }],
+                    [{color: []}, {background: []}],
+                    [{script: "sub"}, {script: "super"}],
+                    [{list: "ordered"}, {list: "bullet"}, {indent: "-1"}, {indent: "+1"}],
+                    [{direction: "rtl"}, {align: []}],
                     ["blockquote", "code-block"],
                     ["link", "image", "video"],
                     ["clean"],
@@ -292,8 +301,8 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                     },
                 },
             },
-            history: { delay: 1000, maxStack: 250, userOnly: true },
-            clipboard: { matchVisual: false },
+            history: {delay: 1000, maxStack: 250, userOnly: true},
+            clipboard: {matchVisual: false},
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -401,7 +410,7 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                 await createBlog(formData);
             }
 
-            lastSavedSnapshot.current = { title, content };
+            lastSavedSnapshot.current = {title, content};
             setDirty(false);
             setSaveState("saved");
 
@@ -437,13 +446,12 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
         }
 
         if (blogId) {
-            // reload from server values in snapshot
             setTitle(lastSavedSnapshot.current.title);
             setContent(lastSavedSnapshot.current.content);
         } else {
             setTitle("");
             setContent("");
-            lastSavedSnapshot.current = { title: "", content: "" };
+            lastSavedSnapshot.current = {title: "", content: ""};
         }
 
         setCoverImage(null);
@@ -470,193 +478,220 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
     const statusPill = useMemo(() => {
         if (initialLoading) {
             return (
-                <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600">
-          <FiRefreshCw className="animate-spin" />
-          Loading…
-        </span>
+                <span
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/60 px-3 py-2 text-sm font-normal text-slate-600 shadow-sm backdrop-blur-xl">
+                    <FiRefreshCw className="animate-spin"/>
+                    Loading…
+                </span>
             );
         }
 
         if (saveState === "saving") {
             return (
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
-          <FiRefreshCw className="animate-spin" />
-          Saving…
-        </span>
+                <span
+                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm font-normal text-emerald-700 shadow-sm backdrop-blur-xl">
+                    <FiRefreshCw className="animate-spin"/>
+                    Saving…
+                </span>
             );
         }
 
         if (saveState === "saved") {
             return (
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
-          <FiCheckCircle />
-          Draft saved
-        </span>
+                <span
+                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm font-normal text-emerald-700 shadow-sm backdrop-blur-xl">
+                    <FiCheckCircle/>
+                    Draft saved
+                </span>
             );
         }
 
         if (saveState === "error") {
             return (
-                <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">
-          <FiAlertTriangle />
-          Save failed
-        </span>
+                <span
+                    className="inline-flex items-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 px-3 py-2 text-sm font-normal text-rose-700 shadow-sm backdrop-blur-xl">
+                    <FiAlertTriangle/>
+                    Save failed
+                </span>
             );
         }
 
         if (!dirty) {
             return (
-                <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600">
-          <FiCheckCircle />
-          Up to date
-        </span>
+                <span
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/60 px-3 py-2 text-sm font-normal text-slate-600 shadow-sm backdrop-blur-xl">
+                    <FiCheckCircle/>
+                    Up to date
+                </span>
             );
         }
 
         return (
-            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
-        <FiAlertTriangle />
-        Unsaved changes
-      </span>
+            <span
+                className="inline-flex items-center gap-2 rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-sm font-normal text-amber-700 shadow-sm backdrop-blur-xl">
+                <FiAlertTriangle/>
+                Unsaved changes
+            </span>
         );
     }, [saveState, dirty, initialLoading]);
 
     const safePreviewHtml = useMemo(() => sanitizeHtmlForPreview(content), [content]);
 
     return (
-        <div className="min-h-screen bg-[#f6f7fb]">
-            <Navbar />
+        <div
+            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col font-sans">
+            <Navbar/>
 
             {/* Sticky editor header */}
-            <header className="sticky top-0 z-30 border-b border-zinc-200/70 bg-white/85 backdrop-blur">
-                <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start justify-between gap-3 md:items-center md:justify-start">
-                        <div className="flex flex-col leading-tight">
-                            <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                  {isEdit ? "Edit blog" : "New blog"}
-                </span>
-                                {statusPill}
+            <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl">
+                <div className="w-full px-2 sm:px-3 lg:px-4 xl:px-5 py-3">
+                    <div className={`${glassCard} mx-auto max-w-6xl`}>
+                        <div
+                            className="px-4 md:px-5 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-start justify-between gap-3 md:items-center md:justify-start">
+                                <div className="flex flex-col leading-tight min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span
+                                            className="text-xs sm:text-sm font-normal uppercase tracking-wider text-slate-500">
+                                            {isEdit ? "Edit blog" : "New blog"}
+                                        </span>
+                                        {statusPill}
+                                    </div>
+
+                                    <div
+                                        className="mt-1 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-500">
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <FiFileText/>
+                                            {wordCount.toLocaleString()} words
+                                        </span>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <FiClock/>
+                                            ~{readingMin} min read
+                                        </span>
+                                        <span className="hidden text-slate-400 md:inline">
+                                            Tip: Ctrl/Cmd + Z works with editor history.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="md:hidden">
+                                    <button
+                                        type="button"
+                                        onClick={togglePreview}
+                                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/60 px-3 py-2 text-sm font-normal text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-slate-100/75 focus:outline-none focus:ring-2 focus:ring-slate-300/60"
+                                    >
+                                        {previewMode ? <FiX/> : <FiEye/>}
+                                        {previewMode ? "Edit" : "Preview"}
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <FiFileText />
-                    {wordCount.toLocaleString()} words
-                </span>
-                                <span className="inline-flex items-center gap-1.5">
-                  <FiClock />
-                  ~{readingMin} min read
-                </span>
-                                <span className="hidden text-zinc-400 md:inline">Tip: Ctrl/Cmd + Z works with editor history.</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={togglePreview}
+                                    className="hidden items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/60 px-4 py-2 text-sm font-normal text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-slate-100/75 focus:outline-none focus:ring-2 focus:ring-slate-300/60 md:inline-flex"
+                                >
+                                    {previewMode ? <FiX/> : <FiEye/>}
+                                    {previewMode ? "Back to edit" : "Preview"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDiscardDraft}
+                                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/60 px-4 py-2 text-sm font-normal text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-slate-100/75 focus:outline-none focus:ring-2 focus:ring-slate-300/60"
+                                    title="Discard local draft"
+                                >
+                                    <FiTrash2/>
+                                    Discard draft
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={!canPublish}
+                                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-4 py-2 text-sm font-normal text-emerald-700 shadow-sm backdrop-blur-xl transition hover:bg-emerald-50/85 focus:outline-none focus:ring-2 focus:ring-emerald-300/60 disabled:opacity-60"
+                                >
+                                    <FiSave/>
+                                    {isEdit ? "Update" : "Publish"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={goBack}
+                                    className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-normal text-slate-500 hover:text-slate-700"
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
-
-                        <div className="md:hidden">
-                            <button
-                                type="button"
-                                onClick={togglePreview}
-                                className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
-                            >
-                                {previewMode ? <FiX /> : <FiEye />}
-                                {previewMode ? "Edit" : "Preview"}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={togglePreview}
-                            className="hidden items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 md:inline-flex"
-                        >
-                            {previewMode ? <FiX /> : <FiEye />}
-                            {previewMode ? "Back to edit" : "Preview"}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={handleDiscardDraft}
-                            className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
-                            title="Discard local draft"
-                        >
-                            <FiTrash2 />
-                            Discard draft
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={!canPublish}
-                            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 disabled:opacity-60"
-                        >
-                            <FiSave />
-                            {isEdit ? "Update" : "Publish"}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={goBack}
-                            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-zinc-500 hover:text-zinc-800"
-                        >
-                            Cancel
-                        </button>
                     </div>
                 </div>
             </header>
 
-            <main className="mx-auto max-w-6xl px-4 pb-24 pt-6">
-                {/* Error banner */}
-                {errorMsg && (
-                    <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                        <div className="flex items-start gap-2">
-                            <FiAlertTriangle className="mt-0.5 shrink-0" />
-                            <div className="leading-relaxed">{errorMsg}</div>
+            {/* ✅ CLEAN + WIDE CONTENT AREA */}
+            <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 xl:px-5 pb-12 pt-4 md:pt-5">
+                <div className="mx-auto w-full max-w-6xl">
+                    {/* Error banner */}
+                    {errorMsg && (
+                        <div
+                            className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
+                            <div className="flex items-start gap-2">
+                                <FiAlertTriangle className="mt-0.5 shrink-0"/>
+                                <div className="leading-relaxed">{errorMsg}</div>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Layout: editor + side panel (collapses on mobile) */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-                    {/* Main surface */}
-                    <section className="rounded-3xl border border-zinc-200/70 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-                        <div className="px-4 py-4 sm:px-6">
+                    {/* Single surface, full width (no side panel) */}
+                    <section className={glassCard}>
+                        <div className="px-3 sm:px-4 md:px-6 py-4 md:py-5">
                             {initialLoading ? (
-                                <div className="flex items-center gap-3 py-16 text-zinc-600">
-                                    <FiRefreshCw className="animate-spin" />
+                                <div className="flex items-center gap-3 py-16 text-sm sm:text-base text-slate-600">
+                                    <FiRefreshCw className="animate-spin"/>
                                     Loading editor…
                                 </div>
                             ) : previewMode ? (
-                                <div className="mx-auto max-w-3xl py-2">
+                                <div className="mx-auto w-full max-w-4xl">
                                     {coverPreview && (
-                                        <div className="mb-6 overflow-hidden rounded-3xl bg-zinc-100">
-                                            <img src={coverPreview} alt="cover" className="h-[320px] w-full object-cover" />
+                                        <div className={`${glassCard} mb-4 overflow-hidden`}>
+                                            <img
+                                                src={coverPreview}
+                                                alt="cover"
+                                                className="h-[220px] sm:h-[280px] md:h-[360px] w-full object-cover"
+                                            />
                                         </div>
                                     )}
 
-                                    <h1 className="mb-3 text-3xl font-semibold leading-tight text-zinc-900 sm:text-4xl">
+                                    <h1 className="mb-3 text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight leading-tight">
                                         {title.trim() ? title : "Untitled"}
                                     </h1>
 
-                                    <div className="mb-7 h-px w-16 bg-zinc-200" />
+                                    <div className="mb-5 h-px w-16 bg-slate-200/70"/>
 
-                                    <article className="prose prose-zinc max-w-none prose-headings:font-semibold prose-a:no-underline hover:prose-a:underline prose-img:rounded-2xl prose-img:border prose-img:border-zinc-100">
-                                        <div dangerouslySetInnerHTML={{ __html: safePreviewHtml }} />
+                                    <article
+                                        className="prose prose-slate max-w-none prose-headings:tracking-tight prose-strong:font-normal prose-strong:text-slate-700 prose-a:underline prose-a:decoration-slate-300 hover:prose-a:decoration-slate-500 prose-img:rounded-2xl prose-img:border prose-img:border-slate-200/70">
+                                        <div dangerouslySetInnerHTML={{__html: safePreviewHtml}}/>
                                     </article>
                                 </div>
                             ) : (
-                                <div className="mx-auto max-w-3xl py-2">
+                                <div className="mx-auto w-full max-w-5xl">
                                     {/* Cover uploader */}
-                                    <div className="mb-6">
+                                    <div className="mb-5">
                                         {coverPreview && (
-                                            <div className="mb-3 overflow-hidden rounded-3xl bg-zinc-100">
-                                                <img src={coverPreview} alt="cover preview" className="h-[320px] w-full object-cover" />
+                                            <div className={`${glassCard} mb-3 overflow-hidden`}>
+                                                <img
+                                                    src={coverPreview}
+                                                    alt="cover preview"
+                                                    className="h-[220px] sm:h-[280px] md:h-[360px] w-full object-cover"
+                                                />
                                             </div>
                                         )}
 
-                                        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-dashed border-zinc-400 bg-white px-4 py-2 font-semibold hover:bg-zinc-50">
-                                                <FiImage />
+                                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                            <label
+                                                className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white/55 px-4 py-2 font-normal text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-white/70">
+                                                <FiImage/>
                                                 <span>{coverPreview ? "Change cover image" : "Add a cover image"}</span>
                                                 <input
                                                     type="file"
@@ -669,35 +704,37 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                                             {coverPreview && (
                                                 <button
                                                     type="button"
-                                                    className="rounded-full px-3 py-2 text-[11px] font-semibold text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                                                    className="rounded-2xl border border-slate-200/70 bg-slate-100/50 px-3 py-2 text-sm font-normal text-slate-600 shadow-sm backdrop-blur-xl transition hover:bg-slate-100/70 hover:text-slate-700"
                                                     onClick={() => handleCoverChange(null)}
                                                 >
                                                     Remove cover
                                                 </button>
                                             )}
 
-                                            <span className="text-[11px] text-zinc-400">Max {MAX_COVER_MB}MB · JPG/PNG/WebP</span>
+                                            <span
+                                                className="text-xs text-slate-500">Max {MAX_COVER_MB}MB · JPG/PNG/WebP</span>
                                         </div>
                                     </div>
 
                                     {/* Title */}
-                                    <div className="mb-5">
+                                    <div className="mb-4">
                                         <input
                                             type="text"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                             placeholder="Write a title that people can’t ignore…"
-                                            className="w-full border-none bg-transparent text-3xl font-semibold leading-tight text-zinc-900 placeholder:text-zinc-300 focus:outline-none focus:ring-0 sm:text-4xl"
+                                            className="w-full border-none bg-transparent text-2xl sm:text-3xl md:text-4xl font-normal leading-tight text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-0"
                                             maxLength={200}
                                         />
-                                        <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                                        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                                             <span>Keep it clear. You can refine later.</span>
                                             <span>{title.trim().length}/200</span>
                                         </div>
                                     </div>
 
-                                    {/* Editor */}
-                                    <div className="overflow-hidden rounded-2xl border border-zinc-200">
+                                    {/* Editor (extended width + better vertical space) */}
+                                    <div
+                                        className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/55 backdrop-blur-xl ring-1 ring-slate-200/50">
                                         <ReactQuill
                                             ref={(r) => (quillRef.current = r)}
                                             value={content}
@@ -709,17 +746,18 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                                             modules={quillModules}
                                             formats={quillFormats}
                                             theme="snow"
-                                            className="min-h-[420px]"
+                                            className="min-h-[520px] md:min-h-[620px]"
                                         />
                                     </div>
 
-                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
-                    <span className="text-zinc-400">
-                      Supports headings, color, alignment, code blocks, embeds, images & video.
-                    </span>
+                                    <div
+                                        className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                                        <span className="text-slate-500">
+                                            Supports headings, color, alignment, code blocks, embeds, images & video.
+                                        </span>
                                         <button
                                             type="button"
-                                            className="rounded-full border border-zinc-200 bg-white px-3 py-2 font-semibold text-zinc-700 hover:bg-zinc-50"
+                                            className="rounded-2xl border border-slate-200/70 bg-slate-100/60 px-3 py-2 text-sm font-normal text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-slate-100/75"
                                             onClick={() => {
                                                 saveDraftLocal();
                                                 setSaveState("saved");
@@ -733,122 +771,49 @@ const BlogEditor: React.FC<BlogEditorProps> = () => {
                             )}
                         </div>
                     </section>
-
-                    {/* Side panel */}
-                    <aside className="space-y-4">
-                        <div className="rounded-3xl border border-zinc-200/70 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-                            <div className="mb-3 text-sm font-semibold text-zinc-900">Publishing checklist</div>
-
-                            <ul className="space-y-2 text-sm text-zinc-600">
-                                <li className="flex items-start gap-2">
-                                    <span className={`mt-0.5 h-2.5 w-2.5 rounded-full ${title.trim() ? "bg-emerald-500" : "bg-zinc-300"}`} />
-                                    <span>Title is set</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className={`mt-0.5 h-2.5 w-2.5 rounded-full ${plainText.trim() ? "bg-emerald-500" : "bg-zinc-300"}`} />
-                                    <span>Content has text</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className={`mt-0.5 h-2.5 w-2.5 rounded-full ${coverPreview ? "bg-emerald-500" : "bg-zinc-300"}`} />
-                                    <span>Cover image (optional)</span>
-                                </li>
-                            </ul>
-
-                            <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs text-zinc-600">
-                                <div className="font-semibold text-zinc-800">Draft safety</div>
-                                <div className="mt-1 leading-relaxed">
-                                    This editor auto-saves a local draft every {Math.round(AUTOSAVE_MS / 1000)} seconds while you type.
-                                    Server save happens only when you publish/update.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-3xl border border-zinc-200/70 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-                            <div className="mb-2 text-sm font-semibold text-zinc-900">Quick actions</div>
-
-                            <div className="flex flex-col gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const editor = quillRef.current?.getEditor();
-                                        if (!editor) return;
-                                        editor.format("header", 1);
-                                        editor.focus();
-                                    }}
-                                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                                >
-                                    Make selection H1
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const editor = quillRef.current?.getEditor();
-                                        if (!editor) return;
-                                        editor.format("blockquote", true);
-                                        editor.focus();
-                                    }}
-                                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                                >
-                                    Blockquote
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const editor = quillRef.current?.getEditor();
-                                        if (!editor) return;
-                                        editor.format("code-block", true);
-                                        editor.focus();
-                                    }}
-                                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                                >
-                                    Code block
-                                </button>
-                            </div>
-
-                            <div className="mt-4 text-[11px] text-zinc-400">
-                                If your backend supports it later, you can switch to uploading inline images instead of base64 without changing the editor UI much.
-                            </div>
-                        </div>
-                    </aside>
                 </div>
             </main>
 
-            {/* Quill toolbar tweaks (kept local) */}
             <style>{`
         /* Make Quill feel more "industry editor" + clean on mobile */
         .ql-toolbar.ql-snow {
           border: none !important;
-          border-bottom: 1px solid rgba(228,228,231,0.8) !important;
+          border-bottom: 1px solid rgba(226,232,240,0.9) !important;
           position: sticky;
           top: 0;
           z-index: 10;
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(10px);
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(16px);
         }
         .ql-container.ql-snow {
           border: none !important;
+          background: transparent;
         }
         .ql-editor {
-          min-height: 420px;
+          min-height: 520px;
           padding: 18px 18px 24px 18px;
           font-size: 16px;
           line-height: 1.85;
+          color: #334155; /* slate-700 */
         }
         .ql-editor p, .ql-editor li {
-          color: #18181b;
+          color: #475569; /* slate-600 */
+          font-weight: 400;
+        }
+        .ql-editor strong {
+          font-weight: 400;
+          color: #334155;
         }
         .ql-editor.ql-blank::before {
-          color: #a1a1aa;
+          color: #cbd5e1; /* slate-300 */
           font-style: normal;
         }
         @media (max-width: 640px) {
-          .ql-editor { padding: 14px 14px 18px 14px; }
+          .ql-editor { padding: 14px 14px 18px 14px; min-height: 520px; }
         }
       `}</style>
         </div>
     );
 };
 
-export default BlogEditor;
+export default AdminBlogEditor;

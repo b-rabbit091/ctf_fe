@@ -1,10 +1,8 @@
 // src/pages/challenges/PracticeAnswerSubmit.tsx
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {Challenge} from "./types";
-import {submitFlag, submitTextSolution, fetchChatHistory} from "./practice";
-import {useAuth} from "../../contexts/AuthContext";
-
-import type {ChatMessage} from "./types";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Challenge } from "./types";
+import { submitFlag, submitTextSolution } from "./practice";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface Props {
     challenge: Challenge;
@@ -30,167 +28,8 @@ type TimerStore = {
     updated_at: number;
 };
 
-
-export const PracticeAiChatHistory: React.FC<{ challenge: Challenge }> = ({challenge}) => {
-    const {user} = useAuth();
-
-    const userId = (user as any)?.id ?? (user as any)?.user_id ?? "anon";
-    const challengeId = challenge?.id ?? 0;
-
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [chatNext, setChatNext] = useState<string | null>(null);
-    const [chatLoading, setChatLoading] = useState(false);
-    const [chatLoadingOlder, setChatLoadingOlder] = useState(false);
-
-    const chatAbortRef = useRef<AbortController | null>(null);
-
-    const dedupeByIdOldestFirst = (list: ChatMessage[]) => {
-        const map = new Map<string, ChatMessage>();
-        for (const m of list) map.set(String(m.id), m);
-        const arr = Array.from(map.values());
-        arr.sort((a, b) => {
-            const ta = Date.parse(a.createdAt || "") || 0;
-            const tb = Date.parse(b.createdAt || "") || 0;
-            return ta - tb;
-        });
-        return arr;
-    };
-
-    const loadChatLatest = async () => {
-        if (!challengeId) {
-            setChatMessages([]);
-            setChatNext(null);
-            return;
-        }
-
-        setChatLoading(true);
-        chatAbortRef.current?.abort();
-        const ac = new AbortController();
-        chatAbortRef.current = ac;
-
-        const res = await fetchChatHistory({
-            challengeId,
-            pageSize: 20,
-            signal: ac.signal,
-        });
-
-        if (ac.signal.aborted) return;
-
-        setChatLoading(false);
-        chatAbortRef.current = null;
-
-        if (!res.ok) {
-            setChatMessages([]);
-            setChatNext(null);
-            return;
-        }
-
-        const newestFirst = res.data.messages; // backend: newest -> oldest
-        const oldestFirst = [...newestFirst].reverse(); // UI: oldest -> newest
-
-        setChatMessages(dedupeByIdOldestFirst(oldestFirst));
-        setChatNext(res.data.next ?? null);
-    };
-
-    const loadChatOlder = async () => {
-        if (!challengeId || !chatNext || chatLoadingOlder) return;
-
-        setChatLoadingOlder(true);
-        chatAbortRef.current?.abort();
-        const ac = new AbortController();
-        chatAbortRef.current = ac;
-
-        const res = await fetchChatHistory({
-            challengeId,
-            cursorUrl: chatNext,
-            signal: ac.signal,
-        });
-
-        if (ac.signal.aborted) return;
-
-        setChatLoadingOlder(false);
-        chatAbortRef.current = null;
-
-        if (!res.ok) return;
-
-        const olderOldestFirst = [...res.data.messages].reverse();
-        setChatMessages((prev) => dedupeByIdOldestFirst([...olderOldestFirst, ...prev]));
-        setChatNext(res.data.next ?? null);
-    };
-
-    useEffect(() => {
-        loadChatLatest();
-        return () => {
-            chatAbortRef.current?.abort();
-            chatAbortRef.current = null;
-        };
-    }, [challengeId, userId]);
-
-    return (
-        <section className="space-y-2">
-            <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    AI Chat History
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {chatNext && !chatLoading && (
-                        <button
-                            type="button"
-                            onClick={loadChatOlder}
-                            disabled={chatLoadingOlder}
-                            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                        >
-                            {chatLoadingOlder ? "Loading…" : "Load older"}
-                        </button>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={loadChatLatest}
-                        disabled={chatLoading}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                    >
-                        {chatLoading ? "Refreshing…" : "Refresh"}
-                    </button>
-                </div>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-white">
-                {chatLoading ? (
-                    <div className="p-3 text-sm text-slate-600">Loading history…</div>
-                ) : chatMessages.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-600">No chat history yet.</div>
-                ) : (
-                    <div className="max-h-80 overflow-y-auto p-3 space-y-2">
-                        {chatMessages.map((m) => {
-                            const isUser = m.role === "user";
-                            return (
-                                <div key={m.id} className={isUser ? "text-right" : "text-left"}>
-                                    <div
-                                        className={[
-                                            "inline-block max-w-[90%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap break-words",
-                                            isUser ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-900",
-                                        ].join(" ")}
-                                    >
-                                        {m.content}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
-            <div className="text-[11px] text-slate-400">
-                Loaded from server (per user + challenge).
-            </div>
-        </section>
-    );
-};
-
-const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
-    const {user} = useAuth();
+const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
+    const { user } = useAuth();
 
     const [flagText, setFlagText] = useState("");
     const [procedureText, setProcedureText] = useState("");
@@ -198,7 +37,6 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [info, setInfo] = useState<string | null>(null);
-
 
     const userId = (user as any)?.id ?? (user as any)?.user_id ?? "anon";
     const challengeId = challenge?.id ?? 0;
@@ -210,7 +48,6 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     const timerRef = useRef<TimerStore | null>(null);
 
     const [lastScore, setLastScore] = useState<{ flag?: number | null; procedure?: number | null }>({});
-
 
     const stopTick = () => {
         if (intervalRef.current !== null) {
@@ -270,8 +107,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
         if (timer.running) startTick();
         else stopTick();
 
-        return () => {
-        };
+        return () => {};
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timer?.running, timer?.accumulated_ms, timer?.started_at]);
 
@@ -320,19 +156,14 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     };
 
     // ----------------------------
-    // Challenge input logic
+    // Challenge input logic (UNCHANGED)
     // ----------------------------
     const solutionType = challenge.solution_type?.type || "";
-
     const showFlag = solutionType === "Flag" || solutionType === "Flag and Procedure";
-
     const showProcedure = solutionType === "Procedure" || solutionType === "Flag and Procedure";
 
     const hasInput = useMemo(() => {
-        return (
-            (showFlag && flagText.trim().length > 0) ||
-            (showProcedure && procedureText.trim().length > 0)
-        );
+        return (showFlag && flagText.trim().length > 0) || (showProcedure && procedureText.trim().length > 0);
     }, [flagText, procedureText, showFlag, showProcedure]);
 
     const clearBannersSoon = () => {
@@ -341,6 +172,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
             setInfo(null);
         }, 3500);
     };
+
     const extractScore = (data: any): number | null => {
         if (!data) return null;
 
@@ -384,8 +216,8 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
             }
 
             setLastScore({
-                ...(flagScore !== undefined ? {flag: flagScore} : {}),
-                ...(procedureScore !== undefined ? {procedure: procedureScore} : {}),
+                ...(flagScore !== undefined ? { flag: flagScore } : {}),
+                ...(procedureScore !== undefined ? { procedure: procedureScore } : {}),
             });
 
             const parts: string[] = [];
@@ -398,22 +230,6 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                     : "Submission received. Check Previous Submissions for status."
             );
             clearBannersSoon();
-
-
-            //
-            // if (showFlag && flagText.trim()) {
-            //     await submitFlag(challenge.id, flagText.trim());
-            //     setFlagText("");
-            // }
-            //
-            // if (showProcedure && procedureText.trim()) {
-            //     console.log("shot procedure and text", showProcedure, procedureText.trim());
-            //     await submitTextSolution(challenge.id, procedureText.trim());
-            //     setProcedureText("");
-            // }
-            //
-            // setInfo("Submission received. Check Previous Submissions for status.");
-            // clearBannersSoon();
         } catch (err: any) {
             console.error(err);
             setError(err?.message || "Submission failed.");
@@ -432,26 +248,47 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
 
     const timerRunning = !!timer?.running;
 
+    // ----------------------------
+    // Styling: match other pages (glassy, slate-700, no black buttons)
+    // ----------------------------
+    const shell =
+        "min-w-0 w-full flex flex-col rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 overflow-hidden";
+
+    const chip =
+        "inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/60 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600";
+
+    const timerPill =
+        "rounded-xl border border-slate-200/70 bg-slate-100/60 px-3 py-1.5 font-mono text-sm text-slate-700";
+
+    const btn =
+        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs sm:text-sm font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-50";
+
+    const inputShell =
+        "rounded-xl border border-slate-200/70 bg-white/70 focus-within:bg-white focus-within:border-blue-200/70 focus-within:ring-2 focus-within:ring-blue-500/10";
+
+    const inputBase =
+        "w-full bg-transparent px-3 py-3 text-sm font-mono text-slate-700 outline-none placeholder:text-slate-400";
+
+    const submitBtn =
+        "w-full rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-2.5 text-sm sm:text-base font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100/60 disabled:text-slate-400 disabled:cursor-not-allowed";
+
     return (
-        <aside
-            className="min-w-0 w-full flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <aside className={shell}>
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-200 bg-white">
+            <div className="px-4 py-3 border-b border-white/40 bg-white/40 backdrop-blur-xl">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     {/* Left: Timer */}
                     <div className="space-y-1">
-                        <div className="text-sm font-semibold text-slate-900">Time on Challenge</div>
+                        <div className="text-sm sm:text-base font-normal text-slate-700">Time on Challenge</div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg bg-slate-900 px-3 py-1.5 font-mono text-sm text-white shadow-sm">
-                    {formatElapsed(elapsedMs)}
-                </span>
+                            <span className={timerPill}>{formatElapsed(elapsedMs)}</span>
 
                             <button
                                 type="button"
                                 onClick={timerRunning ? pauseTimer : startTimer}
                                 disabled={!challengeId}
-                                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                                className={btn}
                                 title={timerRunning ? "Pause timer" : "Start timer"}
                             >
                                 {timerRunning ? "Pause" : "Start"}
@@ -461,7 +298,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                                 type="button"
                                 onClick={resetTimer}
                                 disabled={!challengeId || (elapsedMs === 0 && !timerRunning)}
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                                className={btn}
                                 title="Reset timer"
                             >
                                 Reset
@@ -469,30 +306,24 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                         </div>
                     </div>
 
-                    {/* Right: Type + Score (bigger, clearer) */}
+                    {/* Right: Type + Score */}
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span
-                className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                {typeBadge}
-            </span>
+                        <span className={chip}>{typeBadge}</span>
 
                         {(lastScore.flag != null || lastScore.procedure != null) && (
-                            <div
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                                <span className="text-xs font-semibold text-slate-600">Latest score</span>
+                            <div className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                <span className="text-xs sm:text-sm font-normal text-slate-500">Latest score</span>
 
                                 {lastScore.flag != null && (
-                                    <span
-                                        className="inline-flex items-center rounded-lg bg-slate-900 px-2.5 py-1 font-mono text-sm text-white">
-                            F: {lastScore.flag}
-                        </span>
+                                    <span className="inline-flex items-center rounded-xl border border-slate-200/70 bg-slate-100/60 px-2.5 py-1 font-mono text-sm text-slate-700">
+                                        F: {lastScore.flag}
+                                    </span>
                                 )}
 
                                 {lastScore.procedure != null && (
-                                    <span
-                                        className="inline-flex items-center rounded-lg bg-slate-900 px-2.5 py-1 font-mono text-sm text-white">
-                            P: {lastScore.procedure}
-                        </span>
+                                    <span className="inline-flex items-center rounded-xl border border-slate-200/70 bg-slate-100/60 px-2.5 py-1 font-mono text-sm text-slate-700">
+                                        P: {lastScore.procedure}
+                                    </span>
                                 )}
                             </div>
                         )}
@@ -501,13 +332,13 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white/40 backdrop-blur-xl">
                 {(error || info) && (
                     <div
-                        className={`rounded-lg border px-3 py-2 text-sm ${
+                        className={`rounded-xl border px-3 py-2 text-sm ${
                             error
-                                ? "bg-rose-50 border-rose-200 text-rose-800"
-                                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                                ? "bg-rose-50/80 border-rose-200 text-rose-700"
+                                : "bg-emerald-50/80 border-emerald-200 text-emerald-700"
                         }`}
                     >
                         {error ?? info}
@@ -517,26 +348,24 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                 {showFlag && (
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Flag
-                            </div>
+                            <div className="text-xs font-normal uppercase tracking-wide text-slate-500">Flag</div>
                             <button
                                 type="button"
                                 onClick={() => setFlagText("")}
                                 disabled={submitting || !flagText}
-                                className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                                className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-40"
                             >
                                 Clear
                             </button>
                         </div>
 
-                        <div
-                            className="rounded-lg border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-slate-300">
+                        <div className={inputShell}>
                             <input
                                 value={flagText}
                                 onChange={(e) => setFlagText(e.target.value)}
                                 disabled={submitting}
-                                className="w-full bg-transparent px-3 py-3 text-sm font-mono text-slate-900 outline-none"
+                                className={inputBase}
+                                placeholder="Enter flag…"
                             />
                         </div>
 
@@ -547,26 +376,24 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                 {showProcedure && (
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Procedure
-                            </div>
+                            <div className="text-xs font-normal uppercase tracking-wide text-slate-500">Procedure</div>
                             <button
                                 type="button"
                                 onClick={() => setProcedureText("")}
                                 disabled={submitting || !procedureText}
-                                className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                                className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-40"
                             >
                                 Clear
                             </button>
                         </div>
 
-                        <div
-                            className="rounded-lg border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-slate-300">
+                        <div className={inputShell}>
                             <textarea
                                 value={procedureText}
                                 onChange={(e) => setProcedureText(e.target.value)}
                                 disabled={submitting}
-                                className="h-56 w-full resize-none bg-transparent px-3 py-3 text-sm font-mono text-slate-900 outline-none"
+                                className={`${inputBase} h-56 resize-none`}
+                                placeholder="Explain your approach…"
                             />
                         </div>
 
@@ -576,12 +403,8 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
             </div>
 
             {(showFlag || showProcedure) && (
-                <div className="px-4 py-3 border-t border-slate-200 bg-white">
-                    <button
-                        onClick={handleSubmit}
-                        disabled={submitting || !hasInput}
-                        className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                    >
+                <div className="px-4 py-3 border-t border-white/40 bg-white/40 backdrop-blur-xl">
+                    <button onClick={handleSubmit} disabled={submitting || !hasInput} className={submitBtn}>
                         {submitting ? "Submitting…" : "Submit"}
                     </button>
                 </div>

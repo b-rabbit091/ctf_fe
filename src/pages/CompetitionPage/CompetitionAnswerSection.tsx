@@ -51,22 +51,12 @@ const CompetitionAnswerSection: React.FC<Props> = ({ challenge }) => {
     const contest = challenge.active_contest ?? null;
 
     const solutionTypeLabel = challenge.solution_type?.type || "";
-    const showText =
-        solutionTypeLabel === "Procedure" ||
-        solutionTypeLabel === "Flag and Procedure";
-    const showFlag =
-        solutionTypeLabel === "Flag" || solutionTypeLabel === "Flag and Procedure";
+    const showText = solutionTypeLabel === "Procedure" || solutionTypeLabel === "Flag and Procedure";
+    const showFlag = solutionTypeLabel === "Flag" || solutionTypeLabel === "Flag and Procedure";
 
     const contestState = useMemo(() => {
         if (!contest) {
-            return {
-                status: "no-contest" as const,
-                statusLabel: "No Contest Attached",
-                badgeClasses: "bg-slate-50 text-slate-700 border-slate-200",
-                infoLabel: "This challenge is not currently part of an active contest.",
-                remaining: "",
-                isRunning: false,
-            };
+            return { isRunning: false };
         }
 
         const start = new Date(contest.start_time);
@@ -75,36 +65,7 @@ const CompetitionAnswerSection: React.FC<Props> = ({ challenge }) => {
         const startMs = start.getTime();
         const endMs = end.getTime();
 
-        if (nowMs < startMs) {
-            return {
-                status: "upcoming" as const,
-                statusLabel: "Upcoming",
-                badgeClasses: "bg-sky-50 text-sky-700 border-sky-200",
-                infoLabel: "Contest has not started yet.",
-                remaining: `${formatDuration(startMs - nowMs)} until start`,
-                isRunning: false,
-            };
-        }
-
-        if (nowMs >= startMs && nowMs < endMs) {
-            return {
-                status: "running" as const,
-                statusLabel: "Ongoing",
-                badgeClasses: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                infoLabel: "Contest is live. Submissions are open.",
-                remaining: `${formatDuration(endMs - nowMs)} remaining`,
-                isRunning: true,
-            };
-        }
-
-        return {
-            status: "ended" as const,
-            statusLabel: "Ended",
-            badgeClasses: "bg-rose-50 text-rose-700 border-rose-200",
-            infoLabel: "Contest has ended. Submissions are closed.",
-            remaining: "",
-            isRunning: false,
-        };
+        return { isRunning: nowMs >= startMs && nowMs < endMs };
     }, [contest, now]);
 
     const resetMessages = () => {
@@ -112,9 +73,7 @@ const CompetitionAnswerSection: React.FC<Props> = ({ challenge }) => {
         setError(null);
     };
 
-    const pickLatestSubmittedAt = (
-        resp: SubmitResponse | null | undefined
-    ): string | null => {
+    const pickLatestSubmittedAt = (resp: SubmitResponse | null | undefined): string | null => {
         const arr = resp?.results?.map((r) => r.submitted_at).filter(Boolean) ?? [];
         if (arr.length === 0) return null;
         let latest = arr[0];
@@ -196,70 +155,36 @@ const CompetitionAnswerSection: React.FC<Props> = ({ challenge }) => {
         }
     };
 
-    const submitDisabled =
-        submitting || !contestState.isRunning || (!showFlag && !showText);
+    const submitDisabled = submitting || !contestState.isRunning || (!showFlag && !showText);
 
-    // --- Styling tokens (match PracticeAnswerSubmit) ---
-    const typeBadge = useMemo(() => {
-        if (solutionTypeLabel === "Flag") return "Flag";
-        if (solutionTypeLabel === "Procedure") return "Procedure";
-        if (solutionTypeLabel === "Flag and Procedure") return "Flag + Procedure";
-        return "Competition";
-    }, [solutionTypeLabel]);
+    // --- Styling tokens (EXACT vibe as PracticeAnswerSubmit) ---
+    const shell =
+        "min-w-0 w-full flex flex-col rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 overflow-hidden";
+
+    const btn =
+        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs sm:text-sm font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-50";
+
+    const inputShell =
+        "rounded-xl border border-slate-200/70 bg-white/70 focus-within:bg-white focus-within:border-blue-200/70 focus-within:ring-2 focus-within:ring-blue-500/10";
+
+    const inputBase =
+        "w-full bg-transparent px-3 py-3 text-sm font-mono text-slate-700 outline-none placeholder:text-slate-400";
+
+    // Submit: full width on mobile, compact on sm+
+    const submitBtn =
+        "w-full sm:w-auto sm:min-w-[140px] rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-2.5 text-sm sm:text-base font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100/60 disabled:text-slate-400 disabled:cursor-not-allowed";
 
     return (
-        <aside className="min-w-0 w-full flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            {/* Header (same style as PracticeAnswerSubmit header) */}
-            <div className="px-4 py-3 border-b border-slate-200 bg-white">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                        <div className="text-sm font-semibold text-slate-900">
-                            Contest Status
-                        </div>
+        <aside className={shell}>
 
-                        <div className="flex flex-wrap items-center gap-2">
-              <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${contestState.badgeClasses}`}
-              >
-                {contestState.statusLabel}
-              </span>
 
-                            {contestState.remaining && (
-                                <span className="rounded-md bg-slate-900 px-2.5 py-1 font-mono text-xs text-white">
-                  {contestState.remaining}
-                </span>
-                            )}
-                        </div>
-
-                        {/* Info + last submission (kept functionality, subtle) */}
-                        <div className="text-xs text-slate-500">
-                            {contestState.infoLabel}
-                            {lastSubmittedAt ? (
-                                <>
-                                    {" "}
-                                    • Last:{" "}
-                                    <span className="font-medium text-slate-700">
-                    {new Date(lastSubmittedAt).toLocaleString()}
-                  </span>
-                                </>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-            {typeBadge}
-          </span>
-                </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white/40 backdrop-blur-xl">
                 {(error || message) && (
                     <div
-                        className={`rounded-lg border px-3 py-2 text-sm ${
+                        className={`rounded-xl border px-3 py-2 text-sm ${
                             error
-                                ? "bg-rose-50 border-rose-200 text-rose-800"
-                                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                                ? "bg-rose-50/80 border-rose-200 text-rose-700"
+                                : "bg-emerald-50/80 border-emerald-200 text-emerald-700"
                         }`}
                     >
                         {error ?? message}
@@ -269,82 +194,69 @@ const CompetitionAnswerSection: React.FC<Props> = ({ challenge }) => {
                 {showFlag && (
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Flag
-                            </div>
+                            <div className="text-xs font-normal uppercase tracking-wide text-slate-500">Flag</div>
                             <button
                                 type="button"
                                 onClick={() => setFlagText("")}
                                 disabled={submitting || !flagText}
-                                className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                                className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-40"
                             >
                                 Clear
                             </button>
                         </div>
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-slate-300">
+                        <div className={inputShell}>
                             <input
                                 type="text"
                                 value={flagText}
                                 onChange={(e) => setFlagText(e.target.value)}
-                                placeholder="flag{example_flag_here}"
+                                placeholder="Enter flag…"
                                 disabled={submitting || !contestState.isRunning}
-                                className="w-full bg-transparent px-3 py-3 text-sm font-mono text-slate-900 outline-none"
+                                className={inputBase}
                             />
                         </div>
 
-                        <div className="text-xs text-slate-500">
-                            Flags are usually case-sensitive. Do not share flags with others.
-                        </div>
+                        <div className="text-xs text-slate-500">Flags are usually case-sensitive.</div>
                     </section>
                 )}
 
                 {showText && (
                     <section className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Procedure
-                            </div>
+                            <div className="text-xs font-normal uppercase tracking-wide text-slate-500">Procedure</div>
                             <button
                                 type="button"
                                 onClick={() => setSolutionText("")}
                                 disabled={submitting || !solutionText}
-                                className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                                className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-40"
                             >
                                 Clear
                             </button>
                         </div>
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-slate-300">
-              <textarea
-                  value={solutionText}
-                  onChange={(e) => setSolutionText(e.target.value)}
-                  placeholder="Describe your approach, reasoning, or full solution..."
-                  disabled={submitting || !contestState.isRunning}
-                  className="h-56 w-full resize-none bg-transparent px-3 py-3 text-sm font-mono text-slate-900 outline-none"
-              />
+                        <div className={inputShell}>
+                            <textarea
+                                value={solutionText}
+                                onChange={(e) => setSolutionText(e.target.value)}
+                                placeholder="Explain your approach…"
+                                disabled={submitting || !contestState.isRunning}
+                                className={`${inputBase} h-56 resize-none`}
+                            />
                         </div>
 
-                        <div className="text-xs text-slate-500">
-                            Keep your explanation clear and concise. Do not paste sensitive data.
-                        </div>
+                        <div className="text-xs text-slate-500">Keep it clear and concise.</div>
                     </section>
                 )}
             </div>
 
+            {/* Footer: Submit (small) left, Clear message right; responsive */}
             {(showFlag || showText) && (
-                <div className="px-4 py-3 border-t border-slate-200 bg-white">
-                    <button
-                        onClick={handleSubmit}
-                        disabled={submitDisabled}
-                        className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                    >
-                        {submitting
-                            ? "Submitting…"
-                            : contestState.isRunning
-                                ? "Submit"
-                                : "Submissions Closed"}
-                    </button>
+                <div className="px-4 py-3 border-t border-white/40 bg-white/40 backdrop-blur-xl">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <button onClick={handleSubmit} disabled={submitDisabled} className={submitBtn}>
+                            {submitting ? "Submitting…" : "Submit"}
+                        </button>
+                    </div>
                 </div>
             )}
         </aside>

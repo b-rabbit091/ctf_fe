@@ -1,9 +1,8 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
-import {useParams} from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import {getBlogById} from "./api";
-import {Blog} from "./types";
-
+import { getBlogById } from "./api";
+import { Blog } from "./types";
 
 const safeDate = (iso?: string | null) => {
     if (!iso) return null;
@@ -21,11 +20,11 @@ const calcReadingTime = (html: string) => {
     const text = htmlToText(html);
     const words = text.trim().split(/\s+/).filter(Boolean).length;
     const mins = Math.max(1, Math.round(words / 220));
-    return {words, mins};
+    return { words, mins };
 };
 
 const BlogDetail: React.FC = () => {
-    const {id} = useParams<{ id: string }>();
+    const { id } = useParams<{ id: string }>();
 
     const [blog, setBlog] = useState<Blog | null>(null);
     const [loading, setLoading] = useState(true);
@@ -79,103 +78,118 @@ const BlogDetail: React.FC = () => {
 
     const hasCover = !!(blog?.cover_image && typeof blog.cover_image === "string");
 
+    const glassCard =
+        "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50";
+
     return (
-        <div className="min-h-screen bg-[#fafafa] text-slate-900">
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col font-sans">
+            <Navbar />
 
             {loading && (
-                <div className="mx-auto max-w-4xl px-4 py-10 text-sm text-slate-600">
-                    Loading…
-                </div>
+                <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 xl:px-5 py-4 md:py-5">
+                    <div className={glassCard}>
+                        <div className="px-4 md:px-5 py-4 text-sm sm:text-base text-slate-600">Loading…</div>
+                    </div>
+                </main>
             )}
 
             {error && (
-                <div className="mx-auto max-w-4xl px-4 py-10 text-sm text-red-600">
-                    {error}
-                </div>
+                <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 xl:px-5 py-4 md:py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
+                        {error}
+                    </div>
+                </main>
             )}
 
             {!loading && !error && blog && (
                 <>
-                    {/* Cover (only if exists) */}
+                    {/* ✅ Cover becomes true full-width (no max wrapper) */}
                     {hasCover && (
-                        <div className="w-full bg-[#fafafa]">
-                            <div className="mx-auto max-w-6xl px-4 pt-8">
-                                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                    <div className="relative h-[220px] md:h-[520px]">
+                        <div className="w-full pt-4 md:pt-5">
+                            <div className="w-full px-2 sm:px-3 lg:px-4 xl:px-5">
+                                <div className={`${glassCard} overflow-hidden`}>
+                                    <div className="relative h-[220px] sm:h-[320px] md:h-[520px]">
                                         <img
                                             src={blog.cover_image as string}
                                             alt={blog.title}
                                             className="h-full w-full object-cover"
                                             loading="lazy"
                                         />
-                                        <div
-                                            className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"/>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Main */}
+                    {/* ✅ Main is full-width; content scales by breakpoint (no fixed max-4xl) */}
                     <main
                         className={[
-                            "mx-auto px-4 pb-16",
-                            hasCover ? "max-w-4xl pt-8 md:pt-10" : "max-w-4xl pt-10 md:pt-12",
+                            "flex-1 w-full px-2 sm:px-3 lg:px-4 xl:px-5 pb-10 md:pb-12",
+                            hasCover ? "pt-4 md:pt-5" : "pt-4 md:pt-6",
                         ].join(" ")}
                     >
-                        {/* Title block */}
-                        <header className="mb-6">
-                            <h1 className="text-[30px] font-semibold leading-[1.12] tracking-tight text-slate-900 md:text-[56px]">
-                                {blog.title}
-                            </h1>
+                        {/* Full-width container (keeps nice readable measure on small, expands on large) */}
+                        <div className="w-full">
+                            {/* Title block */}
+                            <header className="mb-4">
+                                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal text-slate-700 tracking-tight leading-tight">
+                                    {blog.title}
+                                </h1>
 
-                            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                                {meta?.createdLabel && (
-                                    <span className="inline-flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-300"/>
-                                        {meta.createdLabel}
-                  </span>
-                                )}
-                                <span className="text-slate-300">•</span>
-                                <span>{meta?.mins ?? 1} min read</span>
-                                {typeof meta?.words === "number" && (
-                                    <>
-                                        <span className="text-slate-300">•</span>
-                                        <span className="text-slate-500">
-                      {meta.words.toLocaleString()} words
-                    </span>
-                                    </>
-                                )}
-                            </div>
-                        </header>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm sm:text-base text-slate-600">
+                                    {meta?.createdLabel && (
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                                            {meta.createdLabel}
+                                        </span>
+                                    )}
+                                    <span className="text-slate-300">•</span>
+                                    <span>{meta?.mins ?? 1} min read</span>
+                                    {typeof meta?.words === "number" && (
+                                        <>
+                                            <span className="text-slate-300">•</span>
+                                            <span className="text-slate-500">{meta.words.toLocaleString()} words</span>
+                                        </>
+                                    )}
+                                </div>
+                            </header>
 
-                        {/* Content */}
-                        <article
-                            ref={(node) => {
-                                articleRef.current = node as any;
-                            }}
-                            className="rounded-2xl border border-slate-200 bg-white px-5 py-7 shadow-sm md:px-14 md:py-14"
-                        >
-                            <div
+                            {/* ✅ Article surface: full width, but adds internal padding and grows with screen */}
+                            <article
+                                ref={(node) => {
+                                    articleRef.current = node as any;
+                                }}
                                 className={[
-                                    "prose max-w-none",
-                                    "prose-slate",
-                                    "prose-headings:tracking-tight",
-                                    "prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl",
-                                    "prose-p:text-[19px] prose-p:leading-9",
-                                    "prose-li:text-[18px] prose-li:leading-9",
-                                    "prose-a:text-slate-900 prose-a:underline prose-a:decoration-slate-300 hover:prose-a:decoration-slate-900",
-                                    "prose-blockquote:border-l-slate-900 prose-blockquote:text-slate-700",
-                                    "prose-hr:border-slate-200",
-                                    "prose-img:rounded-2xl prose-img:border prose-img:border-slate-200",
-                                    "prose-pre:rounded-2xl prose-pre:border prose-pre:border-slate-200",
-                                    "prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5",
-                                    "prose-strong:text-slate-900",
+                                    glassCard,
+                                    "w-full",
+                                    "px-4 sm:px-6 md:px-10 lg:px-14",
+                                    "py-5 sm:py-7 md:py-10",
                                 ].join(" ")}
-                                dangerouslySetInnerHTML={{__html: blog.content}}
-                            />
-                        </article>
+                            >
+                                <div
+                                    className={[
+                                        // Typography: keep readable on mobile; more spacious on large screens
+                                        "prose max-w-none",
+                                        "prose-slate",
+                                        "prose-headings:tracking-tight",
+                                        "prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl",
+                                        "prose-p:text-[16px] sm:prose-p:text-[17px] md:prose-p:text-[18px] lg:prose-p:text-[19px]",
+                                        "prose-p:leading-8 md:prose-p:leading-9",
+                                        "prose-li:text-[15px] sm:prose-li:text-[16px] md:prose-li:text-[17px]",
+                                        "prose-li:leading-8 md:prose-li:leading-9",
+                                        "prose-a:text-slate-700 prose-a:underline prose-a:decoration-slate-300 hover:prose-a:decoration-slate-500",
+                                        "prose-blockquote:border-l-slate-300 prose-blockquote:text-slate-600",
+                                        "prose-hr:border-slate-200/70",
+                                        "prose-img:rounded-2xl prose-img:border prose-img:border-slate-200/70",
+                                        "prose-pre:rounded-2xl prose-pre:border prose-pre:border-slate-200/70",
+                                        "prose-code:rounded prose-code:bg-slate-100/60 prose-code:px-1 prose-code:py-0.5",
+                                        "prose-strong:text-slate-700 prose-strong:font-normal",
+                                    ].join(" ")}
+                                    dangerouslySetInnerHTML={{ __html: blog.content }}
+                                />
+                            </article>
+                        </div>
                     </main>
                 </>
             )}

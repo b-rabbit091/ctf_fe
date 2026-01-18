@@ -1,10 +1,10 @@
 // src/components/chat/Chat.tsx
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import type {ChatMessage} from "./types";
-import {cx, uid, nowIso} from "./utils";
-import {sendChatMessage} from "./api";
-import type {Challenge} from "../../pages/PracticePage/types";
-import {fetchChatHistory} from "../../pages/PracticePage/practice";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChatMessage } from "./types";
+import { cx, uid, nowIso } from "./utils";
+import { sendChatMessage } from "./api";
+import type { Challenge } from "../../pages/PracticePage/types";
+import { fetchChatHistory } from "../../pages/PracticePage/practice";
 
 type Banner = { type: "error" | "info"; text: string } | null;
 
@@ -29,14 +29,7 @@ export function ChatWidget(props: {
     initialMessages?: ChatMessage[];
     active?: boolean;
 }) {
-    const {
-        className,
-        context,
-        disabled = false,
-        maxChars = 4000,
-        initialMessages = [],
-        active = false,
-    } = props;
+    const { className, context, disabled = false, maxChars = 4000, initialMessages = [], active = false } = props;
 
     const challengeId = Number(context?.challengeId ?? 0);
 
@@ -56,24 +49,46 @@ export function ChatWidget(props: {
     // ----------------------------
     // Refs
     // ----------------------------
-    const abortRef = useRef<AbortController | null>(null);        // for send
+    const abortRef = useRef<AbortController | null>(null); // for send
     const historyAbortRef = useRef<AbortController | null>(null); // for history fetch
 
     const scrollerRef = useRef<HTMLDivElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-    // prevents double-send race due to async state updates
     const inFlightRef = useRef(false);
 
-    // banner timeout cleanup
     const bannerTimerRef = useRef<number | null>(null);
 
-    // we only auto-scroll to bottom if user is already near bottom (ChatGPT-like)
     const shouldAutoScrollRef = useRef(true);
-
-    // track "active" edge so we only jump once when user opens AI tab
     const prevActiveRef = useRef(false);
+
+    // ----------------------------
+    // Styling tokens (match PracticeAnswerSubmit: glassy, slate-700, no dark buttons)
+    // ----------------------------
+    const bannerClass = (type: "error" | "info") =>
+        cx(
+            "mb-3 rounded-xl border px-3 py-2 text-sm",
+            type === "error"
+                ? "border-rose-200 bg-rose-50/80 text-rose-700"
+                : "border-emerald-200 bg-emerald-50/80 text-emerald-700"
+        );
+
+    const userBubble =
+        "max-w-[85%] rounded-2xl border border-blue-200/70 bg-blue-50/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
+    const botBubble =
+        "max-w-[85%] rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
+
+    const inputShell =
+        "rounded-2xl border border-slate-200/70 bg-white/70 focus-within:bg-white focus-within:border-blue-200/70 focus-within:ring-2 focus-within:ring-blue-500/10";
+    const inputBase =
+        "w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400";
+
+    const sendBtn =
+        "rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-2.5 text-sm font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:bg-slate-100/60 disabled:text-slate-400";
+
+    const subtleBtn =
+        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-50";
 
     // ----------------------------
     // Helpers
@@ -110,7 +125,7 @@ export function ChatWidget(props: {
     }, []);
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
-        bottomRef.current?.scrollIntoView({behavior, block: "end"});
+        bottomRef.current?.scrollIntoView({ behavior, block: "end" });
     }, []);
 
     const isNearBottom = useCallback(() => {
@@ -160,7 +175,7 @@ export function ChatWidget(props: {
 
             if (!res?.ok) {
                 setHistoryNext(null);
-                setBanner({type: "error", text: res?.error || "Failed to load chat history."});
+                setBanner({ type: "error", text: res?.error || "Failed to load chat history." });
                 clearBannerSoon();
                 return;
             }
@@ -179,7 +194,7 @@ export function ChatWidget(props: {
 
             setHistoryLoadingLatest(false);
             historyAbortRef.current = null;
-            setBanner({type: "error", text: e?.message || "Failed to load chat history."});
+            setBanner({ type: "error", text: e?.message || "Failed to load chat history." });
             clearBannerSoon();
         }
     }, [challengeId, initialMessages, dedupeByIdOldestFirst, scrollToBottom, clearBannerSoon]);
@@ -249,7 +264,7 @@ export function ChatWidget(props: {
         };
     }, [stopAll]);
 
-    // When user opens AI tab: jump to bottom + focus textarea (no manual scroll)
+    // When user opens AI tab: jump to bottom + focus textarea
     useEffect(() => {
         const wasActive = prevActiveRef.current;
         prevActiveRef.current = active;
@@ -281,13 +296,13 @@ export function ChatWidget(props: {
         const userText = input.trim();
         setInput("");
 
-        const userMsg: ChatMessage = {id: uid(), role: "user", content: userText, createdAt: nowIso()};
+        const userMsg: ChatMessage = { id: uid(), role: "user", content: userText, createdAt: nowIso() };
         const placeholderId = uid();
         const placeholder: ChatMessage = {
             id: placeholderId,
             role: "assistant",
             content: "Thinking…",
-            createdAt: nowIso()
+            createdAt: nowIso(),
         };
 
         setMessages((prev) => [...prev, userMsg, placeholder]);
@@ -300,13 +315,13 @@ export function ChatWidget(props: {
         abortRef.current = ac;
 
         try {
-            const res = await sendChatMessage({text: userText, context}, ac.signal);
+            const res = await sendChatMessage({ text: userText, context }, ac.signal);
 
             if (ac.signal.aborted) return;
 
             if (!res.ok) {
                 setMessages((prev) => prev.filter((m) => m.id !== placeholderId));
-                setBanner({type: "error", text: res.error || "Send failed."});
+                setBanner({ type: "error", text: res.error || "Send failed." });
                 clearBannerSoon();
                 return;
             }
@@ -322,7 +337,7 @@ export function ChatWidget(props: {
             setMessages((prev) => prev.filter((m) => m.id !== placeholderId));
             setBanner({
                 type: "error",
-                text: aborted ? "Request aborted." : (e?.message || "Send failed."),
+                text: aborted ? "Request aborted." : e?.message || "Send failed.",
             });
             clearBannerSoon();
         } finally {
@@ -340,36 +355,21 @@ export function ChatWidget(props: {
     };
 
     // ----------------------------
-    // Render (NO BOXES: no border, no card, no rounded container)
+    // Render (NO outer card kept; style updates only)
     // ----------------------------
     return (
         <div className={cx("flex min-h-0 flex-1 flex-col bg-white", className)}>
             {/* Messages */}
-            <div
-                ref={scrollerRef}
-                onScroll={onScroll}
-                className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-3"
-            >
+            <div ref={scrollerRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-3">
                 {historyLoadingOlder && (
                     <div className="mb-2 text-center text-xs text-slate-500">Loading older…</div>
                 )}
 
-                {banner && (
-                    <div
-                        className={cx(
-                            "mb-3 rounded-xl border px-3 py-2 text-sm",
-                            banner.type === "error"
-                                ? "border-rose-200 bg-rose-50 text-rose-800"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                        )}
-                    >
-                        {banner.text}
-                    </div>
-                )}
+                {banner && <div className={bannerClass(banner.type)}>{banner.text}</div>}
 
                 {historyLoadingLatest && messages.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="text-sm font-semibold text-slate-900">Loading…</div>
+                        <div className="text-sm font-normal text-slate-700">Loading…</div>
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
@@ -381,48 +381,63 @@ export function ChatWidget(props: {
                             const isUser = m.role === "user";
                             return (
                                 <div key={m.id} className={cx("flex w-full", isUser ? "justify-end" : "justify-start")}>
-                                    <div
-                                        className={cx(
-                                            "max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words",
-                                            isUser ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-900"
-                                        )}
-                                    >
-                                        {m.content}
-                                    </div>
+                                    <div className={isUser ? userBubble : botBubble}>{m.content}</div>
                                 </div>
                             );
                         })}
                     </div>
                 )}
 
-                <div ref={bottomRef}/>
+                <div ref={bottomRef} />
             </div>
 
-            {/* Composer (still present, but no surrounding box/card) */}
+            {/* Composer */}
             <div className="shrink-0 bg-white px-3 py-3">
                 <div className="flex items-end gap-3">
                     <div className="flex-1">
-                        <textarea
-                            ref={textareaRef}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={onKeyDown}
-                            disabled={disabled || sending}
-                            rows={3}
-                            placeholder={disabled ? "Chat disabled" : "Message…"}
-                            className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-300 focus:bg-white"
-                        />
-                        <div className="mt-1 text-[11px] text-slate-400">
-                            {Math.min(input.trim().length, maxChars)}/{maxChars}
+                        <div className={inputShell}>
+                            <textarea
+                                ref={textareaRef}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={onKeyDown}
+                                disabled={disabled || sending}
+                                rows={3}
+                                placeholder={disabled ? "Chat disabled" : "Message…"}
+                                className={inputBase}
+                            />
+                        </div>
+
+                        <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                            <span>{Math.min(input.trim().length, maxChars)}/{maxChars}</span>
+
+                            <div className="flex items-center gap-2">
+                                {historyNext && !historyLoadingLatest ? (
+                                    <button
+                                        type="button"
+                                        onClick={loadOlder}
+                                        disabled={historyLoadingOlder}
+                                        className={subtleBtn}
+                                        title="Load older messages"
+                                    >
+                                        {historyLoadingOlder ? "Loading…" : "Load older"}
+                                    </button>
+                                ) : null}
+
+                                <button
+                                    type="button"
+                                    onClick={loadLatest}
+                                    disabled={historyLoadingLatest}
+                                    className={subtleBtn}
+                                    title="Refresh chat history"
+                                >
+                                    {historyLoadingLatest ? "Refreshing…" : "Refresh"}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={send}
-                        disabled={!canSend}
-                        className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
+                    <button type="button" onClick={send} disabled={!canSend} className={sendBtn}>
                         {sending ? "Sending…" : "Send"}
                     </button>
                 </div>
@@ -478,124 +493,78 @@ function PracticeAssistPanel(props: {
 
     const headerLabel = tab === "ai" ? aiTitle : answerTitle;
 
+    // styling tokens (match other pages)
+    const shell =
+        "flex min-h-0 flex-1 flex-col rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 overflow-hidden";
+    const header =
+        "shrink-0 border-b border-white/40 bg-white/40 px-3 py-2 backdrop-blur-xl";
+    const headerTitle = "text-sm font-normal text-slate-700";
+    const subtitle = "text-xs text-slate-500";
+    const segmentedWrap =
+        "hidden sm:flex items-center rounded-2xl border border-slate-200/70 bg-white/70 p-1";
+    const segBtn = (activeBtn: boolean) =>
+        cx(
+            "rounded-xl px-3 py-1.5 text-xs font-normal transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
+            activeBtn ? "bg-blue-50 text-blue-700 border border-blue-200/70" : "text-slate-600 hover:text-slate-700"
+        );
+    const menuBtn =
+        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15";
+    const menuPanel =
+        "absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-xl";
+    const menuItem = (activeItem: boolean) =>
+        cx(
+            "w-full px-3 py-2 text-left text-sm hover:bg-slate-50/70",
+            activeItem ? "bg-slate-50/70 font-normal text-slate-700" : "text-slate-600"
+        );
+    const mobileBtn = (activeBtn: boolean) =>
+        cx(
+            "rounded-xl border px-3 py-2 text-xs font-normal",
+            activeBtn ? "border-blue-200/70 bg-blue-50 text-blue-700" : "border-slate-200/70 bg-white/70 text-slate-600"
+        );
+
     return (
-        <section className={cx("flex min-h-0 flex-1 flex-col bg-white", className)}>
+        <section className={cx(shell, className)}>
             {/* Header */}
-            <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2">
+            <div className={header}>
                 <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-gray-700">{headerLabel}</div>
+                    <div className="min-w-0">
+                        <div className={headerTitle}>{headerLabel}</div>
+                        {tab === "ai" && aiSubtitle ? <div className={subtitle}>{aiSubtitle}</div> : null}
+                    </div>
 
                     <div className="flex items-center gap-2">
                         {showSegmentedTabs && (
-                            <div className="hidden sm:flex items-center rounded-xl border border-gray-200 bg-gray-50 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setTab("answer")}
-                                    className={cx(
-                                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
-                                        tab === "answer" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                                    )}
-                                >
+                            <div className={segmentedWrap}>
+                                <button type="button" onClick={() => setTab("answer")} className={segBtn(tab === "answer")}>
                                     Answer
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setTab("ai")}
-                                    className={cx(
-                                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
-                                        tab === "ai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-                                    )}
-                                >
+                                <button type="button" onClick={() => setTab("ai")} className={segBtn(tab === "ai")}>
                                     AI Assistant
                                 </button>
                             </div>
                         )}
 
-                        {showMenu && (
-                            <div className="relative" ref={menuRef}>
-                                <button
-                                    type="button"
-                                    onClick={() => setMenuOpen((s) => !s)}
-                                    className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 hover:bg-gray-50"
-                                    aria-haspopup="menu"
-                                    aria-expanded={menuOpen}
-                                >
-                                    ⋯
-                                </button>
-
-                                {menuOpen && (
-                                    <div
-                                        role="menu"
-                                        className="absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl"
-                                    >
-                                        <button
-                                            type="button"
-                                            role="menuitem"
-                                            onClick={() => {
-                                                setTab("answer");
-                                                setMenuOpen(false);
-                                            }}
-                                            className={cx(
-                                                "w-full px-3 py-2 text-left text-sm hover:bg-gray-50",
-                                                tab === "answer" ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"
-                                            )}
-                                        >
-                                            Answer
-                                        </button>
-                                        <button
-                                            type="button"
-                                            role="menuitem"
-                                            onClick={() => {
-                                                setTab("ai");
-                                                setMenuOpen(false);
-                                            }}
-                                            className={cx(
-                                                "w-full px-3 py-2 text-left text-sm hover:bg-gray-50",
-                                                tab === "ai" ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"
-                                            )}
-                                        >
-                                            AI Assistant
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
 
                 {/* Mobile quick buttons */}
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:hidden">
-                    <button
-                        type="button"
-                        onClick={() => setTab("answer")}
-                        className={cx(
-                            "rounded-xl border px-3 py-2 text-xs font-semibold",
-                            tab === "answer" ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-700"
-                        )}
-                    >
+                    <button type="button" onClick={() => setTab("answer")} className={mobileBtn(tab === "answer")}>
                         Answer
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => setTab("ai")}
-                        className={cx(
-                            "rounded-xl border px-3 py-2 text-xs font-semibold",
-                            tab === "ai" ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-700"
-                        )}
-                    >
+                    <button type="button" onClick={() => setTab("ai")} className={mobileBtn(tab === "ai")}>
                         AI Assistant
                     </button>
                 </div>
             </div>
 
             {/* Body */}
-            <div className="min-h-0 flex-1 overflow-y-auto bg-white p-0">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-white/40 backdrop-blur-xl p-0">
                 {tab === "answer" ? (
-                    // keep answer area as-is (you can remove this box too if you want)
                     <div className="p-4">
                         <div className="mx-auto max-w-4xl">
                             {answerSlot ?? (
-                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/60 p-4 text-sm text-slate-600">
                                     No answer slot provided.
                                 </div>
                             )}
