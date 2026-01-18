@@ -175,12 +175,13 @@ const CompetitionPage: React.FC = () => {
 
     const tabBtn = (active: boolean) =>
         [
-            "rounded-full border px-2 py-0.5 text-[11px] sm:text-xs font-normal transition leading-snug",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-0",
+            "rounded-full border px-2.5 py-1 text-xs sm:text-sm font-normal transition",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
             active
                 ? "border-blue-200/70 bg-blue-50 text-blue-700"
                 : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
         ].join(" ");
+
 
     return (
         <div className={pageShell}>
