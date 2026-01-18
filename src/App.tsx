@@ -69,6 +69,7 @@ const App: React.FC = () => {
 
                             {/* Blogs */}
                             <Route path="/blogs" element={<BlogList />} />
+                            <Route path ="/blogs/:id" element={<BlogDetail />} />
 
                             {/* User pages */}
                             <Route path="/dashboard" element={<DashboardOverview />} />
