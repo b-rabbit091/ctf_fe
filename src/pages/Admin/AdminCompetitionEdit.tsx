@@ -62,6 +62,8 @@ const AdminCompetitionEdit: React.FC = () => {
     const [categories, setCategories] = useState<any[]>([]);
     const [difficulties, setDifficulties] = useState<any[]>([]);
     const [solutionTypes, setSolutionTypes] = useState<any[]>([]);
+    const [groupOnly, setGroupOnly] = useState(false);
+
 
     const resetMessages = () => {
         setMessage(null);
@@ -126,6 +128,8 @@ const AdminCompetitionEdit: React.FC = () => {
                 setCategory(challenge.category?.id || "");
                 setDifficulty(challenge.difficulty?.id || "");
                 setSolutionType(challenge.solution_type?.id || "");
+                setGroupOnly(Boolean((challenge as any).group_only));
+
 
                 const contest: ContestMeta | null | undefined = challenge.active_contest;
 
@@ -303,6 +307,8 @@ const AdminCompetitionEdit: React.FC = () => {
             formData.append("contest_type", contestType);
             formData.append("contest_start_time", new Date(contestStartTime).toISOString());
             formData.append("contest_end_time", new Date(contestEndTime).toISOString());
+            formData.append("group_only", groupOnly ? "true" : "false");
+
 
             uploadFiles.forEach((file) => {
                 formData.append("uploaded_files", file);
@@ -623,6 +629,23 @@ const AdminCompetitionEdit: React.FC = () => {
                                                 onBlur={handleContestNameBlur}
                                             />
                                         </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <input
+                                                id="group_only"
+                                                type="checkbox"
+                                                checked={groupOnly}
+                                                onChange={(e) => setGroupOnly(e.target.checked)}
+                                                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="group_only" className="text-sm text-slate-700">
+                                                Group-only competition
+                                                <p className="text-xs text-slate-500">
+                                                    Only users who are part of a group can participate in this competition.
+                                                </p>
+                                            </label>
+                                        </div>
+
 
                                         <div>
                                             <label className="mb-1 block text-sm font-medium text-slate-700">Slug</label>

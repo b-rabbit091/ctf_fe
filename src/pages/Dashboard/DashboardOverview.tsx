@@ -96,7 +96,8 @@ const SectionCard = memo(function SectionCard({
             <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                     {icon && (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                        <div
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700">
                             {icon}
                         </div>
                     )}
@@ -272,7 +273,8 @@ const DashboardUI: React.FC = () => {
                 <Navbar/>
                 <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
                     <div className="w-full">
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-base text-rose-800 flex items-start gap-3 shadow-sm">
+                        <div
+                            className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-base text-rose-800 flex items-start gap-3 shadow-sm">
                             <FiAlertCircle className="mt-0.5 shrink-0"/>
                             <div className="min-w-0">
                                 <p className="font-medium">We couldn’t load the dashboard data.</p>
@@ -304,7 +306,8 @@ const DashboardUI: React.FC = () => {
                     {/* Header */}
                     <header className="mb-6 flex flex-wrap items-start justify-between gap-5">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-white text-xl font-semibold">
+                            <div
+                                className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-white text-xl font-semibold">
                                 {getInitial(username)}
                             </div>
                             <div className="min-w-0">
@@ -319,7 +322,8 @@ const DashboardUI: React.FC = () => {
 
                         <div className="flex items-center gap-3 text-sm sm:text-base">
                             {roleLabel ? (
-                                <div className="rounded-full bg-white border border-slate-200 px-4 py-2 flex items-center gap-2 text-slate-600 shadow-sm">
+                                <div
+                                    className="rounded-full bg-white border border-slate-200 px-4 py-2 flex items-center gap-2 text-slate-600 shadow-sm">
                                     <FiShield className={data!.user.is_admin ? "text-emerald-600" : "text-slate-500"}/>
                                     <span className="font-medium">{roleLabel}</span>
                                 </div>
@@ -339,7 +343,8 @@ const DashboardUI: React.FC = () => {
 
                     {/* Error banner (non-blocking) */}
                     {hasError && (
-                        <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-base text-rose-800 flex items-start gap-3 shadow-sm">
+                        <div
+                            className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-base text-rose-800 flex items-start gap-3 shadow-sm">
                             <FiAlertCircle className="mt-0.5 shrink-0"/>
                             <div className="min-w-0">
                                 <p className="font-medium">We couldn’t load the latest dashboard data.</p>
@@ -397,7 +402,8 @@ const DashboardUI: React.FC = () => {
                                         </div>
                                         <div className="flex justify-between text-slate-600">
                                             <span>Total attempted</span>
-                                            <span className="font-semibold">{data!.practice_stats.total_attempted}</span>
+                                            <span
+                                                className="font-semibold">{data!.practice_stats.total_attempted}</span>
                                         </div>
                                         <div className="mt-3 space-y-3">
                                             {Object.entries(practiceDiff).map(([k, v]) => (
@@ -416,11 +422,13 @@ const DashboardUI: React.FC = () => {
                                     <div className="space-y-3 text-sm sm:text-base md:text-lg">
                                         <div className="flex justify-between text-slate-600">
                                             <span>Solved in contests</span>
-                                            <span className="font-semibold">{data!.competition_stats.total_solved}</span>
+                                            <span
+                                                className="font-semibold">{data!.competition_stats.total_solved}</span>
                                         </div>
                                         <div className="flex justify-between text-slate-600">
                                             <span>Attempted in contests</span>
-                                            <span className="font-semibold">{data!.competition_stats.total_attempted}</span>
+                                            <span
+                                                className="font-semibold">{data!.competition_stats.total_attempted}</span>
                                         </div>
                                         <div className="mt-3 space-y-3">
                                             {Object.entries(contestDiff).map(([k, v]) => (
@@ -438,7 +446,8 @@ const DashboardUI: React.FC = () => {
 
                             <SectionCard title="Recent Submissions" icon={<FiActivity/>}>
                                 {submissions.length === 0 ? (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
+                                    <div
+                                        className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
                                         <FiInfo className="mt-0.5 text-slate-500"/>
                                         <div>
                                             <p className="font-medium">No submissions yet</p>
@@ -495,7 +504,8 @@ const DashboardUI: React.FC = () => {
                         <div className="flex flex-col gap-5">
                             <SectionCard title="Strongest Categories" icon={<FiTarget/>}>
                                 {data!.overall_stats.category_breakdown.length === 0 ? (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
+                                    <div
+                                        className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
                                         <FiInfo className="mt-0.5 text-slate-500"/>
                                         <div>
                                             <p className="font-medium">No category data yet</p>
@@ -508,7 +518,8 @@ const DashboardUI: React.FC = () => {
                                     <div className="space-y-3 text-sm sm:text-base">
                                         {topCategory && (
                                             <div className="mb-2 rounded-xl bg-slate-900 text-slate-50 px-4 py-3">
-                                                <p className="text-xs uppercase tracking-wide text-slate-300">Top Category</p>
+                                                <p className="text-xs uppercase tracking-wide text-slate-300">Top
+                                                    Category</p>
                                                 <p className="text-lg font-semibold">{topCategory.category || "Uncategorized"}</p>
                                                 <p className="text-xs text-slate-300">{topCategory.solved_count} solved</p>
                                             </div>
@@ -520,7 +531,8 @@ const DashboardUI: React.FC = () => {
                                                     className="flex items-center justify-between text-slate-700"
                                                 >
                                                     <span className="truncate">{cat.category || "Uncategorized"}</span>
-                                                    <span className="text-sm text-slate-500">{cat.solved_count} solved</span>
+                                                    <span
+                                                        className="text-sm text-slate-500">{cat.solved_count} solved</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -531,13 +543,15 @@ const DashboardUI: React.FC = () => {
                             <SectionCard
                                 title="Contests"
                                 icon={<FiFlag/>}
-                                right={<Pill className="bg-slate-100 text-slate-700">Ongoing {contests.ongoing.length}</Pill>}
+                                right={<Pill
+                                    className="bg-slate-100 text-slate-700">Ongoing {contests.ongoing.length}</Pill>}
                             >
                                 <div className="space-y-3 text-sm sm:text-base">
                                     {contests.ongoing.length === 0 &&
                                     contests.upcoming.length === 0 &&
                                     contests.recent_past.length === 0 ? (
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
+                                        <div
+                                            className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-base text-slate-700 flex items-start gap-3">
                                             <FiInfo className="mt-0.5 text-slate-500"/>
                                             <div>
                                                 <p className="font-medium">No contests to show</p>

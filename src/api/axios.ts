@@ -169,13 +169,14 @@ function humanAxiosError(error: any): string {
 
 /** Only toast if request didn't ask to be silent */
 function shouldToast(error: AxiosError): boolean {
-    const cfg: any = error.config || {};
-    const headers = cfg.headers || {};
-    // Option 1: config flag
-    if (cfg.silent === true) return false;
-    // Option 2: header flag (easy to pass without TS headaches)
-    const h = headers["x-silent-error"] ?? headers["X-Silent-Error"];
-    return !(h === "1" || h === 1 || h === true);
+    return false;
+    // const cfg: any = error.config || {};
+    // const headers = cfg.headers || {};
+    // // Option 1: config flag
+    // if (cfg.silent === true) return false;
+    // // Option 2: header flag (easy to pass without TS headaches)
+    // const h = headers["x-silent-error"] ?? headers["X-Silent-Error"];
+    // return !(h === "1" || h === 1 || h === true);
 
 }
 

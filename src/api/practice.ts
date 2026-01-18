@@ -208,3 +208,141 @@ export const getPreviousSubmissions = async (
         return { flag_submissions: [], text_submissions: [] };
     }
 };
+
+
+// ✅ ADD BELOW CODE at the bottom of src/api/practice.ts
+// (Do NOT modify existing code above)
+
+export type ReportGeneratePayload = {
+    challenge_id: number;
+    from?: string; // ISO: "2026-01-14T00:00:00Z" (optional)
+    to?: string;   // ISO: "2026-01-17T23:59:59Z" (optional)
+};
+
+export type ReportEntity =
+    | { username: string } // user
+    | { name: string };    // group
+
+export type ReportAttempt = {
+    type: "flag" | "procedure";
+    submitted_at: string;
+    status: string | null;
+    score: number;
+
+    // user submissions
+    submitted_value?: string | null;
+    submitted_content?: string | null;
+
+    // group submissions (optional)
+    submitted_by?: { id?: number; username?: string | null } | null;
+};
+
+export type ReportResponse = {
+    challenge: {
+        id: number;
+        title: string;
+        solution_type: "flag" | "procedure" | "flag and procedure";
+        group_only: boolean;
+    };
+    count: number;
+    rows: Array<{
+        row_id: string;
+        entity_type: "user" | "group";
+        entity: ReportEntity;
+        solution_type: "flag" | "procedure" | "flag and procedure";
+        summary: {
+            flag: {
+                best_score: number;
+                latest_status: string | null;
+                latest_submitted_at: string | null;
+            };
+            procedure: {
+                best_score: number;
+                latest_status: string | null;
+                latest_submitted_at: string | null;
+            };
+            total_score: number;
+            date: string | null;
+        };
+        see_more: {
+            // ADMIN ONLY: your backend returns correct solutions
+            correct_solution: {
+                solution_type: "flag" | "procedure" | "flag and procedure";
+                flag_solution: string | null;
+                procedure_solution: string | null;
+            };
+            attempts: {
+                flag: ReportAttempt[];
+                procedure: ReportAttempt[];
+            };
+        };
+    }>;
+};
+
+/**
+ * Generate report for a challenge (Admin-only endpoint).
+ * Backend: POST /reports/generate/
+ *
+ * SECURITY NOTE:
+ * This endpoint returns correct solutions + full submission contents, so it MUST be admin-only.
+ */
+export const generateChallengeReport = async (
+    payload: ReportGeneratePayload
+): Promise<ReportResponse> => {
+    try {
+        if (!payload?.challenge_id || typeof payload.challenge_id !== "number") {
+            throw new Error("challenge_id is required and must be a number.");
+        }
+
+        // Optional: minimal sanity checks for ISO strings
+        const from = payload.from;
+        const to = payload.to;
+
+        if (from && typeof from !== "string") throw new Error("from must be an ISO string.");
+        if (to && typeof to !== "string") throw new Error("to must be an ISO string.");
+
+        const res = await api.post("submissions/reports/generate/", payload);
+
+        if (!res || !res.data) throw new Error("No response received from report API.");
+        return res.data as ReportResponse;
+    } catch (error: any) {
+        console.error("Error generating report:", error);
+
+        const data = error?.response?.data;
+
+        // DRF-style friendly message extraction
+        const msg =
+            typeof data === "string"
+                ? data
+                : data?.detail
+                    ? data.detail
+                    : data?.challenge_id?.[0]
+                        ? data.challenge_id[0]
+                        : data?.from?.[0]
+                            ? data.from[0]
+                            : data?.to?.[0]
+                                ? data.to[0]
+                                : data?.non_field_errors?.[0]
+                                    ? data.non_field_errors[0]
+                                    : error?.message
+                                        ? error.message
+                                        : "Failed to generate report.";
+
+        throw new Error(msg);
+    }
+};
+
+/**
+ * Convenience wrapper: generate report by challenge id and optional date range.
+ */
+export const generateReportByChallengeId = async (
+    challengeId: number,
+    from?: string,
+    to?: string
+): Promise<ReportResponse> => {
+    return generateChallengeReport({
+        challenge_id: challengeId,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+    });
+};

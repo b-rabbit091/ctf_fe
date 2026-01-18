@@ -41,7 +41,7 @@ import AdminPracticeList from "./pages/Admin/AdminPracticeList";
 import AdminPracticeEdit from "./pages/Admin/AdminPracticeEdit";
 import AdminChallengeMetadata from "./pages/CategoryDifficultySolutionTypes/AdminChallengeMetadata";
 import AdminUserList from "./pages/Admin/AdminUserList";
-import AdminSubmissionsList from "./pages/Admin/AdminSubmissionsList";
+import AdminGenerateReport from "./pages/Admin/AdminGenerateReport";
 import AdminGroupList from "./pages/Admin/AdminGroupList";
 
 // Note: you currently import CompetitionCreate + PracticeCreate from non-admin folders.
@@ -96,13 +96,11 @@ const App: React.FC = () => {
 
                                 <Route path="/admin/taxonomy" element={<AdminChallengeMetadata />} />
                                 <Route path="/admin/users" element={<AdminUserList />} />
-                                <Route path="/admin/submissions" element={<AdminSubmissionsList />} />
+                                <Route path="/admin/submissions" element={<AdminGenerateReport />} />
                                 <Route path="/admin/groups" element={<AdminGroupList />} />
                             </Route>
                         </Route>
 
-                        {/* Optional 404 */}
-                        {/* <Route path="*" element={<NotFound />} /> */}
                     </Routes>
                 </BrowserRouter>
 
