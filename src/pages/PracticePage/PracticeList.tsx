@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Navbar from "../../components/Navbar";
 import { getChallenges, getCategories, getDifficulties } from "./practice";
 import { useNavigate } from "react-router-dom";
-import { FiEye, FiFilter, FiTag } from "react-icons/fi";
+import { FiEye, FiTag } from "react-icons/fi";
 import type { Challenge } from "./types";
 
 /** Truncate text safely */
@@ -130,9 +130,6 @@ const PracticeList: React.FC = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const filtersActive = useMemo(() => {
-        return Boolean(categoryFilter || difficultyTag || debouncedSearch.trim());
-    }, [categoryFilter, difficultyTag, debouncedSearch]);
 
     // Tag chip: no bold, no black backgrounds; pleasant blue when active
     const tagClass = (active: boolean) =>
@@ -216,7 +213,6 @@ const PracticeList: React.FC = () => {
         );
     };
 
-    const activeFiltersCount = (search.trim() ? 1 : 0) + (categoryFilter ? 1 : 0) + (difficultyTag ? 1 : 0);
 
     return (
         <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
@@ -232,31 +228,6 @@ const PracticeList: React.FC = () => {
                             </h1>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                <span className="text-slate-500">Total:</span>
-                                <span className="ml-2 text-slate-600">{total}</span>
-                            </span>
-
-                            <span className="inline-flex items-center rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                <span className="text-slate-500">Filters:</span>
-                                <span className="ml-2 text-slate-600">{activeFiltersCount}</span>
-                            </span>
-
-                            {filtersActive && (
-                                <div className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    <FiFilter />
-                                    <span>Filters active</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleClearFilters}
-                                        className="ml-1 rounded-xl border border-slate-200/70 bg-white/70 px-2 py-1 text-xs font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-                            )}
-                        </div>
                     </header>
 
                     {/* Filters panel (match CompetitionList layout + chips) */}
@@ -312,13 +283,7 @@ const PracticeList: React.FC = () => {
                                     Reset
                                 </button>
 
-                                <div
-                                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-slate-50/60 px-3 text-sm sm:text-base text-slate-600"
-                                    aria-live="polite"
-                                >
-                                    <span className="text-slate-500">Total:</span>
-                                    <span className="ml-2 text-slate-600">{total}</span>
-                                </div>
+
                             </div>
 
                             {/* Row 2: Difficulty chips (match CompetitionList chip style) */}

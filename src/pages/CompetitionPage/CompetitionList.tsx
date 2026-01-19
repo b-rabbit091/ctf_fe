@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/Navbar";
 import { getChallenges, getCategories, getDifficulties } from "./api";
 import { useNavigate } from "react-router-dom";
-import { FiEye, FiUsers, FiTag, FiFilter } from "react-icons/fi";
+import { FiEye, FiUsers, FiTag } from "react-icons/fi";
 import { Challenge } from "./types";
 
 /** Truncate text safely */
@@ -271,22 +271,6 @@ const CompetitionList: React.FC = () => {
         };
     }, []);
 
-    const contestOptions = useMemo(() => {
-        const seen = new Map<string, { name: string; type: string | null; slug?: string | null; id?: any }>();
-        allChallenges.forEach((c: any) => {
-            const ac = c?.active_contest;
-            if (!ac?.name) return;
-            const key = String(ac.id ?? ac.slug ?? ac.name);
-            if (!seen.has(key))
-                seen.set(key, {
-                    name: ac.name,
-                    type: ac.contest_type ?? null,
-                    slug: ac.slug ?? null,
-                    id: ac.id,
-                });
-        });
-        return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
-    }, [allChallenges]);
 
     const filteredChallenges = useMemo(() => {
         const searchLower = debouncedSearch.trim().toLowerCase();
@@ -392,7 +376,7 @@ const CompetitionList: React.FC = () => {
         const difficulty = cc.difficulty?.level || "N/A";
         const category = cc.category?.name || "N/A";
 
-        const isGroupOnly = !!cc.group_only;
+        const isGroupOnly = cc.group_only;
         const canParticipate = cc.can_participate !== undefined ? !!cc.can_participate : true;
 
         const difficultyLower = String(difficulty || "").toLowerCase();
@@ -488,25 +472,7 @@ const CompetitionList: React.FC = () => {
         );
     };
 
-    const filtersActive = useMemo(() => {
-        return Boolean(
-            categoryFilter ||
-            difficultyFilter ||
-            debouncedSearch.trim() ||
-            statusFilter !== "ALL" ||
-            groupFilter !== "ALL" ||
-            contestNameFilter !== "ALL" ||
-            contestTypeFilter !== "ALL"
-        );
-    }, [
-        categoryFilter,
-        difficultyFilter,
-        debouncedSearch,
-        statusFilter,
-        groupFilter,
-        contestNameFilter,
-        contestTypeFilter,
-    ]);
+
 
     // Tag chip: no bold, no black backgrounds; pleasant blue when active
     const tagClass = (active: boolean) =>
@@ -578,19 +544,7 @@ const CompetitionList: React.FC = () => {
                             </h1>
                         </div>
 
-                        {filtersActive && (
-                            <div className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 text-sm text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                <FiFilter />
-                                <span>Filters active</span>
-                                <button
-                                    type="button"
-                                    onClick={handleClearFilters}
-                                    className="ml-1 rounded-xl border border-slate-200/70 bg-white/70 px-2 py-1 text-xs font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                >
-                                    Reset
-                                </button>
-                            </div>
-                        )}
+
                     </header>
 
                     {/* Filters panel */}
@@ -646,13 +600,6 @@ const CompetitionList: React.FC = () => {
                                     Reset
                                 </button>
 
-                                <div
-                                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-slate-50/60 px-3 text-sm sm:text-base text-slate-600"
-                                    aria-live="polite"
-                                >
-                                    <span className="text-slate-500">Total:</span>
-                                    <span className="ml-2 text-slate-600">{total}</span>
-                                </div>
                             </div>
 
                             {/* Row 2: Tag filters */}
