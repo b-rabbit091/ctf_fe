@@ -219,7 +219,7 @@ const CompetitionList: React.FC = () => {
 
     const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
     const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-    const [difficulties, setDifficulties] = useState<{ id: number; level: string }[]>([]);
+    const [, setDifficulties] = useState<{ id: number; level: string }[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -451,7 +451,7 @@ const CompetitionList: React.FC = () => {
                     {isGroupOnly && !canParticipate ? (
                         <div className="inline-flex items-center gap-2 text-sm sm:text-base md:text-lg font-normal text-slate-600">
                             <FiUsers size={18} />
-                            <span>Please create or join a group to participate.</span>
+                            <span>Join or create a group to participate.</span>
                         </div>
                     ) : (
                         <button
