@@ -1,18 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiEdit, FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiEye, FiTrash2 } from "react-icons/fi";
 
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../contexts/AuthContext";
 import { deleteBlog, getBlogs } from "./api";
 import { Blog as BlogType } from "./types";
 
-/**
- * LeetCode-style listing notes:
- * - Never inject HTML into the list view.
- * - Derive a plain-text excerpt client-side.
- * - Keep UI minimal: title, date, excerpt, actions.
- */
 
 function htmlToPlainText(html: string): string {
     // Strip tags safely without rendering raw HTML.
@@ -104,17 +98,6 @@ const BlogList: React.FC = () => {
                         </p>
                     </div>
 
-                    {isAdmin && (
-                        <button
-                            type="button"
-                            onClick={() => navigate("/blogs/new")}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm sm:text-base font-normal text-emerald-700 shadow-sm backdrop-blur-xl transition hover:bg-emerald-50/85 focus:outline-none focus:ring-2 focus:ring-emerald-300/60"
-                            title="Create New Blog"
-                        >
-                            <FiPlus size={16} />
-                            <span>New Post</span>
-                        </button>
-                    )}
                 </div>
 
                 {/* Status */}
