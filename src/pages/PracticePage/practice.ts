@@ -42,6 +42,27 @@ export const updateChallenge = async (id: number, data: FormData) => {
     return resp.data;
 };
 
+export type BulkUpdateChallengesPayload = {
+    ids: number[]; // required
+    // any fields you want to patch across all items:
+    question_type?: "practice" | "competition" | "N/A";
+};
+
+export const bulkUpdateChallenges = async (
+    ids: number | number[],
+    patch: Omit<BulkUpdateChallengesPayload, "ids">
+) => {
+    const list = Array.isArray(ids) ? ids : [ids];
+    if (list.length === 0) throw new Error("ids cannot be empty.");
+
+    const res = await api.patch("/challenges/challenges/bulk-update/", {
+        ids: list,
+        ...patch,
+    });
+
+    return res.data;
+};
+
 export const deleteChallenge = async (id: number) => {
     const resp = await api.delete(`/challenges/challenges/${id}/`);
     return {success: resp.status};

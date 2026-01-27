@@ -250,13 +250,15 @@ const AdminPracticeEdit: React.FC = () => {
         }
     };
 
-    // --- responsive full-screen shell for all guard states ---
+    // --- responsive full-screen shell for all guard states (CompetitionList style) ---
+
     if (!user) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div
+                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+                <main className="flex-1 px-6 py-8">
+                    Checking permissions…
                 </main>
             </div>
         );
@@ -264,23 +266,22 @@ const AdminPracticeEdit: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div
+                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        Unauthorized – admin access required.
-                    </p>
+                <main className="flex-1 px-6 py-8 text-rose-700">
+                    Unauthorized – admin access required.
                 </main>
             </div>
         );
     }
-
     if (initialLoading) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div
+                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Loading practice challenge…</div>
+                <main className="flex-1 px-6 py-8">
+                    Loading practice challenge…
                 </main>
             </div>
         );
@@ -288,54 +289,59 @@ const AdminPracticeEdit: React.FC = () => {
 
     if (initialError || !loadedChallenge) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div
+                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {initialError || "Unable to load practice challenge."}
-                    </p>
+                <main className="flex-1 px-6 py-8 text-rose-700">
+                    {initialError}
                 </main>
             </div>
         );
     }
-
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+        <div
+            className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
             <Navbar/>
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                <div className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
+            <main className="flex-1 px-6 py-8 text-rose-700">
+                <div
+                    className="w-full rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                    <div
+                        className="flex flex-wrap items-start justify-between gap-4 border-b border-white/40 bg-white/40 px-6 py-5 backdrop-blur-xl">
                         <div className="min-w-0">
-                            <h1 className="truncate text-xl font-semibold text-slate-900 md:text-2xl">Edit Practice
-                                Challenge</h1>
-                            <p className="mt-1 text-xs text-slate-500 md:text-sm">
+                            <h1 className="truncate text-2xl sm:text-3xl font-normal text-slate-700 tracking-tight">
+                                Edit Practice Challenge
+                            </h1>
+                            <p className="mt-1 text-sm sm:text-base text-slate-600">
                                 Update the practice problem, metadata, and reference files.
                             </p>
                         </div>
-                        <div className="flex flex-col items-end gap-1 text-[11px] text-slate-500">
-                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">Admin Panel</span>
+
+                        <div className="flex flex-col items-end gap-1 text-xs text-slate-600">
                             <span
-                                className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
-                Practice #{loadedChallenge.id}
-              </span>
+                                className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1">
+                                Admin Panel
+                            </span>
+                            <span
+                                className="inline-flex items-center rounded-full border border-emerald-200/70 bg-emerald-50/70 px-3 py-1 text-emerald-700">
+                                Practice #{loadedChallenge.id}
+                            </span>
                         </div>
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        {/* Alerts */}
                         {(error || message) && (
                             <div className="px-6 pt-4">
                                 {error && (
                                     <div
-                                        className="mb-3 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                        className="mb-3 whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
                                         {error}
                                     </div>
                                 )}
                                 {message && (
                                     <div
-                                        className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                        className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-4 text-sm sm:text-base text-emerald-800 shadow-sm backdrop-blur-xl">
                                         {message}
                                     </div>
                                 )}
@@ -343,94 +349,76 @@ const AdminPracticeEdit: React.FC = () => {
                         )}
 
                         {/* Tabs */}
-                        <div className="border-b border-slate-200 px-6 pt-2">
-                            <div className="flex gap-4">
+                        <div className="border-b border-white/40 px-6 pt-3">
+                            <div className="flex flex-wrap gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("question")}
-                                    className={`relative pb-2 text-sm font-medium ${
-                                        activeTab === "question" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-                                    }`}
+                                    className={tagClass(activeTab === "question")}
                                 >
                                     Question
-                                    {activeTab === "question" && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
-                                    )}
                                 </button>
                                 <button
                                     type="button"
                                     disabled={!questionSaved}
                                     onClick={() => questionSaved && setActiveTab("solution")}
-                                    className={`relative pb-2 text-sm font-medium ${
-                                        !questionSaved
-                                            ? "cursor-not-allowed text-slate-300"
-                                            : activeTab === "solution"
-                                                ? "text-slate-900"
-                                                : "text-slate-500 hover:text-slate-700"
-                                    }`}
+                                    className={tagClass(activeTab === "solution" && questionSaved, !questionSaved)}
                                 >
                                     Solution Notes
-                                    {activeTab === "solution" && questionSaved && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
-                                    )}
                                 </button>
                             </div>
                         </div>
 
-                        {/* --- Rest of your JSX is unchanged below --- */}
                         {/* QUESTION TAB */}
                         {activeTab === "question" && (
                             <div className="space-y-8 px-6 py-6">
-                                {/* Basic info */}
                                 <div className="grid gap-6 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Title <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Title <span className="text-rose-500">*</span>
                                         </label>
                                         <input
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             placeholder="e.g. SQL Injection Basics"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Question
-                                            Type</label>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Question Type
+                                        </label>
                                         <input
                                             value="practice"
                                             disabled
-                                            className="block w-full rounded-lg border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700"
+                                            className="block h-10 w-full rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-4 text-xs font-normal uppercase tracking-wide text-emerald-700"
                                         />
                                     </div>
                                 </div>
 
-                                {/* Description */}
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Problem Description <span className="text-red-500">*</span>
+                                    <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                        Problem Description <span className="text-rose-500">*</span>
                                     </label>
                                     <textarea
-                                        className="block h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                        style={{height: 160}}
                                         placeholder="Describe the challenge, context, and goal..."
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                     />
-                                    <p className="mt-1 text-xs text-slate-400">
+                                    <p className="mt-1 text-xs sm:text-sm text-slate-500">
                                         Supports plain text. For code snippets, use backticks in the description.
                                     </p>
                                 </div>
 
-                                {/* Metadata */}
                                 <div className="grid gap-6 md:grid-cols-3">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Category <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Category <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             value={category}
                                             onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : "")}
                                         >
@@ -443,11 +431,11 @@ const AdminPracticeEdit: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Difficulty <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Difficulty <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             value={difficulty}
                                             onChange={(e) => setDifficulty(e.target.value ? Number(e.target.value) : "")}
                                         >
@@ -460,11 +448,11 @@ const AdminPracticeEdit: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Solution Type <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Solution Type <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                             value={solutionType}
                                             onChange={(e) => setSolutionType(e.target.value ? Number(e.target.value) : "")}
                                         >
@@ -478,14 +466,14 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* IO + examples */}
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
                                             Constraints
                                         </label>
                                         <textarea
-                                            className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            style={{height: 96}}
                                             placeholder="e.g. 1 ≤ N ≤ 10^5"
                                             value={constraints}
                                             onChange={(e) => setConstraints(e.target.value)}
@@ -493,22 +481,26 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            <label
+                                                className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
                                                 Input Format
                                             </label>
                                             <textarea
-                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                style={{height: 96}}
                                                 placeholder="Describe input specification..."
                                                 value={inputFormat}
                                                 onChange={(e) => setInputFormat(e.target.value)}
                                             />
                                         </div>
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            <label
+                                                className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
                                                 Output Format
                                             </label>
                                             <textarea
-                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                style={{height: 96}}
                                                 placeholder="Describe output specification..."
                                                 value={outputFormat}
                                                 onChange={(e) => setOutputFormat(e.target.value)}
@@ -519,22 +511,24 @@ const AdminPracticeEdit: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
                                             Sample Input
                                         </label>
                                         <textarea
-                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-white/70 px-4 py-3 text-sm font-mono text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            style={{height: 112}}
                                             placeholder="Example input..."
                                             value={sampleInput}
                                             onChange={(e) => setSampleInput(e.target.value)}
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
                                             Sample Output
                                         </label>
                                         <textarea
-                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-white/70 px-4 py-3 text-sm font-mono text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            style={{height: 112}}
                                             placeholder="Example output..."
                                             value={sampleOutput}
                                             onChange={(e) => setSampleOutput(e.target.value)}
@@ -542,20 +536,20 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Attachments */}
-                                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
-                                    <div className="flex items-center justify-between gap-4">
+                                <div
+                                    className="rounded-2xl border border-slate-200/70 bg-white/40 p-4 backdrop-blur-xl">
+                                    <div className="flex flex-wrap items-start justify-between gap-4">
                                         <div>
-                                            <p className="text-sm font-medium text-slate-700">
+                                            <p className="text-sm sm:text-base font-normal text-slate-700">
                                                 Attach Additional Reference Files
                                             </p>
-                                            <p className="mt-1 text-xs text-slate-500">
+                                            <p className="mt-1 text-xs sm:text-sm text-slate-600">
                                                 New uploads will be added to existing attachments for this
                                                 challenge. Max 20MB per file. Allowed types: images, ZIP.
                                             </p>
                                         </div>
                                         <label
-                                            className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                            className="inline-flex cursor-pointer items-center rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15">
                                             <span>Upload files</span>
                                             <input
                                                 type="file"
@@ -568,22 +562,22 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
 
                                     {uploadFiles.length > 0 && (
-                                        <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                                        <ul className="mt-3 space-y-2 text-xs sm:text-sm text-slate-600">
                                             {uploadFiles.map((file, idx) => (
                                                 <li
                                                     key={`${file.name}-${idx}`}
-                                                    className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-1.5"
+                                                    className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2"
                                                 >
-                          <span className="max-w-xs truncate">
-                            {file.name}{" "}
-                              <span className="text-slate-400">
-                              ({Math.round(file.size / 1024)} KB)
-                            </span>
-                          </span>
+                                                    <span className="max-w-[520px] truncate">
+                                                        {file.name}{" "}
+                                                        <span className="text-slate-400">
+                                                            ({Math.round(file.size / 1024)} KB)
+                                                        </span>
+                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveFile(idx)}
-                                                        className="text-xs text-red-500 hover:text-red-600"
+                                                        className="text-xs sm:text-sm font-normal text-rose-700 hover:text-rose-800"
                                                     >
                                                         Remove
                                                     </button>
@@ -593,18 +587,19 @@ const AdminPracticeEdit: React.FC = () => {
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                                <div
+                                    className="flex flex-wrap items-center justify-between gap-3 border-t border-white/40 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => navigate("/admin/practice")}
-                                        className="text-xs text-slate-500 hover:text-slate-700 md:text-sm"
+                                        className="text-sm font-normal text-slate-600 hover:text-slate-700"
                                     >
                                         ← Back to practice list
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleSaveQuestionDraft}
-                                        className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                        className="inline-flex items-center rounded-2xl border border-blue-200/70 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                     >
                                         Validate Question Draft
                                     </button>
@@ -612,11 +607,10 @@ const AdminPracticeEdit: React.FC = () => {
                             </div>
                         )}
 
-                        {/* SOLUTION TAB */}
                         {activeTab === "solution" && questionSaved && (
                             <div className="space-y-6 px-6 py-6">
                                 <div
-                                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                                    className="rounded-2xl border border-slate-200/70 bg-white/40 px-5 py-4 text-xs sm:text-sm text-slate-600 shadow-sm backdrop-blur-xl">
                                     These fields are for internal solution notes and official answers. They should not
                                     be exposed to
                                     participants.
@@ -624,10 +618,12 @@ const AdminPracticeEdit: React.FC = () => {
 
                                 {(solutionType === 1 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Flag
-                                            Solution</label>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Flag Solution
+                                        </label>
                                         <textarea
-                                            className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm font-mono text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            style={{height: 112}}
                                             placeholder="flag{example_flag_here}"
                                             value={flagSolution}
                                             onChange={(e) => setFlagSolution(e.target.value)}
@@ -637,10 +633,12 @@ const AdminPracticeEdit: React.FC = () => {
 
                                 {(solutionType === 2 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Procedure /
-                                            Writeup</label>
+                                        <label className="mb-1 block text-sm sm:text-base font-normal text-slate-600">
+                                            Procedure / Writeup
+                                        </label>
                                         <textarea
-                                            className="block h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            style={{height: 160}}
                                             placeholder="Step-by-step solution, hints, and reasoning..."
                                             value={procedureSolution}
                                             onChange={(e) => setProcedureSolution(e.target.value)}
@@ -648,18 +646,19 @@ const AdminPracticeEdit: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                                <div
+                                    className="flex flex-wrap items-center justify-between gap-3 border-t border-white/40 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("question")}
-                                        className="text-sm text-slate-500 hover:text-slate-700"
+                                        className="text-sm font-normal text-slate-600 hover:text-slate-700"
                                     >
                                         ← Back to Question
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="inline-flex items-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 disabled:opacity-60"
+                                        className="inline-flex items-center rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-5 py-2.5 text-sm sm:text-base font-normal text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/15 disabled:opacity-60"
                                     >
                                         {submitting ? "Updating..." : "Update Practice Challenge"}
                                     </button>
@@ -674,3 +673,16 @@ const AdminPracticeEdit: React.FC = () => {
 };
 
 export default AdminPracticeEdit;
+
+// --- helper: same chip styling + disabled option without changing behavior ---
+function tagClass(active: boolean, disabled = false) {
+    return [
+        "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
+        disabled
+            ? "cursor-not-allowed border-slate-200/70 bg-white/50 text-slate-300"
+            : active
+                ? "border-blue-200/70 bg-blue-50 text-blue-700"
+                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
+    ].join(" ");
+}

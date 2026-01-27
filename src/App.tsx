@@ -1,11 +1,11 @@
 // src/App.tsx
 import React from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
+import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
+import {ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import ErrorBoundary from "./components/ErrorBoundary";
-import { AuthProvider } from "./contexts/AuthContext";
+import {AuthProvider} from "./contexts/AuthContext";
 
 // Guards (must be Outlet-based)
 import PrivateRoute from "./routes/PrivateRoute";
@@ -43,12 +43,15 @@ import AdminChallengeMetadata from "./pages/CategoryDifficultySolutionTypes/Admi
 import AdminUserList from "./pages/Admin/AdminUserList";
 import AdminGenerateReport from "./pages/Admin/AdminGenerateReport";
 import AdminGroupList from "./pages/Admin/AdminGroupList";
-
-// Note: you currently import CompetitionCreate + PracticeCreate from non-admin folders.
-// Keep as-is if that's your project structure.
-import CompetitionCreate from "./pages/CompetitionPage/CompetitionCreate";
-import PracticeCreate from "./pages/PracticePage/PracticeCreate";
 import AdminBlogList from "./pages/Admin/AdminBlogList";
+import AdminDraftQuestionsList from "./pages/Admin/AdminDraftQuestionsList";
+import AdminQuestionCreate from "./pages/Admin/AdminQuestionCreate";
+import AdminDraftAssignPracticeList from "./pages/Admin/AdminDraftAssignPracticeList";
+import AdminCompetitionAssign from "./pages/Admin/AdminCompetitionAssign";
+import AdminContestList from "./pages/Admin/AdminContestList";
+import AdminContestEdit from "./pages/Admin/AdminContestEdit";
+import AdminContestCreate from "./pages/Admin/AdminContestCreate";
+import AdminDraftEdit from "./pages/Admin/AdminDraftEdit";
 
 const App: React.FC = () => {
     return (
@@ -57,57 +60,64 @@ const App: React.FC = () => {
                 <BrowserRouter>
                     <Routes>
                         {/* ---------------- Public ---------------- */}
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/verify-email" element={<VerifyEmail />} />
-                        <Route path="/verify-reset-password" element={<VerifyResetPassword />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/login" element={<Login/>}/>
+                        <Route path="/register" element={<Register/>}/>
+                        <Route path="/verify-email" element={<VerifyEmail/>}/>
+                        <Route path="/verify-reset-password" element={<VerifyResetPassword/>}/>
+                        <Route path="/reset-password" element={<ResetPassword/>}/>
 
                         {/* ---------------- Everything else: Auth required ---------------- */}
-                        <Route element={<PrivateRoute />}>
-                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route element={<PrivateRoute/>}>
+                            <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
 
                             {/* Blogs */}
-                            <Route path="/blogs" element={<BlogList />} />
-                            <Route path ="/blogs/:id" element={<BlogDetail />} />
+                            <Route path="/blogs" element={<BlogList/>}/>
+                            <Route path="/blogs/:id" element={<BlogDetail/>}/>
 
                             {/* User pages */}
-                            <Route path="/dashboard" element={<DashboardOverview />} />
-                            <Route path="/practice" element={<PracticeList />} />
-                            <Route path="/practice/:id" element={<PracticeDetail />} />
-                            <Route path="/compete" element={<CompetitionList />} />
-                            <Route path="/compete/:id" element={<CompetitionDetail />} />
-                            <Route path="/leaderboard" element={<LeaderboardPage />} />
-                            <Route path="/my-group" element={<UserGroupPage />} />
-                            <Route path="/account" element={<AccountSettings />} />
+                            <Route path="/dashboard" element={<DashboardOverview/>}/>
+                            <Route path="/practice" element={<PracticeList/>}/>
+                            <Route path="/practice/:id" element={<PracticeDetail/>}/>
+                            <Route path="/compete" element={<CompetitionList/>}/>
+                            <Route path="/compete/:id" element={<CompetitionDetail/>}/>
+                            <Route path="/leaderboard" element={<LeaderboardPage/>}/>
+                            <Route path="/my-group" element={<UserGroupPage/>}/>
+                            <Route path="/account" element={<AccountSettings/>}/>
 
                             {/* ---------------- Admin only ---------------- */}
-                            <Route element={<AdminRoute />}>
-                                <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                            <Route element={<AdminRoute/>}>
+                                <Route path="/admin-dashboard" element={<AdminDashboard/>}/>
 
-                                <Route path="/admin/contests" element={<AdminCompetitionList />} />
-                                <Route path="/admin/contests/new" element={<CompetitionCreate />} />
-                                <Route path="/admin/contests/:id" element={<AdminCompetitionEdit />} />
+                                <Route path="/admin/competition" element={<AdminCompetitionList/>}/>
+                                <Route path="/admin/competition/new" element={<AdminCompetitionAssign/>}/>
+                                <Route path="/admin/competition/:id" element={<AdminCompetitionEdit/>}/>
+                                <Route path="/admin/contests" element={<AdminContestList/>}/>
+                                <Route path="/admin/contests/new" element={<AdminContestCreate/>}/>
+                                <Route path="/admin/contests/:id" element={<AdminContestEdit/>}/>
 
-                                <Route path="/admin/practice" element={<AdminPracticeList />} />
-                                <Route path="/admin/practice/new" element={<PracticeCreate />} />
-                                <Route path="/admin/practice/:id" element={<AdminPracticeEdit />} />
+                                <Route path="/admin/practice" element={<AdminPracticeList/>}/>
+                                <Route path="/admin/practice/new" element={<AdminDraftAssignPracticeList/>}/>
+                                <Route path="/admin/practice/:id" element={<AdminPracticeEdit/>}/>
 
-                                <Route path="/admin/blogs" element={<AdminBlogList />} />
-                                <Route path="/admin/blogs/new" element={<AdminBlogEditor />} />
-                                <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor />} />
+                                <Route path="/admin/blogs" element={<AdminBlogList/>}/>
+                                <Route path="/admin/blogs/new" element={<AdminBlogEditor/>}/>
+                                <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor/>}/>
 
-                                <Route path="/admin/taxonomy" element={<AdminChallengeMetadata />} />
-                                <Route path="/admin/users" element={<AdminUserList />} />
-                                <Route path="/admin/submissions" element={<AdminGenerateReport />} />
-                                <Route path="/admin/groups" element={<AdminGroupList />} />
+                                <Route path="/admin/taxonomy" element={<AdminChallengeMetadata/>}/>
+                                <Route path="/admin/users" element={<AdminUserList/>}/>
+                                <Route path="/admin/submissions" element={<AdminGenerateReport/>}/>
+                                <Route path="/admin/groups" element={<AdminGroupList/>}/>
+                                <Route path="/admin/questions/create" element={<AdminDraftQuestionsList/>}/>
+                                <Route path="/admin/drafts/new" element={<AdminQuestionCreate/>}/>
+                                <Route path="/admin/drafts/:id" element={<AdminDraftEdit/>}/>
+
                             </Route>
                         </Route>
 
                     </Routes>
                 </BrowserRouter>
 
-                <ToastContainer position="top-right" />
+                <ToastContainer position="top-right"/>
             </AuthProvider>
         </ErrorBoundary>
     );

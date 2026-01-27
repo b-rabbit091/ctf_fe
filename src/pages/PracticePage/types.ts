@@ -1,4 +1,4 @@
-import {ContestMeta} from "../CompetitionPage/types";
+import { ContestMeta } from "../CompetitionPage/types";
 
 export interface FileType {
     name: string;
@@ -22,8 +22,14 @@ export interface DifficultyTypes {
     id: number;
     level: string;
     description: string;
-
 }
+
+/**
+ * What backend returns for per-user submission status.
+ * If it is anything other than "solved" or "partially_solved",
+ * UI should treat it as "unsolved" (you'll do that mapping in UI).
+ */
+export type UserSubmissionStatus = "solved" | "partially_solved" | "attempted" | "not_attempted";
 
 export interface Challenge {
     id: number;
@@ -37,11 +43,12 @@ export interface Challenge {
     files?: FileType[] | null;
     category: CategoryTypes;
     difficulty: DifficultyTypes;
-    solution_type: SolutionTypes
+    solution_type: SolutionTypes;
     active_contest?: ContestMeta | null;
 
+    // ✅ NEW: returned by backend (per user)
+    user_submission_status?: UserSubmissionStatus;
 }
-
 
 export type SubmissionApiItem = {
     id: number;
@@ -76,16 +83,15 @@ export type PreviousSubmission = {
     content: string | null;
 };
 
-
 // src/components/chat/types.ts
 
 export type ChatRole = "user" | "assistant" | "system";
 
 export type ChatMessage = {
-    id: string;           // always string in UI
+    id: string; // always string in UI
     role: ChatRole;
     content: string;
-    createdAt: string;    // ISO string
+    createdAt: string; // ISO string
     meta?: Record<string, any>;
 };
 
@@ -117,11 +123,9 @@ export type ChatSendApiResponse = {
 export type ChatHistoryPage = {
     threadId: number | null;
     challengeId: number;
-    next: string | null;        // next cursor URL = older messages (because backend ordering is -created_at)
+    next: string | null; // next cursor URL = older messages (because backend ordering is -created_at)
     previous: string | null;
-    messages: ChatMessage[];    // normalized
+    messages: ChatMessage[]; // normalized
 };
 
-export type ApiResult<T> =
-    | { ok: true; data: T }
-    | { ok: false; error: string };
+export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };

@@ -1,11 +1,10 @@
 import React, {useEffect, useState} from "react";
 import {useNavigate, Link} from "react-router-dom";
 import {motion} from "framer-motion";
-
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 
-import {FiUsers, FiFlag, FiBookOpen, FiLayers, FiActivity, FiGrid, FiEdit3} from "react-icons/fi";
+import {FiUsers, FiFlag, FiBookOpen, FiLayers, FiActivity, FiGrid, FiEdit3,FiFileText,FiCalendar} from "react-icons/fi";
 
 import {getAdminDashboardTotals, AdminDashboardTotalsResponse} from "../../api/dashboard";
 
@@ -189,19 +188,30 @@ const AdminDashboard: React.FC = () => {
                             <div className="px-4 md:px-5 pt-3 pb-4">
                                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                                     <QuickLink
-                                        label="Manage Challenges"
+                                        label="Draft a Question"
+                                        to="/admin/questions/create"
+                                        description="Create the base question now. Assign Practice/Competition later when you edit."
+                                        icon={<FiFileText size={18}/>}
+                                    />
+                                    <QuickLink
+                                        label="Manage Practice "
                                         to="/admin/practice"
-                                        description="Create, edit, archive practice and competition challenges. Attach files and define solutions."
+                                        description="Attach challenges to contest, edit existing competition challenges and toggle visibility."
                                         icon={<FiBookOpen size={18}/>}
                                     />
                                     <QuickLink
                                         label="Manage Contests"
                                         to="/admin/contests"
-                                        description="Schedule contests, set start/end times, attach challenges, and toggle visibility."
+                                        description="Create, edit, and manage contests. Attach challenges and control schedules."
+                                        icon={<FiCalendar size={18} />}
+                                    />
+                                    <QuickLink
+                                        label="Manage Competition"
+                                        to="/admin/competition"
+                                        description="Attach challenges to contest, edit existing competition challenges and toggle visibility."
                                         icon={<FiFlag size={18}/>}
                                     />
 
-                                    {/* ✅ NEW: Manage Blogs (placed right after Manage Contests) */}
                                     <QuickLink
                                         label="Manage Blogs"
                                         to="/admin/blogs"

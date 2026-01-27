@@ -130,10 +130,12 @@ const AdminPracticeList: React.FC = () => {
     // --- responsive full-screen shell for guard states ---
     if (!user) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-base md:text-lg text-slate-500">Checking permissions…</div>
+                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
+                    <div className="w-full rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        Checking permissions…
+                    </div>
                 </main>
             </div>
         );
@@ -141,10 +143,10 @@ const AdminPracticeList: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
                 <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-base md:text-lg text-red-700">
+                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
+                    <div className="w-full rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-rose-700 shadow-sm backdrop-blur-xl">
                         Unauthorized – admin access required.
                     </div>
                 </main>
@@ -153,162 +155,185 @@ const AdminPracticeList: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
             <Navbar/>
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
                 <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
-                    {/* Header – same style as AdminCompetitionList */}
-                    <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">
+                    <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight">
                                 Manage Practice Challenges
                             </h1>
-                            <p className="mt-1 text-sm sm:text-base md:text-lg text-slate-500">
+                            <p className="mt-1 text-sm sm:text-base md:text-lg text-slate-600">
                                 Admin view of all practice-type challenges. Create, review, and maintain practice
                                 problems from here.
                             </p>
                         </div>
+
                         <button
                             type="button"
                             onClick={() => navigate("/admin/practice/new")}
-                            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm sm:text-base font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-normal text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/15"
                         >
                             <FiPlus size={18}/>
                             <span>New Practice Challenge</span>
                         </button>
                     </header>
 
-                    {/* Filters – same card style, minus contest status buttons */}
-                    <section className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-4 shadow-sm">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <input
-                                type="search"
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                                placeholder="Search by title, description, category…"
-                                className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
+                    {/* Filters */}
+                    <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        <div className="px-4 py-4 space-y-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="min-w-[260px] flex-1 max-w-[720px]">
+                                    <label className="sr-only" htmlFor="admin-practice-search">
+                                        Search practice challenges
+                                    </label>
+                                    <input
+                                        id="admin-practice-search"
+                                        type="search"
+                                        value={search}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search by title, description, category…"
+                                        className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                    />
+                                </div>
 
-                            <select
-                                value={categoryFilter}
-                                onChange={(e) => {
-                                    setCategoryFilter(e.target.value);
-                                    setPage(1);
-                                }}
-                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="">All Categories</option>
-                                {categories.map((c) => (
-                                    <option key={c.id} value={c.name}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
+                                <div className="shrink-0">
+                                    <label className="sr-only" htmlFor="admin-practice-category">
+                                        Category filter
+                                    </label>
+                                    <select
+                                        id="admin-practice-category"
+                                        value={categoryFilter}
+                                        onChange={(e) => {
+                                            setCategoryFilter(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="h-10 w-[190px] rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                    >
+                                        <option value="">Category</option>
+                                        {categories.map((c) => (
+                                            <option key={c.id} value={c.name}>
+                                                {c.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                            <select
-                                value={difficultyFilter}
-                                onChange={(e) => {
-                                    setDifficultyFilter(e.target.value);
-                                    setPage(1);
-                                }}
-                                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="">All Difficulties</option>
-                                {difficulties.map((d) => (
-                                    <option key={d.id} value={d.level}>
-                                        {d.level}
-                                    </option>
-                                ))}
-                            </select>
+                                <div className="shrink-0">
+                                    <label className="sr-only" htmlFor="admin-practice-difficulty">
+                                        Difficulty filter
+                                    </label>
+                                    <select
+                                        id="admin-practice-difficulty"
+                                        value={difficultyFilter}
+                                        onChange={(e) => {
+                                            setDifficultyFilter(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="h-10 w-[190px] rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                    >
+                                        <option value="">Difficulty</option>
+                                        {difficulties.map((d) => (
+                                            <option key={d.id} value={d.level}>
+                                                {d.level}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                            <button
-                                type="button"
-                                onClick={handleClearFilters}
-                                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm sm:text-base text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-300"
-                            >
-                                Clear
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={handleClearFilters}
+                                    className="h-10 shrink-0 rounded-xl border border-slate-200/70 bg-white/80 px-4 text-sm sm:text-base font-normal text-slate-600 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                >
+                                    Reset
+                                </button>
 
-                            <div className="ml-auto text-sm sm:text-base text-slate-500">
-                                Total: <span className="font-medium text-slate-800">{total}</span>
+                                <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
+                                    <span className="text-slate-500">Total:</span>
+                                    <span className="ml-1">{total}</span>
+                                </span>
                             </div>
                         </div>
                     </section>
 
-                    {/* Alerts – same pattern */}
                     {loading && (
-                        <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                             Loading practice challenges…
                         </div>
                     )}
                     {error && (
-                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm sm:text-base text-red-700 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-rose-700 shadow-sm backdrop-blur-xl">
                             {error}
                         </div>
                     )}
                     {message && (
-                        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm sm:text-base text-blue-800 shadow-sm">
+                        <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-sky-700 shadow-sm backdrop-blur-xl">
                             {message}
                         </div>
                     )}
 
-                    {/* Table – same styling as competition, but without contest status col */}
                     {!loading && !error && (
                         <>
                             {total === 0 ? (
-                                <div className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-base md:text-lg text-slate-500 shadow-sm">
-                                    No practice challenges found.
+                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <div className="text-base md:text-lg font-normal text-slate-700">No matches</div>
+                                    <div className="mt-1 text-sm md:text-base text-slate-600">
+                                        No practice challenges match your filters. Try resetting or broadening your search.
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm sm:text-base">
-                                        <thead className="bg-slate-50">
+                                <div className="overflow-x-auto rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                    <table className="min-w-full divide-y divide-slate-200/70 text-sm sm:text-base">
+                                        <thead className="bg-white/40">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-wide text-slate-500">
                                                 Title
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-wide text-slate-500">
                                                 Category
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-wide text-slate-500">
                                                 Difficulty
                                             </th>
-                                            <th className="px-4 py-3 text-right text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 text-right text-xs sm:text-sm font-normal uppercase tracking-wide text-slate-500">
                                                 Actions
                                             </th>
                                         </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100 bg-white">
+
+                                        <tbody className="divide-y divide-slate-200/60 bg-transparent">
                                         {pageItems.map((c) => {
                                             const difficulty = c.difficulty?.level || "N/A";
                                             return (
-                                                <tr key={c.id}>
+                                                <tr key={c.id} className="bg-transparent">
                                                     <td className="px-4 py-3 align-top">
                                                         <div className="max-w-xs">
-                                                            <div className="truncate font-medium text-slate-900 text-sm sm:text-base">
+                                                            <div className="truncate font-normal text-slate-700 text-sm sm:text-base md:text-lg">
                                                                 {c.title}
                                                             </div>
-                                                            <div className="mt-1 line-clamp-2 text-sm text-slate-500">
+                                                            <div className="mt-1 line-clamp-2 text-sm sm:text-base text-slate-600">
                                                                 {c.description}
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-600">
                                                         {c.category?.name || "—"}
                                                     </td>
-                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                    <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-600">
                                                         {difficulty}
                                                     </td>
                                                     <td className="px-4 py-3 align-top">
-                                                        <div className="flex justify-end gap-2 text-sm">
+                                                        <div className="flex justify-end gap-2">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/practice/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-xs sm:text-sm md:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                                             >
                                                                 <FiEye size={16}/>
                                                                 <span>View</span>
@@ -316,7 +341,7 @@ const AdminPracticeList: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/admin/practice/${c.id}`)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-xs sm:text-sm md:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                                             >
                                                                 <FiEdit2 size={16}/>
                                                                 <span>Edit</span>
@@ -324,7 +349,7 @@ const AdminPracticeList: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDelete(c.id)}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                                                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/70 px-4 py-2 text-xs sm:text-sm md:text-base font-normal text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/15"
                                                             >
                                                                 <FiTrash2 size={16}/>
                                                                 <span>Delete</span>
@@ -339,19 +364,18 @@ const AdminPracticeList: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Pagination – identical styling */}
                             {total > 0 && (
-                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
+                                <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
                                     <div>
-                                        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
-                                        <span className="font-semibold text-slate-900">{pageCount}</span>
+                                        Page <span className="text-slate-700">{page}</span> of{" "}
+                                        <span className="text-slate-700">{pageCount}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
                                             disabled={page <= 1}
                                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                         >
                                             Prev
                                         </button>
@@ -359,10 +383,17 @@ const AdminPracticeList: React.FC = () => {
                                             type="button"
                                             disabled={page >= pageCount}
                                             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
                                         >
                                             Next
                                         </button>
+                                    </div>
+
+                                    <div className="text-slate-600">
+                                        Showing{" "}
+                                        <span className="text-slate-700">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                        – <span className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                        <span className="text-slate-700">{total}</span>
                                     </div>
                                 </div>
                             )}

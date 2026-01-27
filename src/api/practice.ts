@@ -46,6 +46,56 @@ export const updateChallenge = async (id: number, data: FormData) => {
     return resp.data;
 };
 
+export type BulkUpdateChallengesPayload = {
+    ids: number[];
+    contest_id?: number | null;
+    question_type?: "N/A" | "practice" | "competition";
+};
+
+export const bulkUpdateChallenges = async (
+    payload: BulkUpdateChallengesPayload
+) => {
+    const res = await api.patch(
+        "/challenges/challenges/bulk-update/",
+        payload
+    );
+    return res.data;
+};
+
+export type ContestType = "daily" | "weekly" | "monthly" | "custom";
+
+export type ContestDTO = {
+    id: number;
+    name: string;
+    slug: string;
+    description: string;
+    contest_type: ContestType;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+    publish_result: boolean;
+};
+
+export const getContests = async (): Promise<ContestDTO[]> => {
+    const res = await api.get("/challenges/contests/");
+    return res.data;
+};
+
+export const createContest = async (payload: {
+    name: string;
+    slug: string;
+    description?: string;
+    contest_type: ContestType;
+    start_time: string; // ISO
+    end_time: string;   // ISO
+    is_active?: boolean;
+    publish_result?: boolean;
+}) => {
+    const res = await api.post("/challenges/contests/", payload);
+    return res.data;
+};
+
+
 export const deleteChallenge = async (id: number) => {
     const resp = await api.delete(`/challenges/challenges/${id}/`);
     return { success: resp.status };
