@@ -16,7 +16,7 @@ type ContestDTO = {
     contest_type: ContestType;
     start_time: string;
     end_time: string;
-    is_active: boolean;
+    group_only: boolean;
     publish_result: boolean;
     challenges?: any[]; // expects [ids...] or [{id:..}]
 };
@@ -86,7 +86,7 @@ const AdminContestEdit: React.FC = () => {
     const [contestType, setContestType] = useState<ContestType>("custom");
     const [startTime, setStartTime] = useState(""); // datetime-local
     const [endTime, setEndTime] = useState(""); // datetime-local
-    const [isActive, setIsActive] = useState(true);
+    const [groupOnly, setGroupOnly] = useState(false);
     const [publishResult, setPublishResult] = useState(false);
 
     // questions tab state
@@ -169,7 +169,7 @@ const AdminContestEdit: React.FC = () => {
             setContestType(c.contest_type || "custom");
             setStartTime(toLocalInput(c.start_time));
             setEndTime(toLocalInput(c.end_time));
-            setIsActive(Boolean(c.is_active));
+            setGroupOnly(Boolean(c.group_only));
             setPublishResult(Boolean(c.publish_result));
 
             const ids = extractChallengeIds(c);
@@ -282,7 +282,7 @@ const AdminContestEdit: React.FC = () => {
                     contest_type: contestType,
                     start_time: new Date(startTime).toISOString(),
                     end_time: new Date(endTime).toISOString(),
-                    is_active: isActive,
+                    group_only: groupOnly,
                     publish_result: publishResult,
                 };
 
@@ -313,7 +313,7 @@ const AdminContestEdit: React.FC = () => {
             contestType,
             startTime,
             endTime,
-            isActive,
+            groupOnly,
             publishResult,
             flashMessage,
             navigate,
@@ -636,11 +636,11 @@ const AdminContestEdit: React.FC = () => {
                                         <label className="flex items-center gap-2 text-sm text-slate-600">
                                             <input
                                                 type="checkbox"
-                                                checked={isActive}
-                                                onChange={(e) => setIsActive(e.target.checked)}
+                                                checked={groupOnly}
+                                                onChange={(e) => setGroupOnly(e.target.checked)}
                                                 className="h-4 w-4 rounded border-slate-300"
                                             />
-                                            Active
+                                            Group Only
                                         </label>
 
                                         <label className="flex items-center gap-2 text-sm text-slate-600">

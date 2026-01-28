@@ -66,6 +66,10 @@ const AdminDraftEdit: React.FC = () => {
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
 
+    // ✅ SCORE fields (sent)
+    const [flagScore, setFlagScore] = useState<number>(0);
+    const [procedureScore, setProcedureScore] = useState<number>(0);
+
     // uploads
     const [uploadFiles, setUploadFiles] = useState<File[]>([]);
 
@@ -165,6 +169,20 @@ const AdminDraftEdit: React.FC = () => {
 
             const lock = mapped === "practice" || mapped === "competition" ? mapped : null;
             setLockedQuestionType(lock);
+
+            // ✅ Prefill scores (support both flat + nested shapes)
+            const anyCh = challenge as any;
+            const flatFlag = anyCh?.flag_score;
+            const flatProc = anyCh?.procedure_score;
+
+            const nestedFlag = anyCh?.challenge_score?.flag_score ?? anyCh?.challenge_score?.flagScore;
+            const nestedProc = anyCh?.challenge_score?.procedure_score ?? anyCh?.challenge_score?.procedureScore;
+
+            const nextFlag = Number(flatFlag ?? nestedFlag ?? 0);
+            const nextProc = Number(flatProc ?? nestedProc ?? 0);
+
+            setFlagScore(Number.isFinite(nextFlag) && nextFlag >= 0 ? Math.floor(nextFlag) : 0);
+            setProcedureScore(Number.isFinite(nextProc) && nextProc >= 0 ? Math.floor(nextProc) : 0);
 
             // existing draft -> can open solution tab
             setQuestionSaved(true);
@@ -311,6 +329,13 @@ const AdminDraftEdit: React.FC = () => {
                 if (difficulty) formData.append("difficulty", String(difficulty));
                 if (solutionType) formData.append("solution_type", String(solutionType));
 
+                // ✅ include scores in update
+                formData.append("flag_score", String(Number.isFinite(flagScore) ? Math.max(0, Math.floor(flagScore)) : 0));
+                formData.append(
+                    "procedure_score",
+                    String(Number.isFinite(procedureScore) ? Math.max(0, Math.floor(procedureScore)) : 0)
+                );
+
                 uploadFiles.forEach((file) => {
                     formData.append("uploaded_files", file);
                 });
@@ -348,6 +373,8 @@ const AdminDraftEdit: React.FC = () => {
             category,
             difficulty,
             solutionType,
+            flagScore,
+            procedureScore,
             uploadFiles,
             flashMessage,
             navigate,
@@ -883,6 +910,54 @@ const AdminDraftEdit: React.FC = () => {
                                         />
                                     </div>
                                 )}
+
+                                {/* ✅ Marks (Challenge Score) */}
+                                <div className="rounded-2xl bg-white/60 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 space-y-4">
+                                    <div className="text-sm font-semibold text-slate-800">Marks (Challenge Score)</div>
+                                    <p className="text-xs text-slate-500">
+                                        Set points for flag/procedure. Used for leaderboard scoring.
+                                    </p>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {(solutionType === 1 || solutionType === 3) && (
+                                            <div>
+                                                <label className="mb-1 block text-sm font-medium text-slate-700">Flag Score</label>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step={1}
+                                                    className={cx(
+                                                        "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                        "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                        focusRing
+                                                    )}
+                                                    value={Number.isFinite(flagScore) ? flagScore : 0}
+                                                    onChange={(e) => setFlagScore(Math.max(0, Number(e.target.value || 0)))}
+                                                    placeholder="e.g. 50"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {(solutionType === 2 || solutionType === 3) && (
+                                            <div>
+                                                <label className="mb-1 block text-sm font-medium text-slate-700">Procedure Score</label>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step={1}
+                                                    className={cx(
+                                                        "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                        "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                        focusRing
+                                                    )}
+                                                    value={Number.isFinite(procedureScore) ? procedureScore : 0}
+                                                    onChange={(e) => setProcedureScore(Math.max(0, Number(e.target.value || 0)))}
+                                                    placeholder="e.g. 50"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                     <button

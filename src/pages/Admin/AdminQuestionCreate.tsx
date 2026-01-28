@@ -38,6 +38,9 @@ const AdminQuestionCreate: React.FC = () => {
     // Solutions (kept exactly as-is behavior-wise; internal notes only)
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
+    const [flagScore, setFlagScore] = useState<number>(0);
+    const [procedureScore, setProcedureScore] = useState<number>(0);
+
     void flagSolution;
     void procedureSolution;
 
@@ -186,6 +189,9 @@ const AdminQuestionCreate: React.FC = () => {
                 form.append("category", String(category));
                 form.append("difficulty", String(difficulty));
                 form.append("solution_type", String(solutionType));
+                form.append("flag_score", String(flagScore ?? 0));
+                form.append("procedure_score", String(procedureScore ?? 0));
+
 
                 uploadFiles.forEach((f) => form.append("uploaded_files", f));
 
@@ -626,6 +632,52 @@ const AdminQuestionCreate: React.FC = () => {
                                     >
                                         {submitting ? "Creating..." : "Create Challenge"}
                                     </button>
+
+                                    <div className="rounded-2xl bg-slate-50/60 ring-1 ring-slate-200/60 p-4 space-y-4">
+                                        <div className="text-sm sm:text-base font-normal tracking-tight text-slate-700">
+                                            Marks (Challenge Score)
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-slate-500">
+                                            Set points for flag/procedure. Used for leaderboard scoring.
+                                        </p>
+
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            {(solutionType === 1 || solutionType === 3) ? (
+                                                <div>
+                                                    <label className="block text-sm sm:text-base font-normal text-slate-600 mb-1">
+                                                        Flag Score
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        step={1}
+                                                        className={inputBase}
+                                                        value={Number.isFinite(flagScore) ? flagScore : 0}
+                                                        onChange={(e) => setFlagScore(Math.max(0, Number(e.target.value || 0)))}
+                                                        placeholder="e.g. 50"
+                                                    />
+                                                </div>
+                                            ) : null}
+
+                                            {(solutionType === 2 || solutionType === 3) ? (
+                                                <div>
+                                                    <label className="block text-sm sm:text-base font-normal text-slate-600 mb-1">
+                                                        Procedure Score
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        step={1}
+                                                        className={inputBase}
+                                                        value={Number.isFinite(procedureScore) ? procedureScore : 0}
+                                                        onChange={(e) => setProcedureScore(Math.max(0, Number(e.target.value || 0)))}
+                                                        placeholder="e.g. 50"
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         ) : null}

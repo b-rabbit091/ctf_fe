@@ -31,8 +31,7 @@ const DIFFICULTY_TAGS = ["Easy", "Medium", "Hard"] as const;
 // backend statuses
 type SubmissionStatus = "solved" | "partially_solved" | "attempted" | "not_attempted";
 
-// ✅ filters you asked
-type ProgressFilter = "" | "solved" | "partially_solved" | "attempted" | "unsolved";
+type ProgressFilter = "" | "solved" | "partially_solved" | "attempted" ;
 
 function normalizeStatus(raw: unknown): SubmissionStatus {
     const v = String(raw ?? "").toLowerCase().trim();
@@ -125,13 +124,7 @@ const progressChipClass = (key: ProgressFilter, active: boolean) => {
         );
     }
     // unsolved
-    return cx(
-        base,
-        ring,
-        active
-            ? "border-violet-300 bg-violet-100 text-violet-900"
-            : "border-violet-200/70 bg-white/70 text-violet-800 hover:bg-violet-50"
-    );
+
 };
 
 // ✅ show label above title only if user has a status other than not_attempted
@@ -234,12 +227,9 @@ const PracticeList: React.FC = () => {
             if (progressFilter) {
                 const st = normalizeStatus((c as any).user_submission_status);
 
-                if (progressFilter === "unsolved") {
-                    // unsolved = attempted OR partially_solved
-                    if (st === "solved" || st === "not_attempted") return false;
-                } else {
+
                     if (st !== progressFilter) return false;
-                }
+
             }
 
             if (!searchLower) return true;
@@ -552,19 +542,6 @@ const PracticeList: React.FC = () => {
                                     aria-pressed={progressFilter === "solved"}
                                 >
                                     Solved
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setProgressFilter((prev) => (prev === "unsolved" ? "" : "unsolved"));
-                                        setPage(1);
-                                    }}
-                                    className={progressChipClass("unsolved", progressFilter === "unsolved")}
-                                    aria-pressed={progressFilter === "unsolved"}
-                                    title="Attempted or Partially Solved"
-                                >
-                                    Unsolved
                                 </button>
                             </div>
                         </div>
