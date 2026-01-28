@@ -24,7 +24,6 @@ const difficultyColors: Record<string, string> = {
     Easy: "bg-emerald-50 text-emerald-700",
     Medium: "bg-amber-50 text-amber-700",
     Hard: "bg-rose-50 text-rose-700",
-    Unknown: "bg-slate-50 text-slate-600",
 };
 
 const DashboardOverview: React.FC = () => {

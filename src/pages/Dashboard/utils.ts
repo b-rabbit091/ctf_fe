@@ -61,7 +61,7 @@ export const sanitizeTitle = (title: unknown): string => {
 };
 
 export const normalizeDifficulty = (input: unknown): DifficultyMap => {
-    const out: DifficultyMap = {Easy: 0, Medium: 0, Hard: 0, Unknown: 0};
+    const out: DifficultyMap = {Easy: 0, Medium: 0, Hard: 0};
     if (!isObject(input)) return out;
 
     (Object.keys(out) as DifficultyKey[]).forEach((k) => {
@@ -83,13 +83,13 @@ export const fallbackDashboard = (): DashboardOverviewResponse => ({
     practice_stats: {
         total_solved: 0,
         total_attempted: 0,
-        difficulty: {Easy: 0, Medium: 0, Hard: 0, Unknown: 0},
+        difficulty: {Easy: 0, Medium: 0, Hard: 0},
         solved_challenge_ids: [],
     },
     competition_stats: {
         total_solved: 0,
         total_attempted: 0,
-        difficulty: {Easy: 0, Medium: 0, Hard: 0, Unknown: 0},
+        difficulty: {Easy: 0, Medium: 0, Hard: 0},
         solved_challenge_ids: [],
     },
     overall_stats: {

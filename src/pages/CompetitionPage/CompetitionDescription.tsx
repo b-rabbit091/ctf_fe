@@ -1,7 +1,8 @@
 // src/pages/CompetePage/CompetitionDescription.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import { Challenge, ContestMeta } from "./types";
-import { formatDuration } from "../../utils/time";
+import React, {useEffect, useMemo, useRef, useState} from "react";
+import {Challenge, ContestMeta} from "./types";
+import {formatDuration} from "../../utils/time";
+import {FiClock, FiFileText, FiHash} from "react-icons/fi";
 
 interface Props {
     challenge: Challenge;
@@ -9,233 +10,265 @@ interface Props {
 
 const isNonEmpty = (v?: string | null) => (v ?? "").trim().length > 0;
 
-const CompetitionDescription: React.FC<Props> = ({ challenge }) => {
-    const contest: ContestMeta | null | undefined = challenge.active_contest;
+const FIVE_MIN_MS = 5 * 60 * 1000;
 
-    // timer state
-    const [now, setNow] = useState<Date>(new Date());
+const safeDate = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const safeExt = (name?: string) => {
+    const raw = (name || "").split(".").pop() || "FILE";
+    const cleaned = raw.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    return cleaned.slice(0, 6) || "FILE";
+};
+
+const isSafeUrl = (url: string) => {
+    try {
+        const u = new URL(url, window.location.origin);
+        return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+        return false;
+    }
+};
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const CompetitionDescription: React.FC<Props> = ({challenge}) => {
+    const contest: ContestMeta | null | undefined = (challenge as any).active_contest;
+
+    const [now, setNow] = useState<Date>(() => new Date());
+    const alive = useRef(true);
+
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         const id = window.setInterval(() => setNow(new Date()), 1000);
         return () => window.clearInterval(id);
     }, []);
 
-    // derive state from contest
     const contestState = useMemo(() => {
         if (!contest) {
             return {
-                statusLabel: "No Active Contest",
-                badgeClasses: "bg-slate-50 text-slate-600 border-slate-200",
-                remainingLabel: "This problem is not currently attached to any contest.",
+                status: "NO_CONTEST" as const,
+                label: "No Active Contest",
+                remainingLabel: "This problem is not attached to any contest.",
+                remainingMs: null as number | null,
                 isRunning: false,
-                isUpcoming: false,
-                isEnded: true,
             };
         }
 
-        const start = new Date(contest.start_time);
-        const end = new Date(contest.end_time);
+        const start = safeDate(contest.start_time);
+        const end = safeDate(contest.end_time);
+
+        if (!start || !end) {
+            return {
+                status: "SCHEDULE_UNKNOWN" as const,
+                label: "Scheduled",
+                remainingLabel: "Contest schedule is not available.",
+                remainingMs: null as number | null,
+                isRunning: false,
+            };
+        }
+
         const nowMs = now.getTime();
         const startMs = start.getTime();
         const endMs = end.getTime();
 
         if (nowMs < startMs) {
+            const ms = startMs - nowMs;
             return {
-                statusLabel: "Upcoming",
-                badgeClasses: "bg-sky-50 text-sky-700 border-sky-200",
-                remainingLabel: formatDuration(startMs - nowMs) + " until start",
+                status: "UPCOMING" as const,
+                label: "Upcoming",
+                remainingLabel: `${formatDuration(ms)} until start`,
+                remainingMs: ms,
                 isRunning: false,
-                isUpcoming: true,
-                isEnded: false,
             };
         }
 
         if (nowMs >= startMs && nowMs < endMs) {
+            const ms = endMs - nowMs;
             return {
-                statusLabel: "Ongoing",
-                badgeClasses: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                remainingLabel: formatDuration(endMs - nowMs) + " remaining",
+                status: "ONGOING" as const,
+                label: "Ongoing",
+                remainingLabel: `${formatDuration(ms)} remaining`,
+                remainingMs: ms,
                 isRunning: true,
-                isUpcoming: false,
-                isEnded: false,
             };
         }
 
         return {
-            statusLabel: "Ended",
-            badgeClasses: "bg-rose-50 text-rose-700 border-rose-200",
+            status: "ENDED" as const,
+            label: "Ended",
             remainingLabel: "Contest has ended",
+            remainingMs: 0,
             isRunning: false,
-            isUpcoming: false,
-            isEnded: true,
         };
     }, [contest, now]);
 
-    const categoryLabel = challenge.category?.name || "Uncategorized";
-    const difficultyLabel = challenge.difficulty?.level || "N/A";
-    const solutionTypeLabel = challenge.solution_type?.type || "Solution";
+    const urgent =
+        contestState.status === "ONGOING" &&
+        typeof contestState.remainingMs === "number" &&
+        contestState.remainingMs > 0 &&
+        contestState.remainingMs <= FIVE_MIN_MS;
 
-    const difficultyTone =
-        difficultyLabel.toLowerCase() === "easy"
-            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-            : difficultyLabel.toLowerCase() === "medium"
-                ? "text-amber-700 bg-amber-50 border-amber-200"
-                : difficultyLabel.toLowerCase() === "hard"
-                    ? "text-rose-700 bg-rose-50 border-rose-200"
-                    : "text-slate-700 bg-slate-50 border-slate-200";
+    const categoryLabel = (challenge as any).category?.name || "Uncategorized";
+    const difficultyLabel = (challenge as any).difficulty?.level || "N/A";
 
-    const pill =
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium";
+    // LeetCode-ish, minimal: simple card, subtle borders, sticky header, compact sections
+    const shell = "w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden";
+    const header = "px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40";
+    const body = "px-4 sm:px-5 py-4";
+    const h1 = "text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-slate-800";
+    const metaRow = "mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600";
+    const pillBase = "inline-flex items-center gap-2 rounded-full ring-1 px-3 py-1 text-xs sm:text-sm";
+    const sec = "pt-4 pb-5 border-b border-slate-200/70 last:border-b-0";
+    const secTitle = "text-sm sm:text-base font-normal text-slate-800";
+    const text = "mt-2 text-sm sm:text-base leading-relaxed text-slate-700 whitespace-pre-wrap";
+    const code = "mt-2 rounded-xl ring-1 ring-slate-200/60 bg-white/70 px-4 py-3 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 whitespace-pre-wrap overflow-auto";
 
-    const sectionTitle = "text-sm font-semibold text-slate-900";
-
-    const section = "py-6 border-b border-slate-200 last:border-b-0";
-
-    const bodyText =
-        "mt-2 text-[15px] leading-7 text-slate-800 whitespace-pre-wrap";
-
-    const mono =
-        "mt-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[13px] leading-relaxed text-slate-900 whitespace-pre-wrap overflow-auto";
+    const statusTone = (() => {
+        if (contestState.status === "ONGOING") return urgent ? "ring-amber-200/60 bg-amber-50/70 text-amber-800" : "ring-emerald-200/60 bg-emerald-50/70 text-emerald-700";
+        if (contestState.status === "UPCOMING") return "ring-sky-200/60 bg-sky-50/70 text-sky-700";
+        return "ring-slate-200/60 bg-slate-100/70 text-slate-700";
+    })();
 
     return (
         <div className="text-slate-900">
-            {/* Top meta row (same as PracticeDescription) */}
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className={`${pill} border-slate-200 bg-white text-slate-700`}>
-          {categoryLabel}
-        </span>
-                <span className={`${pill} ${difficultyTone}`}>{difficultyLabel}</span>
-                <span className={`${pill} border-indigo-200 bg-indigo-50 text-indigo-700`}>
-          {solutionTypeLabel}
-        </span>
-                <span className={`${pill} border-amber-200 bg-amber-50 text-amber-700`}>
-          Competition
-        </span>
+            <div className={shell}>
+                {/* Header (LeetCode-ish: title + small meta + time pill) */}
+                <div className={header}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                            <h1 className={cx(h1, "truncate")}>{challenge.title}</h1>
 
-                {/* Contest state badge (kept functionality, styled as a pill) */}
-                <span className={`${pill} ${contestState.badgeClasses}`}>
-          {contestState.statusLabel}
-        </span>
+                            <div className={metaRow}>
+                                <span className={cx(pillBase, "ring-slate-200/60 bg-slate-100/70 text-slate-700")}>
+                                    <FiHash size={14} />
+                                    {challenge.id}
+                                </span>
 
-                {/* Countdown / remaining (kept, subtle pill) */}
-                <span className={`${pill} border-slate-200 bg-slate-50 text-slate-700 font-mono`}>
-          {contestState.remainingLabel}
-        </span>
-            </div>
+                                <span className="text-slate-300">•</span>
 
-            {/* Main content – same card/sections as PracticeDescription */}
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="px-6 py-5">
-                    {/* Contest details (kept, but minimal) */}
-                    {contest && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Contest</h2>
+                                <span>
+                                    <span className="text-slate-500">Category:</span>{" "}
+                                    <span className="text-slate-700">{categoryLabel}</span>
+                                </span>
 
-                            <div className="mt-2 text-[15px] leading-7 text-slate-800">
-                                <div className="font-medium text-slate-900">
-                                    {contest?.name || "No contest attached"}
-                                </div>
+                                <span className="text-slate-300">•</span>
 
-                                {isNonEmpty(contest.description) && (
-                                    <div className="mt-1 whitespace-pre-wrap text-slate-700">
-                                        {contest.description}
-                                    </div>
+                                <span>
+                                    <span className="text-slate-500">Difficulty:</span>{" "}
+                                    <span className="text-slate-700">{difficultyLabel}</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className={cx(pillBase, statusTone, urgent ? "animate-pulse" : "")}>
+                                <FiClock size={14} />
+                                {contest?.name ? (
+                                    <span className="max-w-[16rem] truncate">{contest.name}</span>
+                                ) : (
+                                    <span>{contestState.label}</span>
                                 )}
+                                <span className="text-slate-300">•</span>
+                                <span>{contestState.remainingLabel}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-                                <div className="mt-2 text-sm text-slate-600">
-                                    <span className="font-medium text-slate-800">Starts:</span>{" "}
-                                    {new Date(contest.start_time).toLocaleString()}
-                                    <span className="mx-2 text-slate-400">•</span>
-                                    <span className="font-medium text-slate-800">Ends:</span>{" "}
-                                    {new Date(contest.end_time).toLocaleString()}
-                                </div>
-                            </div>
+                {/* Body */}
+                <div className={body}>
+                    {isNonEmpty((challenge as any).description) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Description</h2>
+                            <div className={text}>{(challenge as any).description}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {/* Description */}
-                    {isNonEmpty(challenge.description) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Description</h2>
-                            <div className={bodyText}>{challenge.description}</div>
+                    {isNonEmpty((challenge as any).constraints) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Constraints</h2>
+                            <div className={text}>{(challenge as any).constraints}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {/* Constraints */}
-                    {isNonEmpty(challenge.constraints) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Constraints</h2>
-                            <div className={bodyText}>{challenge.constraints}</div>
+                    {isNonEmpty((challenge as any).input_format) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Input</h2>
+                            <div className={text}>{(challenge as any).input_format}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {/* Input */}
-                    {isNonEmpty(challenge.input_format) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Input</h2>
-                            <div className={bodyText}>{challenge.input_format}</div>
+                    {isNonEmpty((challenge as any).output_format) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Output</h2>
+                            <div className={text}>{(challenge as any).output_format}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {/* Output */}
-                    {isNonEmpty(challenge.output_format) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Output</h2>
-                            <div className={bodyText}>{challenge.output_format}</div>
-                        </section>
-                    )}
+                    {isNonEmpty((challenge as any).sample_input) || isNonEmpty((challenge as any).sample_output) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Examples</h2>
 
-                    {/* Examples */}
-                    {(isNonEmpty(challenge.sample_input) || isNonEmpty(challenge.sample_output)) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Examples</h2>
-
-                            <div className="mt-3 space-y-4">
+                            <div className="mt-3 grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                                        Example Input
-                                    </div>
-                                    <div className={mono}>{challenge.sample_input || "—"}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-500">Example Input</div>
+                                    <div className={code}>{(challenge as any).sample_input || "—"}</div>
                                 </div>
 
                                 <div>
-                                    <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                                        Example Output
-                                    </div>
-                                    <div className={mono}>{challenge.sample_output || "—"}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-500">Example Output</div>
+                                    <div className={code}>{(challenge as any).sample_output || "—"}</div>
                                 </div>
                             </div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {/* Files */}
-                    {challenge.files && challenge.files.length > 0 && (
-                        <section className="pt-6">
-                            <h2 className={sectionTitle}>Files</h2>
+                    {(challenge as any).files && (challenge as any).files.length > 0 ? (
+                        <section className={cx(sec, "pb-2")}>
+                            <h2 className={secTitle}>Files</h2>
 
                             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                {challenge.files.map((file) => (
-                                    <a
-                                        key={file.url}
-                                        href={file.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                                    >
-                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 text-[11px] font-semibold text-slate-600">
-                                            {file.name?.split(".").pop()?.toUpperCase() || "FILE"}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="truncate font-medium text-slate-900">
-                                                {file.name}
+                                {(challenge as any).files
+                                    .filter((f: any) => f?.url && isSafeUrl(String(f.url)))
+                                    .map((file: any) => (
+                                        <a
+                                            key={String(file.url)}
+                                            href={String(file.url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={cx(
+                                                "flex items-center gap-3 rounded-xl bg-white/70 px-4 py-3",
+                                                "ring-1 ring-slate-200/60 hover:bg-white/90 transition",
+                                                "min-w-0"
+                                            )}
+                                        >
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-slate-200/60 bg-slate-100/70 text-xs font-normal text-slate-700">
+                                                <FiFileText size={16} />
                                             </div>
-                                            <div className="text-xs text-slate-500">Open in new tab</div>
-                                        </div>
-                                    </a>
-                                ))}
+
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm sm:text-base font-normal text-slate-800">
+                                                    {file.name || "File"}
+                                                </div>
+                                                <div className="text-xs text-slate-500">
+                                                    {safeExt(file.name)} • Open in new tab
+                                                </div>
+                                            </div>
+                                        </a>
+                                    ))}
                             </div>
                         </section>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>

@@ -16,11 +16,7 @@ import {
     updateSolutionType,
     deleteSolutionType,
 } from "../../api/categoryDifficultySolutionTypes";
-import {
-    CategoryTypes,
-    DifficultyTypes,
-    SolutionTypes,
-} from "../PracticePage/types";
+import {CategoryTypes, DifficultyTypes, SolutionTypes} from "../PracticePage/types";
 
 interface EditableRowState {
     id: number | null;
@@ -42,23 +38,13 @@ const AdminChallengeMetadata: React.FC = () => {
 
     // new item states
     const [newCategory, setNewCategory] = useState({name: "", description: ""});
-    const [newDifficulty, setNewDifficulty] = useState({
-        level: "",
-        description: "",
-    });
-    const [newSolutionType, setNewSolutionType] = useState({
-        type: "",
-        description: "",
-    });
+    const [newDifficulty, setNewDifficulty] = useState({level: "", description: ""});
+    const [newSolutionType, setNewSolutionType] = useState({type: "", description: ""});
 
     // inline edit states
-    const [editingCategory, setEditingCategory] = useState<EditableRowState | null>(
-        null
-    );
-    const [editingDifficulty, setEditingDifficulty] =
-        useState<EditableRowState | null>(null);
-    const [editingSolutionType, setEditingSolutionType] =
-        useState<EditableRowState | null>(null);
+    const [editingCategory, setEditingCategory] = useState<EditableRowState | null>(null);
+    const [editingDifficulty, setEditingDifficulty] = useState<EditableRowState | null>(null);
+    const [editingSolutionType, setEditingSolutionType] = useState<EditableRowState | null>(null);
 
     const resetMessages = () => {
         setError(null);
@@ -153,9 +139,7 @@ const AdminChallengeMetadata: React.FC = () => {
                 name: field1.trim(),
                 description: field2.trim(),
             });
-            setCategories((prev) =>
-                prev.map((c) => (c.id === id ? updated : c))
-            );
+            setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
             setEditingCategory(null);
             setMessage("Category updated.");
         } catch (e) {
@@ -166,11 +150,7 @@ const AdminChallengeMetadata: React.FC = () => {
 
     const handleDeleteCategory = async (id: number) => {
         resetMessages();
-        if (
-            !window.confirm(
-                "Delete this category? This may affect existing challenges using it."
-            )
-        ) {
+        if (!window.confirm("Delete this category? This may affect existing challenges using it.")) {
             return;
         }
         const backup = categories;
@@ -234,9 +214,7 @@ const AdminChallengeMetadata: React.FC = () => {
                 level: field1.trim(),
                 description: field2.trim(),
             });
-            setDifficulties((prev) =>
-                prev.map((d) => (d.id === id ? updated : d))
-            );
+            setDifficulties((prev) => prev.map((d) => (d.id === id ? updated : d)));
             setEditingDifficulty(null);
             setMessage("Difficulty updated.");
         } catch (e) {
@@ -247,11 +225,7 @@ const AdminChallengeMetadata: React.FC = () => {
 
     const handleDeleteDifficulty = async (id: number) => {
         resetMessages();
-        if (
-            !window.confirm(
-                "Delete this difficulty? This may affect existing challenges using it."
-            )
-        ) {
+        if (!window.confirm("Delete this difficulty? This may affect existing challenges using it.")) {
             return;
         }
         const backup = difficulties;
@@ -315,9 +289,7 @@ const AdminChallengeMetadata: React.FC = () => {
                 type: field1.trim(),
                 description: field2.trim(),
             });
-            setSolutionTypes((prev) =>
-                prev.map((s) => (s.id === id ? updated : s))
-            );
+            setSolutionTypes((prev) => prev.map((s) => (s.id === id ? updated : s)));
             setEditingSolutionType(null);
             setMessage("Solution type updated.");
         } catch (e) {
@@ -328,11 +300,7 @@ const AdminChallengeMetadata: React.FC = () => {
 
     const handleDeleteSolutionType = async (id: number) => {
         resetMessages();
-        if (
-            !window.confirm(
-                "Delete this solution type? This may affect existing challenges using it."
-            )
-        ) {
+        if (!window.confirm("Delete this solution type? This may affect existing challenges using it.")) {
             return;
         }
         const backup = solutionTypes;
@@ -351,32 +319,33 @@ const AdminChallengeMetadata: React.FC = () => {
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <div className="mx-auto max-w-3xl p-6 text-sm text-slate-500">
-                    Checking permissions…
-                </div>
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+                </main>
             </div>
         );
     }
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen bg-slate-50">
+            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
                 <Navbar/>
-                <div className="mx-auto max-w-3xl p-6">
+                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
                     <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                         Unauthorized – admin access required.
                     </p>
-                </div>
+                </main>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
             <Navbar/>
-            <main className="mx-auto max-w-6xl px-4 py-6 md:py-8">
+
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
                 {/* Header */}
                 <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
                     <div>
@@ -384,8 +353,7 @@ const AdminChallengeMetadata: React.FC = () => {
                             Challenge Metadata
                         </h1>
                         <p className="mt-1 text-xs text-slate-500 md:text-sm">
-                            Manage categories, difficulties, and solution types used by
-                            practice and competition challenges.
+                            Manage categories, difficulties, and solution types used by practice and competition challenges.
                         </p>
                     </div>
                     <span
@@ -420,439 +388,408 @@ const AdminChallengeMetadata: React.FC = () => {
                         {/* Categories */}
                         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="border-b border-slate-200 px-4 py-3 md:px-5">
-                                <h2 className="text-sm font-semibold text-slate-900">
-                                    Categories
-                                </h2>
+                                <h2 className="text-sm font-semibold text-slate-900">Categories</h2>
                                 <p className="mt-1 text-xs text-slate-500">
                                     Logical groupings like Web, Crypto, Forensics, etc.
                                 </p>
                             </div>
                             <div className="px-4 py-4 md:px-5">
-                                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                    <thead
-                                        className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    <tr>
-                                        <th className="px-2 py-2 text-left">Name</th>
-                                        <th className="px-2 py-2 text-left">Description</th>
-                                        <th className="px-2 py-2 text-right">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                    {categories.map((c) => {
-                                        const isEditing =
-                                            editingCategory && editingCategory.id === c.id;
-                                        return (
-                                            <tr key={c.id}>
-                                                <td className="px-2 py-2 align-top">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingCategory?.field1 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingCategory((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field1: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <span className="font-medium text-slate-900">
-                                {c.name}
-                              </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-xs text-slate-700">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingCategory?.field2 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingCategory((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field2: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        c.description || "—"
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-right text-xs">
-                                                    {isEditing ? (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={saveEditCategory}
-                                                                className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={cancelEditCategory}
-                                                                className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => startEditCategory(c)}
-                                                                className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteCategory(c.id)}
-                                                                className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                        <thead
+                                            className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-2 py-2 text-left">Name</th>
+                                            <th className="px-2 py-2 text-left">Description</th>
+                                            <th className="px-2 py-2 text-right">Actions</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                        {categories.map((c) => {
+                                            const isEditing = editingCategory && editingCategory.id === c.id;
+                                            return (
+                                                <tr key={c.id}>
+                                                    <td className="px-2 py-2 align-top">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingCategory?.field1 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingCategory((prev) =>
+                                                                        prev ? {...prev, field1: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <span className="font-medium text-slate-900">{c.name}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-xs text-slate-700">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingCategory?.field2 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingCategory((prev) =>
+                                                                        prev ? {...prev, field2: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            c.description || "—"
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-right text-xs">
+                                                        {isEditing ? (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={saveEditCategory}
+                                                                    className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={cancelEditCategory}
+                                                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => startEditCategory(c)}
+                                                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteCategory(c.id)}
+                                                                    className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
 
-                                    {/* Add new category row */}
-                                    <tr>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="New category name"
-                                                value={newCategory.name}
-                                                onChange={(e) =>
-                                                    setNewCategory((prev) => ({
-                                                        ...prev,
-                                                        name: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="Optional description"
-                                                value={newCategory.description}
-                                                onChange={(e) =>
-                                                    setNewCategory((prev) => ({
-                                                        ...prev,
-                                                        description: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top text-right text-xs">
-                                            <button
-                                                type="button"
-                                                onClick={handleAddCategory}
-                                                className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                            >
-                                                Add Category
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                        {/* Add new category row */}
+                                        <tr>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="New category name"
+                                                    value={newCategory.name}
+                                                    onChange={(e) =>
+                                                        setNewCategory((prev) => ({...prev, name: e.target.value}))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="Optional description"
+                                                    value={newCategory.description}
+                                                    onChange={(e) =>
+                                                        setNewCategory((prev) => ({
+                                                            ...prev,
+                                                            description: e.target.value,
+                                                        }))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top text-right text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddCategory}
+                                                    className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    Add Category
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </section>
 
                         {/* Difficulties */}
                         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="border-b border-slate-200 px-4 py-3 md:px-5">
-                                <h2 className="text-sm font-semibold text-slate-900">
-                                    Difficulties
-                                </h2>
+                                <h2 className="text-sm font-semibold text-slate-900">Difficulties</h2>
                                 <p className="mt-1 text-xs text-slate-500">
                                     Levels like Easy, Medium, Hard used for challenge difficulty.
                                 </p>
                             </div>
                             <div className="px-4 py-4 md:px-5">
-                                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                    <thead
-                                        className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    <tr>
-                                        <th className="px-2 py-2 text-left">Level</th>
-                                        <th className="px-2 py-2 text-left">Description</th>
-                                        <th className="px-2 py-2 text-right">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                    {difficulties.map((d) => {
-                                        const isEditing =
-                                            editingDifficulty && editingDifficulty.id === d.id;
-                                        return (
-                                            <tr key={d.id}>
-                                                <td className="px-2 py-2 align-top">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingDifficulty?.field1 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingDifficulty((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field1: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <span className="font-medium text-slate-900">
-                                {d.level}
-                              </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-xs text-slate-700">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingDifficulty?.field2 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingDifficulty((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field2: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        d.description || "—"
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-right text-xs">
-                                                    {isEditing ? (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={saveEditDifficulty}
-                                                                className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={cancelEditDifficulty}
-                                                                className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => startEditDifficulty(d)}
-                                                                className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteDifficulty(d.id)}
-                                                                className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                        <thead
+                                            className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-2 py-2 text-left">Level</th>
+                                            <th className="px-2 py-2 text-left">Description</th>
+                                            <th className="px-2 py-2 text-right">Actions</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                        {difficulties.map((d) => {
+                                            const isEditing = editingDifficulty && editingDifficulty.id === d.id;
+                                            return (
+                                                <tr key={d.id}>
+                                                    <td className="px-2 py-2 align-top">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingDifficulty?.field1 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingDifficulty((prev) =>
+                                                                        prev ? {...prev, field1: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <span className="font-medium text-slate-900">{d.level}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-xs text-slate-700">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingDifficulty?.field2 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingDifficulty((prev) =>
+                                                                        prev ? {...prev, field2: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            d.description || "—"
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-right text-xs">
+                                                        {isEditing ? (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={saveEditDifficulty}
+                                                                    className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={cancelEditDifficulty}
+                                                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => startEditDifficulty(d)}
+                                                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteDifficulty(d.id)}
+                                                                    className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
 
-                                    {/* Add new difficulty row */}
-                                    <tr>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="New difficulty (e.g. Easy)"
-                                                value={newDifficulty.level}
-                                                onChange={(e) =>
-                                                    setNewDifficulty((prev) => ({
-                                                        ...prev,
-                                                        level: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="Optional description"
-                                                value={newDifficulty.description}
-                                                onChange={(e) =>
-                                                    setNewDifficulty((prev) => ({
-                                                        ...prev,
-                                                        description: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top text-right text-xs">
-                                            <button
-                                                type="button"
-                                                onClick={handleAddDifficulty}
-                                                className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                            >
-                                                Add Difficulty
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                        {/* Add new difficulty row */}
+                                        <tr>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="New difficulty (e.g. Easy)"
+                                                    value={newDifficulty.level}
+                                                    onChange={(e) =>
+                                                        setNewDifficulty((prev) => ({...prev, level: e.target.value}))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="Optional description"
+                                                    value={newDifficulty.description}
+                                                    onChange={(e) =>
+                                                        setNewDifficulty((prev) => ({
+                                                            ...prev,
+                                                            description: e.target.value,
+                                                        }))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top text-right text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddDifficulty}
+                                                    className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    Add Difficulty
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </section>
 
                         {/* Solution Types */}
                         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="border-b border-slate-200 px-4 py-3 md:px-5">
-                                <h2 className="text-sm font-semibold text-slate-900">
-                                    Solution Types
-                                </h2>
+                                <h2 className="text-sm font-semibold text-slate-900">Solution Types</h2>
                                 <p className="mt-1 text-xs text-slate-500">
-                                    E.g. Flag-only, Writeup, Flag + Writeup. Used to configure how
-                                    answers are submitted.
+                                    E.g. Flag-only, Writeup, Flag + Writeup. Used to configure how answers are submitted.
                                 </p>
                             </div>
                             <div className="px-4 py-4 md:px-5">
-                                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                    <thead
-                                        className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    <tr>
-                                        <th className="px-2 py-2 text-left">Type</th>
-                                        <th className="px-2 py-2 text-left">Description</th>
-                                        <th className="px-2 py-2 text-right">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                    {solutionTypes.map((s) => {
-                                        const isEditing =
-                                            editingSolutionType && editingSolutionType.id === s.id;
-                                        return (
-                                            <tr key={s.id}>
-                                                <td className="px-2 py-2 align-top">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingSolutionType?.field1 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingSolutionType((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field1: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <span className="font-medium text-slate-900">
-                                {s.type}
-                              </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-xs text-slate-700">
-                                                    {isEditing ? (
-                                                        <input
-                                                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            value={editingSolutionType?.field2 ?? ""}
-                                                            onChange={(e) =>
-                                                                setEditingSolutionType((prev) =>
-                                                                    prev
-                                                                        ? {...prev, field2: e.target.value}
-                                                                        : prev
-                                                                )
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        s.description || "—"
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2 align-top text-right text-xs">
-                                                    {isEditing ? (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={saveEditSolutionType}
-                                                                className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={cancelEditSolutionType}
-                                                                className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="inline-flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => startEditSolutionType(s)}
-                                                                className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteSolutionType(s.id)}
-                                                                className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                        <thead
+                                            className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-2 py-2 text-left">Type</th>
+                                            <th className="px-2 py-2 text-left">Description</th>
+                                            <th className="px-2 py-2 text-right">Actions</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                        {solutionTypes.map((s) => {
+                                            const isEditing = editingSolutionType && editingSolutionType.id === s.id;
+                                            return (
+                                                <tr key={s.id}>
+                                                    <td className="px-2 py-2 align-top">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingSolutionType?.field1 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingSolutionType((prev) =>
+                                                                        prev ? {...prev, field1: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <span className="font-medium text-slate-900">{s.type}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-xs text-slate-700">
+                                                        {isEditing ? (
+                                                            <input
+                                                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                value={editingSolutionType?.field2 ?? ""}
+                                                                onChange={(e) =>
+                                                                    setEditingSolutionType((prev) =>
+                                                                        prev ? {...prev, field2: e.target.value} : prev
+                                                                    )
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            s.description || "—"
+                                                        )}
+                                                    </td>
+                                                    <td className="px-2 py-2 align-top text-right text-xs">
+                                                        {isEditing ? (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={saveEditSolutionType}
+                                                                    className="rounded-md border border-emerald-500 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={cancelEditSolutionType}
+                                                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="inline-flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => startEditSolutionType(s)}
+                                                                    className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteSolutionType(s.id)}
+                                                                    className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
 
-                                    {/* Add new solution type row */}
-                                    <tr>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="New solution type (e.g. Flag)"
-                                                value={newSolutionType.type}
-                                                onChange={(e) =>
-                                                    setNewSolutionType((prev) => ({
-                                                        ...prev,
-                                                        type: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top">
-                                            <input
-                                                className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                placeholder="Optional description"
-                                                value={newSolutionType.description}
-                                                onChange={(e) =>
-                                                    setNewSolutionType((prev) => ({
-                                                        ...prev,
-                                                        description: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2 align-top text-right text-xs">
-                                            <button
-                                                type="button"
-                                                onClick={handleAddSolutionType}
-                                                className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                            >
-                                                Add Solution Type
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    </tbody>
-                                </table>
+                                        {/* Add new solution type row */}
+                                        <tr>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="New solution type (e.g. Flag)"
+                                                    value={newSolutionType.type}
+                                                    onChange={(e) =>
+                                                        setNewSolutionType((prev) => ({...prev, type: e.target.value}))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top">
+                                                <input
+                                                    className="w-full rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="Optional description"
+                                                    value={newSolutionType.description}
+                                                    onChange={(e) =>
+                                                        setNewSolutionType((prev) => ({
+                                                            ...prev,
+                                                            description: e.target.value,
+                                                        }))
+                                                    }
+                                                />
+                                            </td>
+                                            <td className="px-2 py-2 align-top text-right text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddSolutionType}
+                                                    className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                                >
+                                                    Add Solution Type
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </section>
                     </div>

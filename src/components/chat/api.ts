@@ -19,7 +19,7 @@ type ChatApiResponse =
 }
     | Record<string, any>;
 
-const CHAT_ENDPOINT = "/api/chat/practice/";
+const CHAT_ENDPOINT = "/chat/practice/";
 
 /* -------------------- Friendly messages -------------------- */
 
@@ -29,7 +29,7 @@ function friendlyStatusMessage(status?: number): string {
     if (status === 400) return "Your message couldn’t be processed. Please try rephrasing.";
     if (status === 401) return "Your session has expired. Please log in again.";
     if (status === 403) return "You don’t have permission to do that.";
-    if (status === 404) return "Chat service endpoint not found. Please contact support.";
+    if (status === 404) return "Chat service not available. Please contact support.";
     if (status === 408) return "The request timed out. Please try again.";
     if (status === 413) return "Your message is too large. Please shorten it.";
     if (status === 429) return "Too many requests. Please wait a moment and try again.";

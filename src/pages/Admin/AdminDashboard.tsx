@@ -1,32 +1,145 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {Link, useNavigate} from "react-router-dom";
+import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
-import { useAuth } from "../../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
 
 import {
-    FiUsers,
-    FiFlag,
-    FiBookOpen,
-    FiLayers,
     FiActivity,
+    FiAlertCircle,
+    FiBookOpen,
+    FiCalendar,
+    FiEdit3,
+    FiFileText,
+    FiFlag,
     FiGrid,
+    FiLayers,
+    FiRefreshCw,
+    FiShield,
+    FiUsers,
 } from "react-icons/fi";
 
-import {
-    getAdminDashboardTotals,
-    AdminDashboardTotalsResponse,
-} from "../../api/dashboard";
+import {getAdminDashboardTotals, AdminDashboardTotalsResponse} from "../../api/dashboard";
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+
+const CardShell = memo(function CardShell({
+                                              title,
+                                              subtitle,
+                                              right,
+                                              children,
+                                          }: {
+    title?: string;
+    subtitle?: string;
+    right?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    return (
+        <section className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            {title ? (
+                <>
+                    <div className="px-4 sm:px-5 py-4 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h2 className="text-base sm:text-lg font-normal tracking-tight text-slate-700">{title}</h2>
+                            {subtitle ? <p className="mt-1 text-sm sm:text-base text-slate-500">{subtitle}</p> : null}
+                        </div>
+                        {right}
+                    </div>
+                    <div className="h-px bg-slate-200/70"/>
+                </>
+            ) : null}
+            <div className={cx("px-4 sm:px-5", title ? "py-4" : "py-4")}>{children}</div>
+        </section>
+    );
+});
+
+const StatCard = memo(function StatCard({
+                                            label,
+                                            value,
+                                            icon,
+                                            helper,
+                                            loading,
+                                        }: {
+    label: string;
+    value: string | number;
+    icon: React.ReactNode;
+    helper?: string;
+    loading?: boolean;
+}) {
+    return (
+        <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            <div className="px-4 sm:px-5 py-4">
+                <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs sm:text-sm font-normal tracking-tight text-slate-600 truncate">{label}</p>
+                    <span
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-50/60 ring-1 ring-slate-200/60 text-slate-600 shrink-0">
+            {icon}
+          </span>
+                </div>
+                <div className="mt-2 text-3xl sm:text-4xl font-normal tracking-tight text-slate-700 leading-none">
+                    {loading ? "…" : value}
+                </div>
+                {helper ? <p className="mt-2 text-xs sm:text-sm text-slate-500">{helper}</p> : null}
+            </div>
+        </div>
+    );
+});
+
+const QuickLink = memo(function QuickLink({
+                                              label,
+                                              description,
+                                              to,
+                                              icon,
+                                          }: {
+    label: string;
+    description: string;
+    to: string;
+    icon: React.ReactNode;
+}) {
+    return (
+        <Link
+            to={to}
+            className={cx(
+                "flex items-start gap-3 rounded-2xl bg-white/65 backdrop-blur-xl p-3 ring-1 ring-slate-200/60 shadow-sm",
+                "transition hover:bg-white/75 hover:shadow-md",
+                focusRing
+            )}
+        >
+      <span
+          className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-50/60 ring-1 ring-slate-200/60 text-slate-600 shrink-0">
+        {icon}
+      </span>
+            <span className="min-w-0">
+        <span className="block truncate text-base sm:text-lg font-normal tracking-tight text-slate-700">
+          {label}
+        </span>
+        <span className="mt-1 block text-xs sm:text-sm text-slate-500 line-clamp-2">{description}</span>
+      </span>
+        </Link>
+    );
+});
 
 const AdminDashboard: React.FC = () => {
-    const { user } = useAuth();
+    const {user} = useAuth();
     const navigate = useNavigate();
 
     const [totals, setTotals] = useState<AdminDashboardTotalsResponse | null>(null);
     const [statsLoading, setStatsLoading] = useState<boolean>(false);
     const [statsError, setStatsError] = useState<string | null>(null);
 
+    // avoid setState after unmount
+    const alive = useRef(true);
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
+
+    // redirect guard (security UX)
     useEffect(() => {
         if (!user) {
             navigate("/login");
@@ -37,220 +150,214 @@ const AdminDashboard: React.FC = () => {
         }
     }, [user, navigate]);
 
-    useEffect(() => {
+    const loadTotals = useCallback(async () => {
         if (!user || user.role !== "admin") return;
 
-        const loadTotals = async () => {
-            try {
-                setStatsLoading(true);
-                setStatsError(null);
-                const data = await getAdminDashboardTotals();
-                setTotals(data);
-            } catch (err: any) {
-                console.error("Failed to load admin dashboard totals:", err);
-                setStatsError(
-                    "Failed to load dashboard statistics. Please refresh or try again later."
-                );
-            } finally {
-                setStatsLoading(false);
-            }
-        };
+        setStatsLoading(true);
+        setStatsError(null);
 
-        loadTotals();
+        try {
+            const data = await getAdminDashboardTotals();
+            if (!alive.current) return;
+            setTotals(data);
+        } catch (err: any) {
+            console.error("Failed to load admin dashboard totals:", err);
+            if (!alive.current) return;
+            setStatsError("Failed to load dashboard statistics. Please refresh or try again later.");
+        } finally {
+            if (!alive.current) return;
+            setStatsLoading(false);
+        }
     }, [user]);
+
+    useEffect(() => {
+        loadTotals();
+    }, [loadTotals]);
 
     if (!user) {
         return (
-            <>
-                <Navbar />
-                <main className="min-h-screen bg-slate-50 px-3 py-4 md:px-5 md:py-6">
-                    <div className="mx-auto max-w-7xl text-sm text-slate-500">
+            <div
+                className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar/>
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div
+                        className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
                     </div>
                 </main>
-            </>
+            </div>
         );
     }
 
-    const StatCard: React.FC<{
-        label: string;
-        value: string | number;
-        icon: React.ReactNode;
-        helper?: string;
-        loading?: boolean;
-    }> = ({ label, value, icon, helper, loading }) => (
-        <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-slate-500">{label}</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-slate-800">
-                    {icon}
-                </div>
-            </div>
-            <div className="text-xl font-semibold text-slate-900">
-                {loading ? "…" : value}
-            </div>
-            {helper && <p className="text-[10px] text-slate-500">{helper}</p>}
-        </div>
-    );
-
-    const QuickLink: React.FC<{
-        label: string;
-        description: string;
-        to: string;
-        icon: React.ReactNode;
-    }> = ({ label, description, to, icon }) => (
-        <Link
-            to={to}
-            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-left text-xs md:text-sm text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-        >
-            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/5 text-slate-800">
-                {icon}
-            </div>
-            <div className="min-w-0">
-                <p className="font-medium text-slate-900">{label}</p>
-                <p className="mt-0.5 text-[11px] md:text-xs text-slate-500 line-clamp-2">
-                    {description}
-                </p>
-            </div>
-        </Link>
-    );
+    const signedInBadge = useMemo(() => {
+        const isAdmin = user.role === "admin";
+        return (
+            <span
+                className="inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight ring-1 ring-amber-200/60 text-amber-700">
+        <FiShield/>
+                {isAdmin ? "Signed in as Admin" : "Signed in"}
+      </span>
+        );
+    }, [user.role]);
 
     return (
-        <>
-            <Navbar />
-            <main className="min-h-screen bg-slate-50 px-3 py-4 md:px-5 md:py-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mx-auto max-w-7xl"
-                >
+        <div
+            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar/>
+
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     {/* Header */}
-                    <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
+                    <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
                                 Admin Console
                             </h1>
-                            <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                Manage challenges, contests, users, and platform settings from a single, secure interface.
+                            <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                Manage challenges, contests, users, and platform settings from a single interface.
                             </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs md:text-sm">
-              <span className="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-amber-800 font-medium">
-                Signed in as Admin
-              </span>
+
+                        <div className="flex items-center gap-2">
+                            {signedInBadge}
+                            <button
+                                type="button"
+                                onClick={loadTotals}
+                                disabled={statsLoading}
+                                className={cx(
+                                    "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
+                                    "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
+                                    focusRing
+                                )}
+                                aria-label="Refresh admin stats"
+                                title="Refresh"
+                            >
+                                <FiRefreshCw className={statsLoading ? "animate-spin" : ""} size={16}/>
+                                {statsLoading ? "Refreshing..." : "Refresh"}
+                            </button>
                         </div>
                     </header>
 
-                    {/* Stats error (if any) */}
-                    {statsError && (
-                        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs md:text-sm text-red-700">
-                            {statsError}
+                    {/* Error banner */}
+                    {statsError ? (
+                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                            <div className="flex items-start gap-3">
+                                <FiAlertCircle className="mt-0.5 shrink-0"/>
+                                <div className="min-w-0">
+                                    <p className="font-normal tracking-tight">Couldn’t load dashboard statistics</p>
+                                    <p className="mt-1 text-sm break-words text-rose-700/90">{statsError}</p>
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    ) : null}
 
-                    {/* Top stats row */}
-                    <section className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {/* Top stats */}
+                    <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <StatCard
                             label="Total Users"
                             value={totals?.users.total_users ?? "—"}
-                            icon={<FiUsers size={16} />}
+                            icon={<FiUsers size={18}/>}
                             helper="Students + admins registered."
                             loading={statsLoading && !totals}
                         />
                         <StatCard
                             label="Total Challenges"
                             value={totals?.challenges.total_challenges ?? "—"}
-                            icon={<FiBookOpen size={16} />}
+                            icon={<FiBookOpen size={18}/>}
                             helper="Practice + competition challenges."
                             loading={statsLoading && !totals}
                         />
                         <StatCard
                             label="Active Contests"
                             value={totals?.contests.active_contests ?? "—"}
-                            icon={<FiFlag size={16} />}
+                            icon={<FiFlag size={18}/>}
                             helper="Contests currently running."
                             loading={statsLoading && !totals}
                         />
                         <StatCard
                             label="Total Submissions"
                             value={totals?.submissions.total_submissions ?? "—"}
-                            icon={<FiActivity size={16} />}
+                            icon={<FiActivity size={18}/>}
                             helper="Flag + text submissions."
                             loading={statsLoading && !totals}
                         />
                     </section>
 
                     {/* Main layout */}
-                    <div className="grid grid-cols-1 gap-4">
-                        {/* Content management */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-                            <div className="mb-3">
-                                <h2 className="text-base md:text-lg font-semibold text-slate-900">
-                                    Content Management
-                                </h2>
-                                <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                    Create and maintain challenges, contests, and supporting metadata.
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3">
+                        <CardShell
+                            title="Content Management"
+                            subtitle="Create and maintain challenges, contests, and supporting metadata."
+                        >
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                 <QuickLink
-                                    label="Manage Challenges"
-                                    to="/admin/challenges"
-                                    description="Create, edit, archive practice and competition challenges. Attach files and define solutions."
-                                    icon={<FiBookOpen size={16} />}
+                                    label="Draft a Question"
+                                    to="/admin/questions/create"
+                                    description="Create the base question now. Assign Practice/Competition later when you edit."
+                                    icon={<FiFileText size={18}/>}
+                                />
+                                <QuickLink
+                                    label="Manage Practice"
+                                    to="/admin/practice"
+                                    description="Edit practice challenges and control visibility."
+                                    icon={<FiBookOpen size={18}/>}
                                 />
                                 <QuickLink
                                     label="Manage Contests"
                                     to="/admin/contests"
-                                    description="Schedule contests, set start/end times, attach challenges, and toggle visibility."
-                                    icon={<FiFlag size={16} />}
+                                    description="Create, edit, and schedule contests. Attach challenges and publish results."
+                                    icon={<FiCalendar size={18}/>}
+                                />
+                                <QuickLink
+                                    label="Manage Competition"
+                                    to="/admin/competition"
+                                    description="Attach challenges to contests and manage competition questions."
+                                    icon={<FiFlag size={18}/>}
+                                />
+                                <QuickLink
+                                    label="Manage Blogs"
+                                    to="/admin/blogs"
+                                    description="Create, edit, publish, and remove blog posts."
+                                    icon={<FiEdit3 size={18}/>}
                                 />
                                 <QuickLink
                                     label="Categories & Difficulty"
                                     to="/admin/taxonomy"
-                                    description="Configure categories, difficulty levels, and solution types used throughout the system."
-                                    icon={<FiLayers size={16} />}
+                                    description="Configure categories, difficulty levels, and solution types."
+                                    icon={<FiLayers size={18}/>}
                                 />
                             </div>
-                        </section>
+                        </CardShell>
 
-                        {/* Users & submissions */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-                            <div className="mb-3">
-                                <h2 className="text-base md:text-lg font-semibold text-slate-900">
-                                    Users & Submissions
-                                </h2>
-                                <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                    Monitor user accounts, roles, groups, and submission activity.
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <CardShell
+                            title="Users & Submissions"
+                            subtitle="Monitor user accounts, roles, groups, and submission activity."
+                        >
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                 <QuickLink
                                     label="Manage Users"
                                     to="/admin/users"
                                     description="View students and admins, manage roles, and activate or deactivate accounts."
-                                    icon={<FiUsers size={16} />}
+                                    icon={<FiUsers size={18}/>}
                                 />
                                 <QuickLink
                                     label="Manage Groups"
                                     to="/admin/groups"
-                                    description="View all groups, members, admins, remove members, and delete groups."
-                                    icon={<FiGrid size={16} />}
+                                    description="View groups, members, admins, remove members, and delete groups."
+                                    icon={<FiGrid size={18}/>}
                                 />
                                 <QuickLink
                                     label="Submissions Overview"
                                     to="/admin/submissions"
-                                    description="Inspect user flag and text submissions, statuses, and contest participation."
-                                    icon={<FiActivity size={16} />}
+                                    description="Inspect submissions, statuses, and contest participation."
+                                    icon={<FiActivity size={18}/>}
                                 />
                             </div>
-                        </section>
+                        </CardShell>
                     </div>
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 

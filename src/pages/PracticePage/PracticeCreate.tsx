@@ -1,12 +1,7 @@
 import React, {useState, useEffect, FormEvent} from "react";
 import Navbar from "../../components/Navbar";
 import {useNavigate} from "react-router-dom";
-import {
-    getCategories,
-    getDifficulties,
-    getSolutionTypes,
-    createChallenge,
-} from "./practice";
+import {getCategories, getDifficulties, getSolutionTypes, createChallenge} from "./practice";
 
 type TabKey = "question" | "solution";
 
@@ -28,7 +23,7 @@ const PracticeCreate: React.FC = () => {
     const [category, setCategory] = useState<number | "">("");
     const [difficulty, setDifficulty] = useState<number | "">("");
     const [solutionType, setSolutionType] = useState<number | "">("");
-    const [questionType,setQuestionType] = useState<"practice" | "competition">("practice");
+    const [questionType, setQuestionType] = useState<"practice" | "competition">("practice");
 
     // Solutions
     const [flagSolution, setFlagSolution] = useState("");
@@ -50,11 +45,7 @@ const PracticeCreate: React.FC = () => {
         let mounted = true;
         (async () => {
             try {
-                const [cats, diffs, sols] = await Promise.all([
-                    getCategories(),
-                    getDifficulties(),
-                    getSolutionTypes(),
-                ]);
+                const [cats, diffs, sols] = await Promise.all([getCategories(), getDifficulties(), getSolutionTypes()]);
                 if (!mounted) return;
 
                 setCategories(cats);
@@ -97,15 +88,19 @@ const PracticeCreate: React.FC = () => {
         resetMessages();
 
         const allowedTypes = [
-            "image/jpeg", "image/png", "image/webp", "image/gif",
-            "application/zip", "application/x-zip-compressed"
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "application/zip",
+            "application/x-zip-compressed",
         ];
 
         const maxSize = 20 * 1024 * 1024;
         const accepted: File[] = [];
         const rejected: string[] = [];
 
-        Array.from(files).forEach(f => {
+        Array.from(files).forEach((f) => {
             if (!allowedTypes.includes(f.type)) {
                 rejected.push(`${f.name} (invalid type)`);
                 return;
@@ -117,7 +112,7 @@ const PracticeCreate: React.FC = () => {
             accepted.push(f);
         });
 
-        setUploadFiles(prev => [...prev, ...accepted]);
+        setUploadFiles((prev) => [...prev, ...accepted]);
 
         if (rejected.length > 0) {
             setError("Rejected files:\n" + rejected.join("\n"));
@@ -125,7 +120,7 @@ const PracticeCreate: React.FC = () => {
     };
 
     const handleRemoveFile = (idx: number) => {
-        setUploadFiles(prev => prev.filter((_, i) => i !== idx));
+        setUploadFiles((prev) => prev.filter((_, i) => i !== idx));
     };
 
     const handleSubmitChallenge = async (e: FormEvent) => {
@@ -155,7 +150,7 @@ const PracticeCreate: React.FC = () => {
             form.append("difficulty", String(difficulty));
             form.append("solution_type", String(solutionType));
 
-            uploadFiles.forEach(f => form.append("uploaded_files", f));
+            uploadFiles.forEach((f) => form.append("uploaded_files", f));
 
             await createChallenge(form);
             navigate("/admin/practice");
@@ -167,35 +162,31 @@ const PracticeCreate: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            <Navbar />
-            <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+            <Navbar/>
 
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-
+            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
+                <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200">
                     {/* --- HEADER --- */}
                     <div className="px-6 py-4 border-b border-slate-200">
-                        <h1 className="text-2xl font-semibold text-slate-900">
-                            Create Practice Challenge
-                        </h1>
-                        <p className="text-sm text-slate-500">
-                            Define the problem, metadata, and files.
-                        </p>
+                        <h1 className="text-2xl font-semibold text-slate-900">Create Practice Challenge</h1>
+                        <p className="text-sm text-slate-500">Define the problem, metadata, and files.</p>
                     </div>
 
                     {/* FORM */}
                     <form onSubmit={handleSubmitChallenge}>
-
                         {/* Alerts */}
                         {(error || message) && (
                             <div className="px-6 pt-4">
                                 {error && (
-                                    <div className="mb-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm whitespace-pre-line">
+                                    <div
+                                        className="mb-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm whitespace-pre-line">
                                         {error}
                                     </div>
                                 )}
                                 {message && (
-                                    <div className="mb-3 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm">
+                                    <div
+                                        className="mb-3 border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm">
                                         {message}
                                     </div>
                                 )}
@@ -209,9 +200,7 @@ const PracticeCreate: React.FC = () => {
                                     type="button"
                                     onClick={() => setActiveTab("question")}
                                     className={`pb-2 text-sm font-medium ${
-                                        activeTab === "question"
-                                            ? "text-slate-900 border-b-2 border-blue-600"
-                                            : "text-slate-500"
+                                        activeTab === "question" ? "text-slate-900 border-b-2 border-blue-600" : "text-slate-500"
                                     }`}
                                 >
                                     Question
@@ -234,9 +223,6 @@ const PracticeCreate: React.FC = () => {
                             </div>
                         </div>
 
-
-
-
                         {/* Question Tab */}
                         {activeTab === "question" && (
                             <div className="px-6 py-6 space-y-6">
@@ -254,18 +240,14 @@ const PracticeCreate: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Question Type
-                                        </label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Question
+                                            Type</label>
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={questionType}
-                                            onChange={(e) =>
-                                                setQuestionType(e.target.value as "practice" | "competition")
-                                            }
+                                            onChange={(e) => setQuestionType(e.target.value as "practice")}
                                         >
                                             <option value="practice">Practice</option>
-                                            <option value="competition">Competition</option>
                                         </select>
                                     </div>
                                 </div>
@@ -295,9 +277,7 @@ const PracticeCreate: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={category}
-                                            onChange={(e) =>
-                                                setCategory(e.target.value ? Number(e.target.value) : "")
-                                            }
+                                            onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Category</option>
                                             {categories.map((c) => (
@@ -314,9 +294,7 @@ const PracticeCreate: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={difficulty}
-                                            onChange={(e) =>
-                                                setDifficulty(e.target.value ? Number(e.target.value) : "")
-                                            }
+                                            onChange={(e) => setDifficulty(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Difficulty</option>
                                             {difficulties.map((d) => (
@@ -333,9 +311,7 @@ const PracticeCreate: React.FC = () => {
                                         <select
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             value={solutionType}
-                                            onChange={(e) =>
-                                                setSolutionType(e.target.value ? Number(e.target.value) : "")
-                                            }
+                                            onChange={(e) => setSolutionType(e.target.value ? Number(e.target.value) : "")}
                                         >
                                             <option value="">Select Solution Type</option>
                                             {solutionTypes.map((s) => (
@@ -350,9 +326,8 @@ const PracticeCreate: React.FC = () => {
                                 {/* IO and examples */}
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Constraints
-                                        </label>
+                                        <label
+                                            className="block text-sm font-medium text-slate-700 mb-1">Constraints</label>
                                         <textarea
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-24"
                                             placeholder="e.g. 1 ≤ N ≤ 10^5"
@@ -362,9 +337,8 @@ const PracticeCreate: React.FC = () => {
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                                Input Format
-                                            </label>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Input
+                                                Format</label>
                                             <textarea
                                                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-24"
                                                 placeholder="Describe input specification..."
@@ -373,9 +347,8 @@ const PracticeCreate: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                                Output Format
-                                            </label>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Output
+                                                Format</label>
                                             <textarea
                                                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-24"
                                                 placeholder="Describe output specification..."
@@ -388,9 +361,8 @@ const PracticeCreate: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Sample Input
-                                        </label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Sample
+                                            Input</label>
                                         <textarea
                                             className="block w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-28"
                                             placeholder="Example input..."
@@ -399,9 +371,8 @@ const PracticeCreate: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Sample Output
-                                        </label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Sample
+                                            Output</label>
                                         <textarea
                                             className="block w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-28"
                                             placeholder="Example output..."
@@ -415,13 +386,11 @@ const PracticeCreate: React.FC = () => {
                                 <div className="border border-dashed border-slate-300 rounded-lg p-4 bg-slate-50">
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
-                                            <p className="text-sm font-medium text-slate-700">
-                                                Attach Reference Files
-                                            </p>
+                                            <p className="text-sm font-medium text-slate-700">Attach Reference Files</p>
                                             <p className="text-xs text-slate-500 mt-1">
                                                 Upload diagrams, screenshots, or a ZIP archive with supplementary
-                                                material.
-                                                Max 20MB per file. Allowed types: images, ZIP.
+                                                material. Max 20MB per file.
+                                                Allowed types: images, ZIP.
                                             </p>
                                         </div>
                                         <label
@@ -445,10 +414,7 @@ const PracticeCreate: React.FC = () => {
                                                     className="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5"
                                                 >
                           <span className="truncate max-w-xs">
-                            {file.name}{" "}
-                              <span className="text-slate-400">
-                              ({Math.round(file.size / 1024)} KB)
-                            </span>
+                            {file.name} <span className="text-slate-400">({Math.round(file.size / 1024)} KB)</span>
                           </span>
                                                     <button
                                                         type="button"
@@ -464,9 +430,8 @@ const PracticeCreate: React.FC = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                                    <p className="text-xs text-slate-400">
-                                        You can refine solution notes after saving the question draft.
-                                    </p>
+                                    <p className="text-xs text-slate-400">You can refine solution notes after saving the
+                                        question draft.</p>
                                     <button
                                         type="button"
                                         onClick={handleSaveQuestion}
@@ -488,9 +453,8 @@ const PracticeCreate: React.FC = () => {
 
                                 {(solutionType === 1 || solutionType === 3) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Flag Solution
-                                        </label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Flag
+                                            Solution</label>
                                         <textarea
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-24 font-mono"
                                             placeholder="flag{example_flag_here}"
@@ -502,9 +466,8 @@ const PracticeCreate: React.FC = () => {
 
                                 {(solutionType === 2 || solutionType === 3) && (
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            Procedure / Writeup
-                                        </label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Procedure /
+                                            Writeup</label>
                                         <textarea
                                             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-40"
                                             placeholder="Step-by-step solution, hints, and reasoning..."
@@ -532,10 +495,9 @@ const PracticeCreate: React.FC = () => {
                                 </div>
                             </div>
                         )}
-
                     </form>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

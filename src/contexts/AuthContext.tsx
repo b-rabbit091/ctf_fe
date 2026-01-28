@@ -16,7 +16,6 @@ import {
 } from "../utils/token";
 import {toast} from "react-toastify";
 
-// ✅ add `id` as alias (so pages can use user.id)
 type User = {
     id?: number;
     user_id?: number;
@@ -50,10 +49,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         if (t) {
             try {
                 const d: any = jwtDecode(t);
+                if (d?.exp && Date.now() >= d.exp * 1000) {
+                    clearTokens();
+                    setUser(null);
+                    setAccessTokenState(null);
+                    setReady(true);
+                    return;
+                }
+
                 setUser({user_id: d.user_id, username: d.username , email: d.email, role: d.role});
                 setAccessTokenState(t);
             } catch {
                 clearTokens();
+                setUser(null);
+                setAccessTokenState(null);
             }
         }
         setReady(true);

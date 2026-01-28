@@ -1,145 +1,135 @@
 // src/pages/dashboard/index.tsx
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Navbar from "../../components/Navbar";
-import { motion } from "framer-motion";
 import {
-    FiTrendingUp,
-    FiTarget,
+    FiActivity,
+    FiAlertCircle,
     FiAward,
     FiClock,
-    FiAlertCircle,
+    FiFlag,
+    FiInfo,
     FiRefreshCw,
     FiShield,
-    FiActivity,
-    FiFlag,
-    FiBookOpen,
-    FiInfo,
+    FiTarget,
+    FiTrendingUp,
 } from "react-icons/fi";
 
-import type { DashboardOverviewResponse, LoadingState } from "./types";
-import { loadDashboard } from "./api";
+import type {DashboardOverviewResponse, LoadingState} from "./types";
+import {loadDashboard} from "./api";
 import {
+    dedupeSubmissions,
     formatDate,
     formatDateTime,
     getInitial,
-    safeString,
+    normalizeDifficulty,
+    pct,
     safeNumber,
+    safeString,
     safeUsername,
     sanitizeTitle,
-    pct,
-    normalizeDifficulty,
-    dedupeSubmissions,
     statusPillClass,
     contestState,
 } from "./utils";
 
-/**
- * ErrorBoundary prevents blank screen if rendering crashes.
- */
-class ErrorBoundary extends React.Component<
-    { children: React.ReactNode },
-    { hasError: boolean; message: string }
-> {
-    constructor(props: any) {
-        super(props);
-        this.state = { hasError: false, message: "" };
-    }
-    static getDerivedStateFromError(err: any) {
-        return { hasError: true, message: err?.message || "Something went wrong." };
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+    state = {hasError: false};
+    static getDerivedStateFromError() {
+        return {hasError: true};
     }
     componentDidCatch(err: any) {
-        console.error("Dashboard render crash:", err);
+        console.error("Dashboard crash:", err);
     }
     render() {
         if (this.state.hasError) {
             return (
-                <>
+                <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans">
                     <Navbar />
-                    <main className="min-h-[60vh] w-full bg-slate-50 px-4 py-10">
-                        <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+                    <main className="mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                             <div className="flex items-start gap-3">
-                                <FiAlertCircle className="mt-0.5 text-rose-700" />
-                                <div>
-                                    <h1 className="text-base font-semibold text-rose-900">Dashboard error</h1>
-                                    <p className="mt-1 text-sm text-rose-800">{this.state.message}</p>
-                                    <p className="mt-2 text-xs text-rose-700">Refresh the page to recover.</p>
+                                <FiAlertCircle className="mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="text-base sm:text-lg font-normal tracking-tight">Something went wrong</p>
+                                    <p className="mt-1 text-sm sm:text-base text-rose-700/90">
+                                        Please refresh the page to recover.
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     </main>
-                </>
+                </div>
             );
         }
         return this.props.children;
     }
 }
 
-/**
- * Pure components (memo) for faster rendering.
- */
-const SectionCard = memo(function SectionCard({
-                                                  title,
-                                                  icon,
-                                                  right,
-                                                  children,
-                                              }: {
+const Card = memo(function Card({
+                                    title,
+                                    icon,
+                                    right,
+                                    children,
+                                }: {
     title: string;
     icon?: React.ReactNode;
     right?: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 md:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    {icon && (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+        <section className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            <div className="px-4 sm:px-5 py-4 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                    {icon ? (
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/60 shrink-0">
                             {icon}
-                        </div>
-                    )}
-                    <h2 className="text-sm md:text-base font-semibold text-slate-900">{title}</h2>
+                        </span>
+                    ) : null}
+                    <h2 className="min-w-0 truncate text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                        {title}
+                    </h2>
                 </div>
                 {right}
             </div>
-            {children}
+            <div className="h-px bg-slate-200/70" />
+            <div className="px-4 sm:px-5 py-4">{children}</div>
         </section>
     );
 });
 
-const StatCard = memo(function StatCard({
-                                            label,
-                                            value,
-                                            hint,
-                                            icon,
-                                        }: {
+const Stat = memo(function Stat({
+                                    label,
+                                    value,
+                                    hint,
+                                    icon,
+                                }: {
     label: string;
     value: React.ReactNode;
     hint?: string;
     icon?: React.ReactNode;
 }) {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">{label}</span>
-                {icon}
+        <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            <div className="px-4 sm:px-5 py-4">
+                <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs sm:text-sm font-normal tracking-tight text-slate-600 truncate">{label}</p>
+                    {icon ? <span className="text-indigo-500/80 shrink-0">{icon}</span> : null}
+                </div>
+                <div className="mt-2 text-3xl sm:text-4xl font-normal tracking-tight text-slate-700 leading-none">
+                    {value}
+                </div>
+                {hint ? <p className="mt-2 text-xs sm:text-sm text-slate-500">{hint}</p> : null}
             </div>
-            <div className="text-2xl font-semibold text-slate-900">{value}</div>
-            {hint ? <p className="text-[11px] text-slate-500">{hint}</p> : null}
         </div>
     );
 });
 
-const Pill = memo(function Pill({
-                                    className = "",
-                                    children,
-                                }: {
-    className?: string;
-    children: React.ReactNode;
-}) {
+const Pill = memo(function Pill({className, children}: {className: string; children: React.ReactNode}) {
     return (
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>
-      {children}
-    </span>
+        <span className={cx("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs sm:text-sm font-normal tracking-tight ring-1", className)}>
+            {children}
+        </span>
     );
 });
 
@@ -153,43 +143,52 @@ const DifficultyBar = memo(function DifficultyBar({
     total: number;
 }) {
     const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+
     return (
-        <div className="flex flex-col gap-1 text-xs">
-            <div className="flex justify-between text-slate-600">
-                <span>{label}</span>
-                <span className="font-medium">
-          {value} <span className="text-slate-400">({percent}%)</span>
-        </span>
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-sm sm:text-base">
+                <span className="truncate text-slate-600 font-normal tracking-tight">{label}</span>
+                <span className="shrink-0 text-slate-500 font-normal tracking-tight">
+                    {value} <span className="text-slate-400">({percent}%)</span>
+                </span>
             </div>
-            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: `${percent}%` }} />
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden ring-1 ring-slate-200/60">
+                {/* no black */}
+                <div
+                    className="h-full rounded-full bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 transition-all"
+                    style={{width: `${percent}%`}}
+                />
             </div>
         </div>
     );
 });
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
 
 const DashboardUI: React.FC = () => {
     const [data, setData] = useState<DashboardOverviewResponse | null>(null);
     const [state, setState] = useState<LoadingState>("idle");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const mounted = useRef(true);
+    // avoid setState after unmount
+    const alive = useRef(true);
     useEffect(() => {
-        mounted.current = true;
+        alive.current = true;
         return () => {
-            mounted.current = false;
+            alive.current = false;
         };
     }, []);
 
     const loading = state === "loading";
     const hasError = state === "error";
 
-    const load = useCallback(async () => {
+    const refresh = useCallback(async () => {
         setState("loading");
         setErrorMessage(null);
 
         const res = await loadDashboard();
-        if (!mounted.current) return;
+        if (!alive.current) return;
 
         if (res.ok) {
             setData(res.data);
@@ -201,322 +200,342 @@ const DashboardUI: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        load();
-    }, [load]);
+        refresh();
+    }, [refresh]);
 
-    // ✅ Hooks must always run — so we compute derived values with safe defaults
     const username = useMemo(() => safeUsername(data?.user.username), [data?.user.username]);
-    const roleLabel = useMemo(() => (data?.user.role ?? ""), [data?.user.role]);
+    const roleLabel = data?.user.role ?? "";
+    const joined = data ? formatDate(data.user.date_joined) : "—";
 
-    const overallSolved = useMemo(() => safeNumber(data?.overall_stats.total_solved, 0), [data?.overall_stats.total_solved]);
-    const overallAttempted = useMemo(() => safeNumber(data?.overall_stats.total_attempted, 0), [data?.overall_stats.total_attempted]);
-    const overallRate = useMemo(() => pct(overallSolved, overallAttempted), [overallSolved, overallAttempted]);
+    const overallSolved = safeNumber(data?.overall_stats.total_solved, 0);
+    const overallAttempted = safeNumber(data?.overall_stats.total_attempted, 0);
+    const overallRate = pct(overallSolved, overallAttempted);
 
-    const practiceDiff = useMemo(
-        () => normalizeDifficulty(data?.practice_stats.difficulty),
-        [data?.practice_stats.difficulty]
-    );
-    const contestDiff = useMemo(
-        () => normalizeDifficulty(data?.competition_stats.difficulty),
-        [data?.competition_stats.difficulty]
-    );
+    const practiceDiff = normalizeDifficulty(data?.practice_stats.difficulty);
+    const contestDiff = normalizeDifficulty(data?.competition_stats.difficulty);
 
-    const submissions = useMemo(() => {
-        const list = data?.recent_submissions ?? [];
-        return dedupeSubmissions(list).slice(0, 20);
-    }, [data?.recent_submissions]);
-
-    const contests = useMemo(
-        () => data?.contests ?? { ongoing: [], upcoming: [], recent_past: [] },
-        [data?.contests]
+    const submissions = useMemo(
+        () => dedupeSubmissions(data?.recent_submissions ?? []).slice(0, 20),
+        [data?.recent_submissions]
     );
 
-    const topCategory = useMemo(
-        () => data?.overall_stats.category_breakdown?.[0] ?? null,
-        [data?.overall_stats.category_breakdown]
+    const contests = data?.contests ?? {ongoing: [], upcoming: [], recent_past: []};
+    const topCategory = data?.overall_stats.category_breakdown?.[0] ?? null;
+
+    const Shell: React.FC<{children: React.ReactNode}> = ({children}) => (
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700">
+            <Navbar />
+            <main className="mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">{children}</main>
+        </div>
     );
 
-    // ✅ Now conditionally render JSX only
     if (!data && !hasError) {
         return (
-            <>
-                <Navbar />
-                <main className="w-full px-4 py-6 md:py-8 bg-slate-50">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-11 w-11 rounded-full bg-slate-200 animate-pulse" />
-                                    <div className="space-y-2">
-                                        <div className="h-5 w-56 bg-slate-200 rounded animate-pulse" />
-                                        <div className="h-3 w-80 bg-slate-100 rounded animate-pulse" />
-                                    </div>
-                                </div>
-                                <div className="h-8 w-24 bg-slate-200 rounded-full animate-pulse" />
+            <Shell>
+                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-10 w-10 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                            <div className="min-w-0 space-y-2">
+                                <div className="h-5 w-52 bg-slate-200/80 rounded animate-pulse" />
+                                <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
                             </div>
                         </div>
-                        <p className="mt-4 text-center text-xs text-slate-500">Preparing your dashboard…</p>
+                        <div className="h-9 w-28 bg-slate-200/80 rounded-full animate-pulse shrink-0" />
                     </div>
-                </main>
-            </>
+                </div>
+                <p className="mt-3 text-center text-sm text-slate-500">Preparing your dashboard…</p>
+            </Shell>
         );
     }
 
     if (!data && hasError) {
         return (
-            <>
-                <Navbar />
-                <main className="w-full px-4 py-6 md:py-8 bg-slate-50">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 flex items-start gap-2 shadow-sm">
-                            <FiAlertCircle className="mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                                <p className="font-medium">We couldn’t load the dashboard data.</p>
-                                <p className="text-xs mt-1 break-words">{errorMessage}</p>
-                                <button
-                                    type="button"
-                                    onClick={load}
-                                    className="mt-2 inline-flex items-center gap-1 rounded-md border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-800 hover:bg-rose-50"
-                                >
-                                    <FiRefreshCw size={12} />
-                                    <span>Try again</span>
-                                </button>
-                            </div>
+            <Shell>
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                    <div className="flex items-start gap-3">
+                        <FiAlertCircle className="mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                            <p className="font-normal tracking-tight">Couldn’t load dashboard data</p>
+                            <p className="mt-1 text-sm break-words text-rose-700/90">{errorMessage}</p>
+                            <button
+                                type="button"
+                                onClick={refresh}
+                                className={cx(
+                                    "mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-sm font-normal tracking-tight",
+                                    "ring-1 ring-rose-200 hover:bg-white/90",
+                                    focusRing
+                                )}
+                            >
+                                <FiRefreshCw size={14} />
+                                Try again
+                            </button>
                         </div>
                     </div>
-                </main>
-            </>
+                </div>
+            </Shell>
         );
     }
 
-    // data is present here
-    const joined = formatDate(data!.user.date_joined);
-
     return (
-        <>
-            <Navbar />
-            <main className="w-full px-4 py-6 md:py-8 bg-slate-50">
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-6xl">
-                    {/* Header */}
-                    <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-white text-xl font-semibold">
-                                {getInitial(username)}
-                            </div>
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
-                                    {username ? `Welcome back, ${username}` : ""}
-                                </h1>
-                                <p className="mt-1 text-xs md:text-sm text-slate-500">
-                                    Track your practice, contests, and submission history in one place.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs md:text-sm">
-                            {roleLabel ? (
-                                <div className="rounded-full bg-white border border-slate-200 px-3 py-1.5 flex items-center gap-2 text-slate-600 shadow-sm">
-                                    <FiShield className={data!.user.is_admin ? "text-emerald-600" : "text-slate-500"} />
-                                    <span className="font-medium">{roleLabel}</span>
-                                </div>
-                            ) : null}
-
-                            <button
-                                type="button"
-                                onClick={load}
-                                disabled={loading}
-                                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                            >
-                                <FiRefreshCw className={loading ? "animate-spin" : ""} size={14} />
-                                <span>{loading ? "Refreshing..." : "Refresh"}</span>
-                            </button>
-                        </div>
-                    </header>
-
-                    {/* Error banner (non-blocking) */}
-                    {hasError && (
-                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 flex items-start gap-2 shadow-sm">
-                            <FiAlertCircle className="mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                                <p className="font-medium">We couldn’t load the latest dashboard data.</p>
-                                <p className="text-xs mt-1 break-words">{errorMessage}</p>
-                                <button
-                                    type="button"
-                                    onClick={load}
-                                    className="mt-2 inline-flex items-center gap-1 rounded-md border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-800 hover:bg-rose-50"
-                                >
-                                    <FiRefreshCw size={12} />
-                                    <span>Try again</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Stats */}
-                    <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard label="Total Solved" value={loading ? "…" : overallSolved} hint="Practice + contests." icon={<FiAward className="text-amber-500" />} />
-                        <StatCard label="Attempted" value={loading ? "…" : overallAttempted} hint="All attempts counted." icon={<FiTarget className="text-emerald-500" />} />
-                        <StatCard label="Success Rate" value={loading ? "…" : `${overallRate}%`} hint="Solved / Attempted." icon={<FiTrendingUp className="text-sky-500" />} />
-                        <StatCard label="Joined" value={loading ? "…" : joined} hint="Account creation date." icon={<FiClock className="text-slate-500" />} />
+        <Shell>
+            {/* Header */}
+            <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/60 font-normal tracking-tight shrink-0">
+                        {getInitial(username)}
                     </div>
 
-                    {/* Main */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                        {/* Left */}
-                        <div className="lg:col-span-2 flex flex-col gap-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <SectionCard title="Practice Progress" icon={<FiBookOpen />}>
-                                    <div className="space-y-3 text-xs">
-                                        <div className="flex justify-between text-slate-600">
-                                            <span>Total solved</span>
-                                            <span className="font-semibold">{data!.practice_stats.total_solved}</span>
-                                        </div>
-                                        <div className="flex justify-between text-slate-600">
-                                            <span>Total attempted</span>
-                                            <span className="font-semibold">{data!.practice_stats.total_attempted}</span>
-                                        </div>
-                                        <div className="mt-2 space-y-2">
-                                            {Object.entries(practiceDiff).map(([k, v]) => (
-                                                <DifficultyBar key={`p-${k}`} label={k} value={v} total={data!.practice_stats.total_solved || 1} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </SectionCard>
+                    <div className="min-w-0">
+                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
+                            {username ? `Welcome, ${username}` : "Welcome"}
+                        </h1>
+                        <p className="mt-1 text-sm sm:text-base text-slate-500">
+                            Practice, contests, and submissions — all in one view.
+                        </p>
+                    </div>
+                </div>
 
-                                <SectionCard title="Contest Progress" icon={<FiFlag />}>
-                                    <div className="space-y-3 text-xs">
-                                        <div className="flex justify-between text-slate-600">
-                                            <span>Solved in contests</span>
-                                            <span className="font-semibold">{data!.competition_stats.total_solved}</span>
-                                        </div>
-                                        <div className="flex justify-between text-slate-600">
-                                            <span>Attempted in contests</span>
-                                            <span className="font-semibold">{data!.competition_stats.total_attempted}</span>
-                                        </div>
-                                        <div className="mt-2 space-y-2">
-                                            {Object.entries(contestDiff).map(([k, v]) => (
-                                                <DifficultyBar key={`c-${k}`} label={k} value={v} total={data!.competition_stats.total_solved || 1} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </SectionCard>
-                            </div>
-
-                            <SectionCard title="Recent Submissions" icon={<FiActivity />}>
-                                {submissions.length === 0 ? (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 flex items-start gap-2">
-                                        <FiInfo className="mt-0.5 text-slate-500" />
-                                        <div>
-                                            <p className="font-medium">No submissions yet</p>
-                                            <p className="mt-1 text-xs text-slate-500">Solve a practice challenge or join a contest.</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-xs md:text-sm">
-                                            <thead>
-                                            <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                                                <th className="py-2 pr-4">Time</th>
-                                                <th className="py-2 pr-4">Challenge</th>
-                                                <th className="py-2 pr-4">Mode</th>
-                                                <th className="py-2 pr-4">Status</th>
-                                                <th className="py-2 pr-4">Contest</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            {submissions.map((s) => (
-                                                <tr key={`${s.type}-${s.id}-${s.submitted_at}`} className="border-b border-slate-100 last:border-0">
-                                                    <td className="py-2 pr-4 text-slate-600 whitespace-nowrap">{formatDateTime(s.submitted_at)}</td>
-                                                    <td className="py-2 pr-4 text-slate-800">{sanitizeTitle(s.challenge_title)}</td>
-                                                    <td className="py-2 pr-4 text-slate-600">{safeString(s.question_type, "—")}</td>
-                                                    <td className="py-2 pr-4">
-                                                        <Pill className={statusPillClass(s.status)}>{safeString(s.status, "Unknown")}</Pill>
-                                                    </td>
-                                                    <td className="py-2 pr-4 text-slate-600">{s.contest_name || "—"}</td>
-                                                </tr>
-                                            ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </SectionCard>
+                <div className="flex items-center gap-2">
+                    {roleLabel ? (
+                        <div className="inline-flex items-center gap-2 rounded-xl bg-white/65 ring-1 ring-slate-200/60 px-3 py-2 text-sm font-normal tracking-tight text-slate-600">
+                            <FiShield className={data!.user.is_admin ? "text-emerald-600" : "text-slate-500"} />
+                            {roleLabel}
                         </div>
+                    ) : null}
 
-                        {/* Right */}
-                        <div className="flex flex-col gap-5">
-                            <SectionCard title="Strongest Categories" icon={<FiTarget />}>
-                                {data!.overall_stats.category_breakdown.length === 0 ? (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 flex items-start gap-2">
-                                        <FiInfo className="mt-0.5 text-slate-500" />
-                                        <div>
-                                            <p className="font-medium">No category data yet</p>
-                                            <p className="mt-1 text-xs text-slate-500">Solve more problems to populate this.</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2 text-xs">
-                                        {topCategory && (
-                                            <div className="mb-2 rounded-xl bg-slate-900 text-slate-50 px-3 py-2">
-                                                <p className="text-[11px] uppercase tracking-wide text-slate-300">Top Category</p>
-                                                <p className="text-sm font-semibold">{topCategory.category || "Uncategorized"}</p>
-                                                <p className="text-[11px] text-slate-300">{topCategory.solved_count} solved</p>
-                                            </div>
-                                        )}
-                                        <ul className="space-y-1">
-                                            {data!.overall_stats.category_breakdown.map((cat) => (
-                                                <li
-                                                    key={`${cat.category_id ?? cat.category ?? "unknown"}-${cat.solved_count}`}
-                                                    className="flex items-center justify-between text-slate-700"
-                                                >
-                                                    <span className="truncate">{cat.category || "Uncategorized"}</span>
-                                                    <span className="text-xs text-slate-500">{cat.solved_count} solved</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </SectionCard>
+                    <button
+                        type="button"
+                        onClick={refresh}
+                        disabled={loading}
+                        className={cx(
+                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
+                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
+                            focusRing
+                        )}
+                    >
+                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16} />
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                </div>
+            </header>
 
-                            <SectionCard title="Contests" icon={<FiFlag />} right={<Pill className="bg-slate-100 text-slate-700">Ongoing {contests.ongoing.length}</Pill>}>
-                                <div className="space-y-3 text-xs">
-                                    {contests.ongoing.length === 0 && contests.upcoming.length === 0 && contests.recent_past.length === 0 ? (
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 flex items-start gap-2">
-                                            <FiInfo className="mt-0.5 text-slate-500" />
-                                            <div>
-                                                <p className="font-medium">No contests to show</p>
-                                                <p className="mt-1 text-xs text-slate-500">When contests exist, they’ll appear here.</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {contests.ongoing.slice(0, 3).map((c) => {
-                                                const st = contestState(c);
-                                                return (
-                                                    <div key={`on-${c.id}-${c.slug}`} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="min-w-0">
-                                                                <p className="font-semibold text-slate-900 truncate">{c.name}</p>
-                                                                <p className="mt-0.5 text-[11px] text-slate-500 truncate">{c.description || "No description."}</p>
-                                                            </div>
-                                                            <Pill className={st.cls}>{st.text}</Pill>
-                                                        </div>
-                                                        <p className="mt-2 text-[11px] text-slate-600">
-                                                            {formatDateTime(c.start_time)} → {formatDateTime(c.end_time)}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </>
-                                    )}
-                                </div>
-                            </SectionCard>
+            {/* Soft error banner */}
+            {hasError ? (
+                <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                    <div className="flex items-start gap-3">
+                        <FiAlertCircle className="mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                            <p className="font-normal tracking-tight">Couldn’t refresh latest data</p>
+                            <p className="mt-1 text-sm break-words text-rose-700/90">{errorMessage}</p>
                         </div>
                     </div>
+                </div>
+            ) : null}
 
-                    {state === "loading" && <p className="mt-6 text-center text-xs text-slate-500">Preparing your dashboard…</p>}
-                </motion.div>
-            </main>
-        </>
+            {/* Stats */}
+            <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Stat label="Total Solved" value={loading ? "…" : overallSolved} hint="Practice + contests" icon={<FiAward />} />
+                <Stat label="Attempted" value={loading ? "…" : overallAttempted} hint="All attempts" icon={<FiTarget />} />
+                <Stat label="Success Rate" value={loading ? "…" : `${overallRate}%`} hint="Solved / Attempted" icon={<FiTrendingUp />} />
+                <Stat label="Joined" value={loading ? "…" : joined} hint="Account created" icon={<FiClock />} />
+            </div>
+
+            {/* Main grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {/* Left */}
+                <div className="lg:col-span-2 flex flex-col gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Card title="Practice Progress" icon={<FiTarget />}>
+                            <div className="space-y-2.5">
+                                <div className="flex justify-between gap-2 text-sm sm:text-base">
+                                    <span className="text-slate-500 font-normal tracking-tight">Solved</span>
+                                    <span className="text-slate-700 font-normal tracking-tight">{data!.practice_stats.total_solved}</span>
+                                </div>
+                                <div className="flex justify-between gap-2 text-sm sm:text-base">
+                                    <span className="text-slate-500 font-normal tracking-tight">Attempted</span>
+                                    <span className="text-slate-700 font-normal tracking-tight">{data!.practice_stats.total_attempted}</span>
+                                </div>
+
+                                <div className="pt-2 space-y-3">
+                                    {Object.entries(practiceDiff).map(([k, v]) => (
+                                        <DifficultyBar key={`p-${k}`} label={k} value={v} total={data!.practice_stats.total_solved || 1} />
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+
+                        <Card title="Contest Progress" icon={<FiFlag />}>
+                            <div className="space-y-2.5">
+                                <div className="flex justify-between gap-2 text-sm sm:text-base">
+                                    <span className="text-slate-500 font-normal tracking-tight">Solved</span>
+                                    <span className="text-slate-700 font-normal tracking-tight">{data!.competition_stats.total_solved}</span>
+                                </div>
+                                <div className="flex justify-between gap-2 text-sm sm:text-base">
+                                    <span className="text-slate-500 font-normal tracking-tight">Attempted</span>
+                                    <span className="text-slate-700 font-normal tracking-tight">{data!.competition_stats.total_attempted}</span>
+                                </div>
+
+                                <div className="pt-2 space-y-3">
+                                    {Object.entries(contestDiff).map(([k, v]) => (
+                                        <DifficultyBar key={`c-${k}`} label={k} value={v} total={data!.competition_stats.total_solved || 1} />
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    <Card title="Recent Submissions" icon={<FiActivity />}>
+                        {submissions.length === 0 ? (
+                            <div className="rounded-2xl bg-slate-50/60 ring-1 ring-slate-200/60 p-4">
+                                <div className="flex items-start gap-3">
+                                    <FiInfo className="mt-0.5 text-slate-500 shrink-0" />
+                                    <div>
+                                        <p className="font-normal tracking-tight text-slate-700">No submissions yet</p>
+                                        <p className="mt-1 text-sm text-slate-500">Solve a practice challenge or join a contest.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm sm:text-base">
+                                    <thead>
+                                    <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                        <th className="py-2.5 pr-4 font-normal">Time</th>
+                                        <th className="py-2.5 pr-4 font-normal">Challenge</th>
+                                        <th className="py-2.5 pr-4 font-normal">Mode</th>
+                                        <th className="py-2.5 pr-4 font-normal">Status</th>
+                                        <th className="py-2.5 pr-4 font-normal">Contest</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {submissions.map((s) => (
+                                        <tr
+                                            key={`${s.type}-${s.id}-${s.submitted_at}`}
+                                            className="border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition"
+                                        >
+                                            <td className="py-2.5 pr-4 text-slate-500 whitespace-nowrap">
+                                                {formatDateTime(s.submitted_at)}
+                                            </td>
+                                            <td className="py-2.5 pr-4 text-slate-700 tracking-tight">
+                                                {sanitizeTitle(s.challenge_title)}
+                                            </td>
+                                            <td className="py-2.5 pr-4 text-slate-500">
+                                                {safeString(s.question_type, "—")}
+                                            </td>
+                                            <td className="py-2.5 pr-4">
+                                                <Pill className={statusPillClass(s.status)}>{safeString(s.status, "Unknown")}</Pill>
+                                            </td>
+                                            <td className="py-2.5 pr-4 text-slate-500">
+                                                {s.contest_name || "—"}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                </div>
+
+                {/* Right */}
+                <div className="flex flex-col gap-3">
+                    <Card title="Strongest Categories" icon={<FiTarget />}>
+                        {data!.overall_stats.category_breakdown.length === 0 ? (
+                            <div className="rounded-2xl bg-slate-50/60 ring-1 ring-slate-200/60 p-4">
+                                <div className="flex items-start gap-3">
+                                    <FiInfo className="mt-0.5 text-slate-500 shrink-0" />
+                                    <div>
+                                        <p className="font-normal tracking-tight text-slate-700">No category data yet</p>
+                                        <p className="mt-1 text-sm text-slate-500">Solve more problems to populate this.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {topCategory ? (
+                                    <div className="rounded-2xl bg-indigo-50/60 ring-1 ring-indigo-200/50 p-4">
+                                        <p className="text-xs uppercase tracking-wide text-indigo-600/80 font-normal">Top Category</p>
+                                        <p className="mt-1 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                            {topCategory.category || "Uncategorized"}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500">{topCategory.solved_count} solved</p>
+                                    </div>
+                                ) : null}
+
+                                <ul className="space-y-2">
+                                    {data!.overall_stats.category_breakdown.map((cat) => (
+                                        <li
+                                            key={`${cat.category_id ?? cat.category ?? "unknown"}-${cat.solved_count}`}
+                                            className="flex items-center justify-between gap-2"
+                                        >
+                                            <span className="truncate text-slate-600 font-normal tracking-tight">
+                                                {cat.category || "Uncategorized"}
+                                            </span>
+                                            <span className="shrink-0 text-sm text-slate-500 font-normal tracking-tight">
+                                                {cat.solved_count} solved
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </Card>
+
+                    <Card
+                        title="Contests"
+                        icon={<FiFlag />}
+                        right={
+                            <Pill className="bg-indigo-50 text-indigo-700 ring-indigo-200/60">
+                                Ongoing {contests.ongoing.length}
+                            </Pill>
+                        }
+                    >
+                        {contests.ongoing.length === 0 &&
+                        contests.upcoming.length === 0 &&
+                        contests.recent_past.length === 0 ? (
+                            <div className="rounded-2xl bg-slate-50/60 ring-1 ring-slate-200/60 p-4">
+                                <div className="flex items-start gap-3">
+                                    <FiInfo className="mt-0.5 text-slate-500 shrink-0" />
+                                    <div>
+                                        <p className="font-normal tracking-tight text-slate-700">No contests to show</p>
+                                        <p className="mt-1 text-sm text-slate-500">When contests exist, they’ll appear here.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {contests.ongoing.slice(0, 3).map((c) => {
+                                    const st = contestState(c);
+                                    return (
+                                        <div key={`on-${c.id}-${c.slug}`} className="rounded-2xl bg-white/60 ring-1 ring-slate-200/60 p-3 shadow-sm">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm sm:text-base font-normal tracking-tight text-slate-700">
+                                                        {c.name}
+                                                    </p>
+                                                    <p className="mt-1 text-xs sm:text-sm text-slate-500 line-clamp-2">
+                                                        {c.description || "No description."}
+                                                    </p>
+                                                </div>
+                                                <Pill className={st.cls}>{st.text}</Pill>
+                                            </div>
+                                            <p className="mt-2 text-xs sm:text-sm text-slate-500">
+                                                {formatDateTime(c.start_time)} → {formatDateTime(c.end_time)}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            </div>
+
+            {state === "loading" ? (
+                <p className="mt-4 text-center text-sm text-slate-500">Preparing your dashboard…</p>
+            ) : null}
+        </Shell>
     );
 };
 

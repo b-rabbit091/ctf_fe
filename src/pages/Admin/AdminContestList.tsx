@@ -1,33 +1,35 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
-
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
-
-import {getChallenges, getCategories, getDifficulties, deleteChallenge} from "../../api/practice";
-import {Challenge} from "../CompetitionPage/types";
-
+import api from "../../api/axios";
 import {FiPlus, FiEye, FiEdit2, FiTrash2, FiAlertCircle, FiInfo} from "react-icons/fi";
 
-type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED" | "NONE";
+type ContestType = "daily" | "weekly" | "monthly" | "custom";
+
+type ContestDTO = {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string;
+    contest_type: ContestType;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+    publish_result: boolean;
+};
+
+type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED";
 type StatusFilter = ContestStatus | "ALL";
 
-interface ContestMeta {
-    label: string;
-    status: ContestStatus;
-}
+function getContestStatus(contest: ContestDTO): { label: string; status: ContestStatus } {
+    const now = Date.now();
+    const start = new Date(contest.start_time).getTime();
+    const end = new Date(contest.end_time).getTime();
 
-function getContestMeta(challenge: Challenge): ContestMeta {
-    const activeContest = challenge.active_contest ?? null;
-    if (!activeContest) return {label: "No Contest", status: "NONE"};
-
-    const nowMs = Date.now();
-    const start = new Date(activeContest.start_time).getTime();
-    const end = new Date(activeContest.end_time).getTime();
-
-    if (nowMs < start) return {label: "Upcoming", status: "UPCOMING"};
-    if (nowMs >= start && nowMs < end) return {label: "Ongoing", status: "ONGOING"};
+    if (now < start) return {label: "Upcoming", status: "UPCOMING"};
+    if (now >= start && now < end) return {label: "Ongoing", status: "ONGOING"};
     return {label: "Ended", status: "ENDED"};
 }
 
@@ -45,21 +47,16 @@ const tagClass = (active: boolean) =>
             : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90"
     );
 
-const AdminCompetitionList: React.FC = () => {
+const AdminContestList: React.FC = () => {
     const {user} = useAuth();
     const navigate = useNavigate();
 
-    const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
-    const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-    const [difficulties, setDifficulties] = useState<{ id: number; level: string }[]>([]);
-
+    const [contests, setContests] = useState<ContestDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
 
     const [search, setSearch] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState("");
-    const [difficultyFilter, setDifficultyFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
     const [page, setPage] = useState(1);
@@ -91,7 +88,7 @@ const AdminCompetitionList: React.FC = () => {
         }, 3500);
     }, []);
 
-    const fetchData = useCallback(async () => {
+    const fetchContests = useCallback(async () => {
         if (!user) return;
         if (user.role !== "admin") return;
 
@@ -99,21 +96,13 @@ const AdminCompetitionList: React.FC = () => {
         setError(null);
 
         try {
-            const [cats, diffs, chals] = await Promise.all([
-                getCategories(),
-                getDifficulties(),
-                getChallenges({type: "competition"}),
-            ]);
-
+            const res = await api.get<ContestDTO[]>("/challenges/contests/");
             if (!alive.current) return;
-
-            setCategories(Array.isArray(cats) ? cats : []);
-            setDifficulties(Array.isArray(diffs) ? diffs : []);
-            setAllChallenges(Array.isArray(chals) ? chals : []);
+            setContests(Array.isArray(res.data) ? res.data : []);
         } catch (e) {
             console.error(e);
             if (!alive.current) return;
-            setError("Failed to load competition data. Please try again.");
+            setError("Failed to load contests. Please try again.");
         } finally {
             if (!alive.current) return;
             setLoading(false);
@@ -121,27 +110,26 @@ const AdminCompetitionList: React.FC = () => {
     }, [user]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchContests();
+    }, [fetchContests]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
 
-        return allChallenges.filter((c) => {
-            if (categoryFilter && c.category?.name !== categoryFilter) return false;
-            if (difficultyFilter && c.difficulty?.level !== difficultyFilter) return false;
-
-            const meta = getContestMeta(c);
+        return contests.filter((c) => {
+            const meta = getContestStatus(c);
             if (statusFilter !== "ALL" && meta.status !== statusFilter) return false;
 
             if (!q) return true;
 
-            const title = (c.title || "").toLowerCase();
+            const name = (c.name || "").toLowerCase();
+            const slug = (c.slug || "").toLowerCase();
             const desc = (c.description || "").toLowerCase();
-            const cat = (c.category?.name || "").toLowerCase();
-            return title.includes(q) || desc.includes(q) || cat.includes(q);
+            const type = (c.contest_type || "").toLowerCase();
+
+            return name.includes(q) || slug.includes(q) || desc.includes(q) || type.includes(q);
         });
-    }, [allChallenges, categoryFilter, difficultyFilter, statusFilter, search]);
+    }, [contests, search, statusFilter]);
 
     const total = filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -155,14 +143,6 @@ const AdminCompetitionList: React.FC = () => {
         return filtered.slice(start, start + pageSize);
     }, [filtered, page]);
 
-    const handleClearFilters = useCallback(() => {
-        setCategoryFilter("");
-        setDifficultyFilter("");
-        setStatusFilter("ALL");
-        setSearch("");
-        setPage(1);
-    }, []);
-
     const handleDelete = useCallback(
         async (id: number) => {
             if (!user || user.role !== "admin") {
@@ -171,37 +151,38 @@ const AdminCompetitionList: React.FC = () => {
             }
             if (busyRef.current) return;
 
-            if (
-                !window.confirm(
-                    "Are you sure you want to delete this competition challenge? This cannot be undone."
-                )
-            )
-                return;
+            if (!window.confirm("Are you sure you want to delete this contest? This cannot be undone.")) return;
 
             busyRef.current = true;
             setError(null);
 
-            const backup = allChallenges;
-            setAllChallenges((prev) => prev.filter((c) => c.id !== id));
-            flashMessage("Deleting challenge...");
+            const backup = contests;
+            setContests((prev) => prev.filter((c) => c.id !== id));
+            flashMessage("Deleting contest...");
 
             try {
-                await deleteChallenge(id);
+                await api.delete(`/challenges/contests/${id}/`);
                 if (!alive.current) return;
-                flashMessage("Challenge deleted.");
+                flashMessage("Contest deleted.");
             } catch (err) {
                 console.error(err);
                 if (!alive.current) return;
-                setAllChallenges(backup);
-                flashMessage("Failed to delete challenge.");
+                setContests(backup);
+                flashMessage("Failed to delete contest.");
             } finally {
                 busyRef.current = false;
             }
         },
-        [allChallenges, user, flashMessage]
+        [contests, user, flashMessage]
     );
 
-    // --- responsive full-screen shell for guard states (same style as your AdminPracticeList) ---
+    const handleClearFilters = useCallback(() => {
+        setStatusFilter("ALL");
+        setSearch("");
+        setPage(1);
+    }, []);
+
+    // --- responsive full-screen shell for guard states (match your AdminPracticeList style) ---
     if (!user) {
         return (
             <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
@@ -243,16 +224,16 @@ const AdminCompetitionList: React.FC = () => {
                     <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                             <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
-                                Manage Competition Challenges
+                                Manage Contests
                             </h1>
                             <p className="mt-1 text-sm sm:text-base text-slate-500">
-                                Admin view of all competition-type challenges. Create, review, and maintain contests from here.
+                                Admin view of all contests. Create, review, edit, and delete contests from here.
                             </p>
                         </div>
 
                         <button
                             type="button"
-                            onClick={() => navigate("/admin/competition/new")}
+                            onClick={() => navigate("/admin/contests/new")}
                             className={cx(
                                 "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
                                 "ring-1 ring-emerald-200/60 text-emerald-700 hover:bg-white/90",
@@ -260,7 +241,7 @@ const AdminCompetitionList: React.FC = () => {
                             )}
                         >
                             <FiPlus size={18}/>
-                            <span>New Competition</span>
+                            <span>New Contest</span>
                         </button>
                     </header>
 
@@ -269,18 +250,18 @@ const AdminCompetitionList: React.FC = () => {
                         <div className="px-4 sm:px-5 py-4 space-y-3">
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="min-w-[240px] flex-1">
-                                    <label className="sr-only" htmlFor="admin-competition-search">
-                                        Search competition challenges
+                                    <label className="sr-only" htmlFor="admin-contest-search">
+                                        Search contests
                                     </label>
                                     <input
-                                        id="admin-competition-search"
+                                        id="admin-contest-search"
                                         type="search"
                                         value={search}
                                         onChange={(e) => {
                                             setSearch(e.target.value);
                                             setPage(1);
                                         }}
-                                        placeholder="Search by title, description, category…"
+                                        placeholder="Search by name, slug, description, type…"
                                         className={cx(
                                             "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
                                             "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
@@ -288,54 +269,34 @@ const AdminCompetitionList: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="shrink-0">
-                                    <label className="sr-only" htmlFor="admin-competition-category">
-                                        Category filter
-                                    </label>
-                                    <select
-                                        id="admin-competition-category"
-                                        value={categoryFilter}
-                                        onChange={(e) => {
-                                            setCategoryFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className={cx(
-                                            "h-10 w-[190px] max-w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
-                                            "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
-                                        )}
-                                    >
-                                        <option value="">Category</option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.name}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-1 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                                        Status
+                                    </span>
 
-                                <div className="shrink-0">
-                                    <label className="sr-only" htmlFor="admin-competition-difficulty">
-                                        Difficulty filter
-                                    </label>
-                                    <select
-                                        id="admin-competition-difficulty"
-                                        value={difficultyFilter}
-                                        onChange={(e) => {
-                                            setDifficultyFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className={cx(
-                                            "h-10 w-[190px] max-w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
-                                            "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
-                                        )}
-                                    >
-                                        <option value="">Difficulty</option>
-                                        {difficulties.map((d) => (
-                                            <option key={d.id} value={d.level}>
-                                                {d.level}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {(
+                                        [
+                                            {key: "ALL", label: "All"},
+                                            {key: "ONGOING", label: "Ongoing"},
+                                            {key: "UPCOMING", label: "Upcoming"},
+                                            {key: "ENDED", label: "Ended"},
+                                        ] as { key: StatusFilter; label: string }[]
+                                    ).map((opt) => {
+                                        const active = statusFilter === opt.key;
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onClick={() => {
+                                                    setStatusFilter(opt.key);
+                                                    setPage(1);
+                                                }}
+                                                className={tagClass(active)}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <button
@@ -355,38 +316,6 @@ const AdminCompetitionList: React.FC = () => {
                                     <span className="ml-1">{total}</span>
                                 </span>
                             </div>
-
-                            {/* Status chips */}
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="mr-1 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
-                                    Status
-                                </span>
-
-                                {(
-                                    [
-                                        {key: "ALL", label: "All"},
-                                        {key: "ONGOING", label: "Ongoing"},
-                                        {key: "UPCOMING", label: "Upcoming"},
-                                        {key: "ENDED", label: "Ended"},
-                                        {key: "NONE", label: "No contest"},
-                                    ] as { key: StatusFilter; label: string }[]
-                                ).map((opt) => {
-                                    const active = statusFilter === opt.key;
-                                    return (
-                                        <button
-                                            key={opt.key}
-                                            type="button"
-                                            onClick={() => {
-                                                setStatusFilter(opt.key);
-                                                setPage(1);
-                                            }}
-                                            className={tagClass(active)}
-                                        >
-                                            {opt.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </section>
 
@@ -399,7 +328,7 @@ const AdminCompetitionList: React.FC = () => {
                                     <div className="h-4 w-72 bg-slate-100 rounded animate-pulse"/>
                                 </div>
                             </div>
-                            <p className="mt-3 text-center text-sm text-slate-500">Loading competition challenges…</p>
+                            <p className="mt-3 text-center text-sm text-slate-500">Loading contests…</p>
                         </div>
                     ) : null}
 
@@ -408,7 +337,7 @@ const AdminCompetitionList: React.FC = () => {
                             <div className="flex items-start gap-3">
                                 <FiAlertCircle className="mt-0.5 shrink-0"/>
                                 <div className="min-w-0">
-                                    <p className="font-normal tracking-tight">Couldn’t load competition challenges</p>
+                                    <p className="font-normal tracking-tight">Couldn’t load contests</p>
                                     <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
                                 </div>
                             </div>
@@ -432,7 +361,7 @@ const AdminCompetitionList: React.FC = () => {
                                         No matches
                                     </div>
                                     <div className="mt-1 text-sm sm:text-base text-slate-500">
-                                        No competition challenges match your filters. Try resetting or broadening your search.
+                                        No contests match your filters. Try resetting or broadening your search.
                                     </div>
                                 </div>
                             ) : (
@@ -440,18 +369,22 @@ const AdminCompetitionList: React.FC = () => {
                                     <table className="min-w-full text-sm sm:text-base">
                                         <thead className="bg-white/40 sticky top-0">
                                         <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
-                                            <th className="px-4 py-3 font-normal">Title</th>
-                                            <th className="px-4 py-3 font-normal">Category</th>
-                                            <th className="px-4 py-3 font-normal">Difficulty</th>
-                                            <th className="px-4 py-3 font-normal">Contest</th>
+                                            <th className="px-4 py-3 font-normal">Name</th>
+                                            <th className="px-4 py-3 font-normal">Type</th>
+                                            <th className="px-4 py-3 font-normal">Window</th>
+                                            <th className="px-4 py-3 font-normal">Status</th>
                                             <th className="px-4 py-3 text-right font-normal">Actions</th>
                                         </tr>
                                         </thead>
 
                                         <tbody className="bg-transparent">
                                         {pageItems.map((c) => {
-                                            const meta = getContestMeta(c);
-                                            const difficulty = c.difficulty?.level || "N/A";
+                                            const meta = getContestStatus(c);
+
+                                            const start = new Date(c.start_time);
+                                            const end = new Date(c.end_time);
+
+                                            const windowLabel = `${start.toLocaleString()} → ${end.toLocaleString()}`;
 
                                             return (
                                                 <tr
@@ -461,19 +394,22 @@ const AdminCompetitionList: React.FC = () => {
                                                     <td className="px-4 py-3 align-top">
                                                         <div className="max-w-[34rem]">
                                                             <div className="truncate font-normal tracking-tight text-slate-700">
-                                                                {c.title}
+                                                                {c.name}
                                                             </div>
                                                             <div className="mt-1 line-clamp-2 text-sm text-slate-600">
-                                                                {c.description}
+                                                                {c.description || "—"}
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-slate-500">
+                                                                slug: <span className="font-mono">{c.slug}</span>
                                                             </div>
                                                         </div>
                                                     </td>
 
-                                                    <td className="px-4 py-3 align-top text-slate-600">
-                                                        {c.category?.name || "—"}
-                                                    </td>
+                                                    <td className="px-4 py-3 align-top text-slate-600">{c.contest_type}</td>
 
-                                                    <td className="px-4 py-3 align-top text-slate-600">{difficulty}</td>
+                                                    <td className="px-4 py-3 align-top text-slate-600">
+                                                        <div className="max-w-sm line-clamp-2">{windowLabel}</div>
+                                                    </td>
 
                                                     <td className="px-4 py-3 align-top text-slate-600">{meta.label}</td>
 
@@ -481,7 +417,7 @@ const AdminCompetitionList: React.FC = () => {
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => navigate(`/compete/${c.id}`)}
+                                                                onClick={() => navigate(`/admin/contests/${c.id}/view`)}
                                                                 className={cx(
                                                                     "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
                                                                     "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
@@ -494,7 +430,7 @@ const AdminCompetitionList: React.FC = () => {
 
                                                             <button
                                                                 type="button"
-                                                                onClick={() => navigate(`/admin/competition/${c.id}`)}
+                                                                onClick={() => navigate(`/admin/contests/${c.id}`)}
                                                                 className={cx(
                                                                     "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
                                                                     "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
@@ -580,4 +516,4 @@ const AdminCompetitionList: React.FC = () => {
     );
 };
 
-export default AdminCompetitionList;
+export default AdminContestList;

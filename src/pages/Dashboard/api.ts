@@ -19,7 +19,7 @@ export class DashboardError extends Error {
 
 export const getDashboardOverview = async (): Promise<DashboardOverview> => {
     try {
-        const resp = await api.get<DashboardOverview>("/api/dashboard/overview/");
+        const resp = await api.get<DashboardOverview>("/dashboard/overview/");
         return resp.data;
     } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
@@ -60,7 +60,7 @@ export const getAdminDashboardTotals = async (): Promise<AdminDashboardTotalsRes
     // Your old file had no try/catch here; keeping behavior consistent is better for UI stability.
     try {
         const resp = await api.get<AdminDashboardTotalsResponse>(
-            "/api/dashboard/admin/totals/"
+            "/dashboard/admin/totals/"
         );
         return resp.data;
     } catch (error: unknown) {

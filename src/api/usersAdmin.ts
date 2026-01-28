@@ -33,8 +33,8 @@ export type AdminGroup = {
  * under /api/users/.
  */
 
-const USER_BASE = "/api/users/";
-const ADMIN_INVITE_BASE = "/api/users/admin-invite";
+const USER_BASE = "/users/";
+const ADMIN_INVITE_BASE = "/users/admin-invite";
 
 /** List all users (admin-only). */
 export const getUsers = async (): Promise<AdminUser[]> => {

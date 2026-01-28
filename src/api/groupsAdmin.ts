@@ -2,7 +2,7 @@
 import api from "./axios";
 
 /* ---------- Types (match backend response) ---------- */
-
+const API_URL = '/users/'
 export type GroupMember = {
     user_id: number;
     username: string;
@@ -21,28 +21,28 @@ export type AdminGroup = {
 
 /**
  * Admin-only list
- * If yours is /api/users/groups/ then change the path accordingly.
+ * If yours is {API_URL}groups/ then change the path accordingly.
  */
 export async function getAllGroups(): Promise<AdminGroup[]> {
-    const res = await api.get<AdminGroup[]>("/api/users/groups/");
+    const res = await api.get<AdminGroup[]>(`${API_URL}groups/`);
     return res.data;
 }
 
 /**
  * Delete a group
- * DELETE /api/users/groups/{id}/
+ * DELETE {API_URL}groups/{id}/
  */
 export async function deleteGroup(groupId: number): Promise<void> {
-    await api.delete(`/api/users/groups/${groupId}/`);
+    await api.delete(`${API_URL}groups/${groupId}/`);
 }
 
 /**
  * Remove a member from a group (admin-only)
- * POST /api/users/groups/{id}/remove-member/
+ * POST {API_URL}groups/{id}/remove-member/
  * Body: { user_id: <int> }
  */
 export async function removeMember(groupId: number, userId: number): Promise<{ detail?: string }> {
-    const res = await api.post(`/api/users/groups/${groupId}/remove-member/`, {
+    const res = await api.post(`${API_URL}groups/${groupId}/remove-member/`, {
         user_id: userId,
     });
     return res.data;

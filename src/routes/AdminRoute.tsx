@@ -1,14 +1,18 @@
 // src/routes/AdminRoute.tsx
 import React from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import {Navigate, Outlet} from "react-router-dom";
+import {useAuth} from "../contexts/AuthContext";
 
-const AdminRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
-    const { user, ready } = useAuth();
+const AdminRoute: React.FC = () => {
+    const {user, ready} = useAuth();
+
     if (!ready) return null;
-    if (!user) return <Navigate to="/login" replace />;
-    if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
-    return children;
+    if (!user) return <Navigate to="/login" replace/>;
+
+    const role = (user.role || "").toLowerCase();
+    if (role !== "admin") return <Navigate to="/dashboard" replace/>;
+
+    return <Outlet/>;
 };
 
 export default AdminRoute;

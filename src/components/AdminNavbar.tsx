@@ -34,7 +34,7 @@ const AdminNavbar: React.FC = () => {
     // Admin-specific links
     const adminLinks = [
         { name: "Admin Dashboard", path: "/admin" },
-        { name: "Challenges", path: "/admin/challenges" },
+        { name: "Challenges", path: "/admin/practice" },
         { name: "Contests", path: "/admin/contests" },
         { name: "Users", path: "/admin/users" },
         { name: "Settings", path: "/admin/settings" },

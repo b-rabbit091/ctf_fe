@@ -1,6 +1,6 @@
 import api from "./axios";
 
-const API_URL = "/api/blogs/";
+const API_URL = "/blogs/";
 
 export interface Blog {
     id: number;

@@ -1,8 +1,8 @@
 // src/pages/groups/UserGroupPage.tsx
-import React, { useCallback, useEffect, useMemo, useState, FormEvent } from "react";
-import { motion } from "framer-motion";
+import React, {useCallback, useEffect, useMemo, useState, FormEvent} from "react";
+import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
-import { useAuth } from "../../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
 
 import {
     getMyGroupDashboard,
@@ -33,7 +33,7 @@ import {
     FiX,
 } from "react-icons/fi";
 
-import { safeApi } from "../../utils/apiError";
+import {safeApi} from "../../utils/apiError";
 
 const MIN_ALLOWED = 2;
 const MAX_ALLOWED = 10;
@@ -43,14 +43,11 @@ function isNumericString(s: string) {
 }
 
 type AnyObj = Record<string, any>;
+
 function isObject(v: any): v is AnyObj {
     return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-/**
- * For SUCCESS payloads (2xx): pull message out of common keys
- * Example: {detail:"..."} or {message:"..."} or string body
- */
 function extractSuccessMessage(data: any): string | null {
     if (data == null) return null;
     if (typeof data === "string") return data.trim() || null;
@@ -61,10 +58,6 @@ function extractSuccessMessage(data: any): string | null {
     return null;
 }
 
-/**
- * Some endpoints may return 200 with {error:"..."} or {detail:"..."} to mean failure.
- * If we detect an error-like payload, treat it as an error even if HTTP is 2xx.
- */
 function semanticErrorFromOkResponse(data: any): string | null {
     if (!isObject(data)) return null;
     const err = data.error ?? data.detail ?? data.message ?? null;
@@ -72,18 +65,20 @@ function semanticErrorFromOkResponse(data: any): string | null {
     return null;
 }
 
-// Small GitHub-like box component
-const Box: React.FC<{
+// Glass pane (matches Practice/Competition)
+const Pane: React.FC<{
     title: string;
     subtitle?: string;
     right?: React.ReactNode;
     children: React.ReactNode;
-}> = ({ title, subtitle, right, children }) => (
-    <section className="overflow-hidden rounded-md border border-slate-200 bg-white">
-        <header className="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+}> = ({title, subtitle, right, children}) => (
+    <section
+        className="min-w-0 overflow-hidden rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+        <header
+            className="flex items-start justify-between gap-3 border-b border-white/40 bg-white/40 px-4 py-3 backdrop-blur-xl">
             <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-                {subtitle ? <p className="mt-0.5 text-xs text-slate-600">{subtitle}</p> : null}
+                <h2 className="text-sm sm:text-base font-normal text-slate-700 truncate">{title}</h2>
+                {subtitle ? <p className="mt-1 text-xs sm:text-sm text-slate-500">{subtitle}</p> : null}
             </div>
             {right ? <div className="shrink-0">{right}</div> : null}
         </header>
@@ -92,7 +87,7 @@ const Box: React.FC<{
 );
 
 const UserGroupPage: React.FC = () => {
-    const { user } = useAuth();
+    const {user} = useAuth();
 
     const [groupLoading, setGroupLoading] = useState<boolean>(true);
     const [groupError, setGroupError] = useState<string | null>(null);
@@ -102,7 +97,6 @@ const UserGroupPage: React.FC = () => {
     const [members, setMembers] = useState<GroupMember[]>([]);
     const [pendingInvites, setPendingInvites] = useState<GroupInvite[]>([]);
 
-    // Incoming invites (other groups invited ME)
     const [incomingInvites, setIncomingInvites] = useState<IncomingInvite[]>([]);
     const [incomingLoading, setIncomingLoading] = useState(false);
 
@@ -120,18 +114,12 @@ const UserGroupPage: React.FC = () => {
     };
 
     const onApiError = (err: any) => {
-        // err is NormalizedApiError from apiError.ts
         console.error(err?.raw ?? err);
-
         const msg =
             Array.isArray(err?.messages) && err.messages.length
                 ? err.messages.join(" • ")
                 : err?.message || "Something went wrong.";
-
         setGroupError(msg);
-
-        // Optional: auto-redirect if token expired
-        // if (err?.isAuthError) logout?.();
     };
 
     const enforceNumberOnlyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -166,12 +154,10 @@ const UserGroupPage: React.FC = () => {
         setIncomingLoading(false);
 
         if (!res.ok) {
-            // quieter than main errors
             console.error(res.error.raw);
             return;
         }
 
-        // if backend ever returns {error:"..."} with 200
         const semanticErr = semanticErrorFromOkResponse(res.data);
         if (semanticErr) {
             console.error("Incoming invites semantic error:", semanticErr);
@@ -206,7 +192,6 @@ const UserGroupPage: React.FC = () => {
         setPendingInvites(data.pending_invites || []);
         setGroupLoading(false);
 
-        // independent load
         loadIncomingInvites();
     }, [loadIncomingInvites]);
 
@@ -217,12 +202,16 @@ const UserGroupPage: React.FC = () => {
 
     if (!user) {
         return (
-            <>
-                <Navbar />
-                <main className="min-h-screen bg-slate-50 px-4 py-6">
-                    <div className="mx-auto max-w-6xl text-sm text-slate-500">Checking your account…</div>
+            <div
+                className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
+                <Navbar/>
+                <main className="flex-1 w-full px-0 py-6 md:py-8">
+                    <div
+                        className="rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                        Checking your account…
+                    </div>
                 </main>
-            </>
+            </div>
         );
     }
 
@@ -303,7 +292,7 @@ const UserGroupPage: React.FC = () => {
         setMembers((prev) => prev.filter((x) => x.id !== m.id));
 
         const res = await safeApi(
-            () => removeGroupMember({ group_id: myGroup.id, user_id: m.id }),
+            () => removeGroupMember({group_id: myGroup.id, user_id: m.id}),
             "Failed to remove member. Please try again."
         );
 
@@ -320,8 +309,6 @@ const UserGroupPage: React.FC = () => {
         }
 
         setMessage(extractSuccessMessage(res.data) ?? `Member ${m.username} has been removed from the group.`);
-        // optional refresh:
-        // await loadGroupDashboard();
     };
 
     const handleSetAdmin = async (m: GroupMember) => {
@@ -332,7 +319,7 @@ const UserGroupPage: React.FC = () => {
         setGroupLoading(true);
 
         const res = await safeApi(
-            () => setGroupAdmin({ group_id: myGroup.id, user_id: m.id }),
+            () => setGroupAdmin({group_id: myGroup.id, user_id: m.id}),
             "Failed to update group admin. Please try again."
         );
 
@@ -346,7 +333,6 @@ const UserGroupPage: React.FC = () => {
             return;
         }
 
-        // backend returns group payload for set-admin
         setMyGroup(res.data as any);
         setMessage(extractSuccessMessage(res.data) ?? `"${m.username}" is now the group admin.`);
         await loadGroupDashboard();
@@ -368,14 +354,12 @@ const UserGroupPage: React.FC = () => {
         setSearchLoading(false);
 
         if (!res.ok) {
-            // keep silent like before, but log
             console.error(res.error.raw);
             return;
         }
 
         const semanticErr = semanticErrorFromOkResponse(res.data);
         if (semanticErr) {
-            // treat as empty results + show small error? (silent is ok)
             console.error("Search semantic error:", semanticErr);
             setSearchResults([]);
             return;
@@ -391,7 +375,7 @@ const UserGroupPage: React.FC = () => {
         setGroupLoading(true);
 
         const res = await safeApi(
-            () => sendGroupInvite({ group_id: myGroup.id, user_id: u.id }),
+            () => sendGroupInvite({group_id: myGroup.id, user_id: u.id}),
             "Failed to send invitation. Please try again."
         );
 
@@ -399,7 +383,6 @@ const UserGroupPage: React.FC = () => {
 
         if (!res.ok) return onApiError(res.error);
 
-        // IMPORTANT: invite() sometimes returns 200 with {error:"User already belongs..."}
         const semanticErr = semanticErrorFromOkResponse(res.data);
         if (semanticErr) {
             setGroupError(semanticErr);
@@ -456,127 +439,175 @@ const UserGroupPage: React.FC = () => {
     const totalPending = pendingInvites.length;
     const adminMember = useMemo(() => members.find((m) => m.is_admin), [members]);
 
+    // -------------------- Styling tokens (same family as Practice pages) --------------------
+
+    const pageShell =
+        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 text-sm font-sans flex flex-col";
+
+    const pageWrap = "w-full px-0 py-6 md:py-8";
+
+    const title = "text-2xl sm:text-3xl font-semibold text-slate-900";
+    const subtitle = "mt-1 text-sm sm:text-base text-slate-600";
+
+    const alertBase =
+        "rounded-2xl border px-4 py-3 text-sm sm:text-base shadow-sm backdrop-blur-xl";
+
+    const alertInfo = `${alertBase} border-white/30 bg-white/55 text-slate-700 ring-1 ring-slate-200/50`;
+    const alertErr = `${alertBase} border-rose-200 bg-rose-50/80 text-rose-700`;
+    const alertOk = `${alertBase} border-emerald-200 bg-emerald-50/80 text-emerald-700`;
+
+    const chip =
+        "inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/60 px-3 py-1 text-xs sm:text-sm font-normal text-slate-600";
+
+    const btn =
+        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-xs sm:text-sm font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-50";
+
+    const btnPrimary =
+        "rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-2.5 text-sm sm:text-base font-normal text-blue-700 shadow-sm hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:bg-slate-100/60 disabled:text-slate-400 disabled:cursor-not-allowed";
+
+    const btnDanger =
+        "rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-xs sm:text-sm font-normal text-rose-700 shadow-sm hover:bg-rose-100/60 focus:outline-none focus:ring-2 focus:ring-rose-500/15 disabled:opacity-50";
+
+    const btnSuccess =
+        "rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs sm:text-sm font-normal text-emerald-700 shadow-sm hover:bg-emerald-100/60 focus:outline-none focus:ring-2 focus:ring-emerald-500/15 disabled:opacity-50";
+
+    const inputShell =
+        "rounded-xl border border-slate-200/70 bg-white/70 focus-within:bg-white focus-within:border-blue-200/70 focus-within:ring-2 focus-within:ring-blue-500/10";
+
+    const inputBase =
+        "w-full bg-transparent px-3 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400";
+
+    const inputMono =
+        "w-full bg-transparent px-3 py-2.5 text-sm font-mono text-slate-700 outline-none placeholder:text-slate-400";
+
     // -------------------- UI --------------------
 
     return (
-        <>
-            <Navbar />
-            <main className="min-h-screen bg-slate-50 px-4 py-6 md:py-8">
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-6xl">
-                    {/* GitHub-ish page header */}
-                    <div className="mb-6">
-                        <h1 className="text-xl font-semibold text-slate-900">My Group</h1>
-                        <p className="mt-1 text-sm text-slate-600">Manage group members, invitations, and join requests in one place.</p>
+        <div className={pageShell}>
+            <Navbar/>
+
+            <main className={pageWrap}>
+                <motion.div
+                    initial={{opacity: 0, y: 6}}
+                    animate={{opacity: 1, y: 0}}
+                    className="w-full px-0"
+                >
+                    {/* Page header */}
+                    <div className="px-4 sm:px-6 md:px-8 mb-6">
+                        <h1 className={title}>My Group</h1>
+                        <p className={subtitle}>Manage group members, invitations, and join requests in one place.</p>
                     </div>
 
                     {/* Alerts */}
-                    {groupLoading && (
-                        <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                            Loading group information…
-                        </div>
-                    )}
-                    {groupError && (
-                        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            {groupError}
-                        </div>
-                    )}
-                    {message && (
-                        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                            {message}
-                        </div>
-                    )}
+                    <div className="px-4 sm:px-6 md:px-8 space-y-3 mb-6">
+                        {groupLoading && <div className={alertInfo}>Loading group information…</div>}
+                        {groupError && <div className={alertErr}>{groupError}</div>}
+                        {message && <div className={alertOk}>{message}</div>}
+                    </div>
 
-                    {/* GitHub-like two-column layout */}
-                    <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-                        {/* LEFT column */}
-                        <div className="space-y-4">
-                            {/* Overview / Create */}
-                            <Box
+                    {/* Two-column layout (full width) */}
+                    <div className="px-4 sm:px-6 md:px-8 grid gap-4 lg:grid-cols-[360px_1fr]">
+                        {/* LEFT */}
+                        <div className="space-y-4 min-w-0">
+                            <Pane
                                 title={myGroup ? "Group overview" : "Create a new group"}
                                 subtitle={myGroup ? "Basic details about your group." : "You don’t belong to a group yet."}
                                 right={
                                     myGroup?.is_admin ? (
-                                        <button
-                                            type="button"
-                                            onClick={handleDeleteGroup}
-                                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                                        >
-                                            <FiTrash2 size={14} />
-                                            Delete
+                                        <button type="button" onClick={handleDeleteGroup} className={btnDanger}>
+                                            <span className="inline-flex items-center gap-2">
+                                                <FiTrash2 size={16}/>
+                                                Delete
+                                            </span>
                                         </button>
                                     ) : null
                                 }
                             >
                                 {myGroup ? (
-                                    <div className="space-y-2 text-sm">
+                                    <div className="space-y-3">
                                         <div className="flex items-center gap-2">
-                                            <FiUsers className="text-slate-600" />
-                                            <div className="font-medium text-slate-900">{myGroup.name}</div>
-                                        </div>
-
-                                        <div className="text-xs text-slate-600">
-                                            Members: <span className="font-semibold text-slate-900">{totalMembers}</span> / {myGroup.max_members}
-                                            {" · "}
-                                            Min required: {myGroup.min_members}
+                                            <FiUsers className="text-slate-600"/>
+                                            <div className="min-w-0">
+                                                <div
+                                                    className="text-base font-semibold text-slate-900 truncate">{myGroup.name}</div>
+                                                <div className="mt-1 text-xs sm:text-sm text-slate-500">
+                                                    Members: <span
+                                                    className="text-slate-700">{totalMembers}</span> / {myGroup.max_members}
+                                                    {" · "}
+                                                    Min required: {myGroup.min_members}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {myGroup.is_admin ? (
-                                            <div className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-                                                You are the admin
-                                            </div>
+                                            <span className={chip}>You are the admin</span>
                                         ) : adminMember ? (
-                                            <div className="text-xs text-slate-600">
-                                                Admin: <span className="font-medium text-slate-900">{adminMember.username}</span>
+                                            <div className="text-xs sm:text-sm text-slate-500">
+                                                Admin: <span className="text-slate-700">{adminMember.username}</span>
                                             </div>
                                         ) : null}
                                     </div>
                                 ) : (
                                     <form onSubmit={handleCreateGroup} className="space-y-3">
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-slate-700">Group name</label>
-                                            <input
-                                                type="text"
-                                                value={groupName}
-                                                onChange={(e) => setGroupName(e.target.value)}
-                                                placeholder="e.g., NW Bears"
-                                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            />
+                                        <div className="space-y-1">
+                                            <label
+                                                className="block text-xs font-normal uppercase tracking-wide text-slate-500">
+                                                Group name
+                                            </label>
+                                            <div className={inputShell}>
+                                                <input
+                                                    type="text"
+                                                    value={groupName}
+                                                    onChange={(e) => setGroupName(e.target.value)}
+                                                    placeholder="e.g., NW Bears"
+                                                    className={inputBase}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="mb-1 block text-xs font-medium text-slate-700">Min</label>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    value={minMembers}
-                                                    onKeyDown={enforceNumberOnlyKeyDown}
-                                                    onChange={(e) => setMinMembers(sanitizeToDigits(e.target.value))}
-                                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                />
+                                            <div className="space-y-1">
+                                                <label
+                                                    className="block text-xs font-normal uppercase tracking-wide text-slate-500">
+                                                    Min
+                                                </label>
+                                                <div className={inputShell}>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        value={minMembers}
+                                                        onKeyDown={enforceNumberOnlyKeyDown}
+                                                        onChange={(e) => setMinMembers(sanitizeToDigits(e.target.value))}
+                                                        className={inputMono}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label className="mb-1 block text-xs font-medium text-slate-700">Max</label>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    value={maxMembers}
-                                                    onKeyDown={enforceNumberOnlyKeyDown}
-                                                    onChange={(e) => setMaxMembers(sanitizeToDigits(e.target.value))}
-                                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                />
+
+                                            <div className="space-y-1">
+                                                <label
+                                                    className="block text-xs font-normal uppercase tracking-wide text-slate-500">
+                                                    Max
+                                                </label>
+                                                <div className={inputShell}>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        value={maxMembers}
+                                                        onKeyDown={enforceNumberOnlyKeyDown}
+                                                        onChange={(e) => setMaxMembers(sanitizeToDigits(e.target.value))}
+                                                        className={inputMono}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <button
-                                            type="submit"
-                                            disabled={groupLoading}
-                                            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                                        >
-                                            <FiUserCheck size={16} />
-                                            {groupLoading ? "Creating…" : "Create group"}
+                                        <button type="submit" disabled={groupLoading} className={btnPrimary}>
+                                            <span className="inline-flex items-center gap-2 justify-center w-full">
+                                                <FiUserCheck size={18}/>
+                                                {groupLoading ? "Creating…" : "Create group"}
+                                            </span>
                                         </button>
 
                                         <p className="text-xs text-slate-500">
@@ -584,35 +615,38 @@ const UserGroupPage: React.FC = () => {
                                         </p>
                                     </form>
                                 )}
-                            </Box>
+                            </Pane>
 
-                            {/* Incoming invitations (requests to YOU) */}
-                            <Box
+                            <Pane
                                 title="Pending requests"
                                 subtitle="Invitations sent to you by other groups."
                                 right={
                                     incomingLoading ? (
                                         <span className="text-xs text-slate-500">Loading…</span>
                                     ) : (
-                                        <span className="text-xs text-slate-600">{incomingInvites.length}</span>
+                                        <span className="text-xs text-slate-500">{incomingInvites.length}</span>
                                     )
                                 }
                             >
                                 {incomingInvites.length === 0 ? (
-                                    <div className="text-sm text-slate-600">
-                                        <div className="flex items-center gap-2">
-                                            <FiInbox className="text-slate-500" />
-                                            <span>No pending requests.</span>
-                                        </div>
+                                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                                        <FiInbox className="text-slate-500"/>
+                                        <span>No pending requests.</span>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
                                         {incomingInvites.map((inv) => (
-                                            <div key={inv.id} className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-3 py-2">
+                                            <div
+                                                key={inv.id}
+                                                className="flex items-center justify-between gap-3 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50"
+                                            >
                                                 <div className="min-w-0">
-                                                    <div className="truncate text-sm font-semibold text-slate-900">{inv.group.name}</div>
-                                                    <div className="text-xs text-slate-600">
-                                                        Admin: <span className="font-medium">{inv.invited_by?.username ?? "Unknown"}</span>
+                                                    <div className="truncate text-sm font-semibold text-slate-900">
+                                                        {inv.group.name}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">
+                                                        Admin: <span
+                                                        className="text-slate-700">{inv.invited_by?.username ?? "Unknown"}</span>
                                                     </div>
                                                 </div>
 
@@ -621,54 +655,62 @@ const UserGroupPage: React.FC = () => {
                                                         type="button"
                                                         onClick={() => handleAcceptIncoming(inv.id)}
                                                         disabled={incomingLoading}
-                                                        className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                                                        className={btnSuccess}
                                                     >
-                                                        <FiCheck size={14} />
-                                                        Accept
+                                                        <span className="inline-flex items-center gap-2">
+                                                            <FiCheck size={16}/>
+                                                            Accept
+                                                        </span>
                                                     </button>
+
                                                     <button
                                                         type="button"
                                                         onClick={() => handleDeclineIncoming(inv.id)}
                                                         disabled={incomingLoading}
-                                                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                                        className={btn}
                                                     >
-                                                        <FiX size={14} />
-                                                        Decline
+                                                        <span className="inline-flex items-center gap-2">
+                                                            <FiX size={16}/>
+                                                            Decline
+                                                        </span>
                                                     </button>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
-                            </Box>
+                            </Pane>
                         </div>
 
-                        {/* RIGHT column */}
-                        <div className="space-y-4">
-                            {/* Members */}
-                            <Box
+                        {/* RIGHT */}
+                        <div className="space-y-4 min-w-0">
+                            <Pane
                                 title="Members"
                                 subtitle={myGroup ? "People currently in your group." : "Create or join a group to see members."}
-                                right={myGroup ? <span className="text-xs text-slate-600">{totalMembers}</span> : null}
+                                right={myGroup ? <span className="text-xs text-slate-500">{totalMembers}</span> : null}
                             >
                                 {!myGroup ? (
                                     <div className="text-sm text-slate-600">No group yet.</div>
                                 ) : members.length === 0 ? (
                                     <div className="text-sm text-slate-600">No members in this group yet.</div>
                                 ) : (
-                                    <div className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                                    <div className="space-y-2">
                                         {members.map((m) => (
-                                            <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                                            <div
+                                                key={m.id}
+                                                className="flex items-center justify-between gap-3 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50"
+                                            >
                                                 <div className="min-w-0">
                                                     <div className="truncate text-sm font-semibold text-slate-900">
-                                                        {m.username}{" "}
+                                                        {m.username}
                                                         {m.is_admin ? (
-                                                            <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-                                Admin
-                              </span>
+                                                            <span
+                                                                className={[chip, "text-slate-700"].join(" ") + " ml-2"}>
+    Admin
+  </span>
                                                         ) : null}
                                                     </div>
-                                                    <div className="truncate text-xs text-slate-600">{m.email}</div>
+                                                    <div className="truncate text-xs text-slate-500">{m.email}</div>
                                                 </div>
 
                                                 {myGroup.is_admin ? (
@@ -678,10 +720,12 @@ const UserGroupPage: React.FC = () => {
                                                                 type="button"
                                                                 onClick={() => handleSetAdmin(m)}
                                                                 disabled={groupLoading}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                                                className={btn}
                                                             >
-                                                                <FiUserCheck size={14} />
-                                                                Make admin
+                                                                <span className="inline-flex items-center gap-2">
+                                                                    <FiUserCheck size={16}/>
+                                                                    Make admin
+                                                                </span>
                                                             </button>
                                                         )}
 
@@ -689,10 +733,12 @@ const UserGroupPage: React.FC = () => {
                                                             type="button"
                                                             onClick={() => handleRemoveMember(m)}
                                                             disabled={groupLoading}
-                                                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                                            className={btnDanger}
                                                         >
-                                                            <FiUserX size={14} />
-                                                            Remove
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <FiUserX size={16}/>
+                                                                Remove
+                                                            </span>
                                                         </button>
                                                     </div>
                                                 ) : null}
@@ -700,44 +746,63 @@ const UserGroupPage: React.FC = () => {
                                         ))}
                                     </div>
                                 )}
-                            </Box>
+                            </Pane>
 
-                            {/* Invites (admin only) */}
-                            <Box title="Invitations" subtitle="Invite users to join your group." right={<span className="text-xs text-slate-600">{totalPending}</span>}>
+                            <Pane
+                                title="Invitations"
+                                subtitle="Invite users to join your group."
+                                right={<span className="text-xs text-slate-500">{totalPending}</span>}
+                            >
                                 {!myGroup ? (
-                                    <div className="text-sm text-slate-600">Create or join a group to invite users.</div>
+                                    <div className="text-sm text-slate-600">Create or join a group to invite
+                                        users.</div>
                                 ) : !myGroup.is_admin ? (
-                                    <div className="text-sm text-slate-600">Only the group admin can send invitations.</div>
+                                    <div className="text-sm text-slate-600">Only the group admin can send
+                                        invitations.</div>
                                 ) : (
-                                    <div className="grid gap-4 lg:grid-cols-2">
+                                    <div className="grid gap-4 lg:grid-cols-2 min-w-0">
                                         {/* Search */}
-                                        <div>
-                                            <label className="mb-1 block text-xs font-medium text-slate-700">Search users</label>
-                                            <input
-                                                type="search"
-                                                value={searchTerm}
-                                                onChange={(e) => handleSearchUsers(e.target.value)}
-                                                placeholder="Search by username or email…"
-                                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            />
-                                            {searchLoading && <p className="mt-1 text-xs text-slate-500">Searching…</p>}
+                                        <div className="min-w-0">
+                                            <label
+                                                className="block text-xs font-normal uppercase tracking-wide text-slate-500 mb-1">
+                                                Search users
+                                            </label>
+                                            <div className={inputShell}>
+                                                <input
+                                                    type="search"
+                                                    value={searchTerm}
+                                                    onChange={(e) => handleSearchUsers(e.target.value)}
+                                                    placeholder="Search by username or email…"
+                                                    className={inputBase}
+                                                />
+                                            </div>
+
+                                            {searchLoading && <p className="mt-2 text-xs text-slate-500">Searching…</p>}
 
                                             {searchResults.length > 0 && (
-                                                <div className="mt-2 divide-y divide-slate-200 rounded-md border border-slate-200">
+                                                <div className="mt-3 space-y-2">
                                                     {searchResults.map((u) => (
-                                                        <div key={u.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                                                        <div
+                                                            key={u.id}
+                                                            className="flex items-center justify-between gap-3 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50"
+                                                        >
                                                             <div className="min-w-0">
-                                                                <div className="truncate text-sm font-semibold text-slate-900">{u.username}</div>
-                                                                <div className="truncate text-xs text-slate-600">{u.email}</div>
+                                                                <div
+                                                                    className="truncate text-sm font-semibold text-slate-900">{u.username}</div>
+                                                                <div
+                                                                    className="truncate text-xs text-slate-500">{u.email}</div>
                                                             </div>
+
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleSendInvite(u)}
                                                                 disabled={groupLoading}
-                                                                className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                                                className={btnPrimary}
                                                             >
-                                                                <FiSend size={14} />
-                                                                Invite
+                                                                <span className="inline-flex items-center gap-2">
+                                                                    <FiSend size={18}/>
+                                                                    Invite
+                                                                </span>
                                                             </button>
                                                         </div>
                                                     ))}
@@ -750,21 +815,32 @@ const UserGroupPage: React.FC = () => {
                                         </div>
 
                                         {/* Pending sent invites */}
-                                        <div>
-                                            <div className="mb-1 text-xs font-medium text-slate-700">Pending invites sent</div>
+                                        <div className="min-w-0">
+                                            <div
+                                                className="text-xs font-normal uppercase tracking-wide text-slate-500 mb-1">
+                                                Pending invites sent
+                                            </div>
+
                                             {pendingInvites.length === 0 ? (
                                                 <div className="text-sm text-slate-600">No pending invitations.</div>
                                             ) : (
-                                                <div className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                                                <div className="space-y-2">
                                                     {pendingInvites.map((inv) => (
-                                                        <div key={inv.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                                                        <div
+                                                            key={inv.id}
+                                                            className="flex items-center justify-between gap-3 rounded-2xl border border-white/30 bg-white/55 px-3 py-2 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50"
+                                                        >
                                                             <div className="min-w-0">
-                                                                <div className="truncate text-sm font-semibold text-slate-900">{inv.user.username}</div>
-                                                                <div className="truncate text-xs text-slate-600">{inv.user.email}</div>
+                                                                <div
+                                                                    className="truncate text-sm font-semibold text-slate-900">{inv.user.username}</div>
+                                                                <div
+                                                                    className="truncate text-xs text-slate-500">{inv.user.email}</div>
                                                             </div>
-                                                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                                {String(inv.status || "").toUpperCase()}
-                              </span>
+
+                                                            <span
+                                                                className="inline-flex items-center rounded-full border border-amber-200/70 bg-amber-50/70 px-3 py-1 text-xs font-normal text-amber-700">
+                                                                {String(inv.status || "").toUpperCase()}
+                                                            </span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -772,12 +848,12 @@ const UserGroupPage: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
-                            </Box>
+                            </Pane>
                         </div>
                     </div>
                 </motion.div>
             </main>
-        </>
+        </div>
     );
 };
 

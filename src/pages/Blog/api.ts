@@ -1,7 +1,7 @@
 import api from "../../api/axios";
 import {Blog} from "./types";
 
-const API_URL = "/api/blogs/";
+const API_URL = "/blogs/";
 
 
 // Fetch all blogs

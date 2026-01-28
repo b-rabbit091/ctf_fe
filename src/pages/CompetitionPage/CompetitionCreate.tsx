@@ -1,20 +1,20 @@
-import React, { useState, useEffect, FormEvent } from "react";
+import React, {useState, useEffect, FormEvent} from "react";
 import Navbar from "../../components/Navbar";
-import { useNavigate } from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {
     getCategories,
     getDifficulties,
     getSolutionTypes,
     createChallenge,
 } from "./api";
-import { useAuth } from "../../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
 
 type TabKey = "question" | "solution";
 type ContestType = "daily" | "weekly" | "monthly" | "custom";
 
 const CompetitionCreate: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const {user} = useAuth();
 
     // Tabs
     const [activeTab, setActiveTab] = useState<TabKey>("question");
@@ -57,6 +57,7 @@ const CompetitionCreate: React.FC = () => {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [groupOnly, setGroupOnly] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -217,6 +218,7 @@ const CompetitionCreate: React.FC = () => {
             formData.append("output_format", outputFormat);
             formData.append("sample_input", sampleInput);
             formData.append("sample_output", sampleOutput);
+            formData.append("group_only", String(groupOnly));
 
             // force competition
             formData.append("question_type", questionType);
@@ -260,7 +262,7 @@ const CompetitionCreate: React.FC = () => {
     if (user?.role !== "admin") {
         return (
             <div className="min-h-screen bg-gray-50">
-                <Navbar />
+                <Navbar/>
                 <div className="mx-auto max-w-3xl p-6">
                     <p className="text-center font-medium text-red-600">
                         Unauthorized – admin access required.
@@ -272,7 +274,7 @@ const CompetitionCreate: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-50">
-            <Navbar />
+            <Navbar/>
             <div className="mx-auto">
                 <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     {/* Header */}
@@ -289,7 +291,8 @@ const CompetitionCreate: React.FC = () => {
               <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">
                 Admin Panel
               </span>
-                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
+                            <span
+                                className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
                 Competition
               </span>
                         </div>
@@ -300,12 +303,14 @@ const CompetitionCreate: React.FC = () => {
                         {(error || message) && (
                             <div className="px-6 pt-4">
                                 {error && (
-                                    <div className="mb-3 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                    <div
+                                        className="mb-3 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                                         {error}
                                     </div>
                                 )}
                                 {message && (
-                                    <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                    <div
+                                        className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                                         {message}
                                     </div>
                                 )}
@@ -326,7 +331,8 @@ const CompetitionCreate: React.FC = () => {
                                 >
                                     Question & Contest
                                     {activeTab === "question" && (
-                                        <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600" />
+                                        <span
+                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
                                     )}
                                 </button>
                                 <button
@@ -343,7 +349,8 @@ const CompetitionCreate: React.FC = () => {
                                 >
                                     Solution Notes
                                     {activeTab === "solution" && questionSaved && (
-                                        <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600" />
+                                        <span
+                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
                                     )}
                                 </button>
                             </div>
@@ -531,7 +538,8 @@ const CompetitionCreate: React.FC = () => {
                                                 This competition challenge will be attached to a new contest.
                                             </p>
                                         </div>
-                                        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">
+                                        <span
+                                            className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">
                       Single Contest
                     </span>
                                     </div>
@@ -549,6 +557,21 @@ const CompetitionCreate: React.FC = () => {
                                                 onBlur={handleContestNameBlur}
                                             />
                                         </div>
+                                        <div className="flex items-start gap-2">
+                                            <input
+                                                id="group_only"
+                                                type="checkbox"
+                                                checked={groupOnly}
+                                                onChange={(e) => setGroupOnly(e.target.checked)}
+                                                className="mt-1 h-4 w-4 rounded border-slate-300"
+                                            />
+                                            <label htmlFor="group_only" className="text-sm text-slate-700">
+                                                Group-only competition
+                                                <div className="text-xs text-slate-500">If checked, this competition is
+                                                    only for groups.</div>
+                                            </label>
+                                        </div>
+
                                         <div>
                                             <label className="mb-1 block text-sm font-medium text-slate-700">
                                                 Slug
@@ -633,7 +656,8 @@ const CompetitionCreate: React.FC = () => {
                                                 images, ZIP.
                                             </p>
                                         </div>
-                                        <label className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                        <label
+                                            className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
                                             <span>Upload files</span>
                                             <input
                                                 type="file"
@@ -690,7 +714,8 @@ const CompetitionCreate: React.FC = () => {
                         {/* SOLUTION TAB */}
                         {activeTab === "solution" && questionSaved && (
                             <div className="space-y-6 px-6 py-6">
-                                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                                <div
+                                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                                     These fields are for internal solution notes and official
                                     answers. They should never be exposed to participants.
                                 </div>

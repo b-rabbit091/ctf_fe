@@ -18,32 +18,53 @@ export const getChallenges = async (filters?: {
     if (filters?.difficulty) params.difficulty = filters.difficulty;
     if (filters?.type) params.type = filters.type;
 
-    const resp = await api.get("/api/challenges/challenges", {params});
+    const resp = await api.get("/challenges/challenges", {params});
     return resp.data;
 };
 
 export const getChallengeById = async (id: number): Promise<Challenge> => {
-    const resp = await api.get(`/api/challenges/challenges/${id}`);
+    const resp = await api.get(`/challenges/challenges/${id}`);
     if (!resp) throw new Error("Challenge not found");
     return resp.data!;
 };
 
 export const createChallenge = async (data: FormData) => {
-    const resp = await api.post("/api/challenges/challenges/", data, {
+    const resp = await api.post("/challenges/challenges/", data, {
         headers: {"Content-Type": "multipart/form-data"},
     });
     return resp.data;
 };
 
 export const updateChallenge = async (id: number, data: FormData) => {
-    const resp = await api.patch(`/api/challenges/challenges/${id}/`, data, {
+    const resp = await api.patch(`/challenges/challenges/${id}/`, data, {
         headers: {"Content-Type": "multipart/form-data"},
     });
     return resp.data;
 };
 
+export type BulkUpdateChallengesPayload = {
+    ids: number[]; // required
+    // any fields you want to patch across all items:
+    question_type?: "practice" | "competition" | "N/A";
+};
+
+export const bulkUpdateChallenges = async (
+    ids: number | number[],
+    patch: Omit<BulkUpdateChallengesPayload, "ids">
+) => {
+    const list = Array.isArray(ids) ? ids : [ids];
+    if (list.length === 0) throw new Error("ids cannot be empty.");
+
+    const res = await api.patch("/challenges/challenges/bulk-update/", {
+        ids: list,
+        ...patch,
+    });
+
+    return res.data;
+};
+
 export const deleteChallenge = async (id: number) => {
-    const resp = await api.delete(`/api/challenges/challenges/${id}/`);
+    const resp = await api.delete(`/challenges/challenges/${id}/`);
     return {success: resp.status};
 };
 
@@ -51,21 +72,21 @@ export const deleteChallenge = async (id: number) => {
 
 // Categories
 export const getCategories = async (): Promise<CategoryTypes[]> => {
-    const resp = await api.get("/api/challenges/categories");
+    const resp = await api.get("/challenges/categories");
     // expects array of { id, name, description }
     return resp.data;
 };
 
 // Difficulties
 export const getDifficulties = async (): Promise<DifficultyTypes[]> => {
-    const resp = await api.get("/api/challenges/difficulties");
+    const resp = await api.get("/challenges/difficulties");
     // expects array of { id, level, description }
     return resp.data;
 };
 
 // Solution types
 export const getSolutionTypes = async (): Promise<SolutionTypes[]> => {
-    const resp = await api.get("/api/challenges/solution-types");
+    const resp = await api.get("/challenges/solution-types");
     // expects array of { id, type, description }
     return resp.data;
 };
@@ -125,7 +146,7 @@ export const submitSolution = async (
     payload: SubmitPayload
 ): Promise<SubmitResponse> => {
     try {
-        const res = await api.post(`/api/submissions/${challengeId}/`, payload);
+        const res = await api.post(`/submissions/${challengeId}/`, payload);
         return res.data;
     } catch (error: any) {
         console.error("Error submitting solution:", error);
@@ -150,7 +171,7 @@ export const submitSolution = async (
 };
 
 export const submitFlag = async (challengeId: number, value: string) =>
-    submitSolution(challengeId, {value});
+     submitSolution(challengeId, {value});
 
 export const submitTextSolution = async (challengeId: number, content: string) =>
     submitSolution(challengeId, {content});
@@ -186,7 +207,7 @@ export const getPreviousSubmissions = async (
 }> => {
     try {
         const response = await api.get<PreviousSubmissionsApiResponse>(
-            `/api/submissions/previous-submissions/${challengeId}/`
+            `/submissions/previous-submissions/${challengeId}/`
         );
 
         const flagRaw = response.data.flag_submissions ?? [];
@@ -268,7 +289,7 @@ export async function fetchChatHistory(args: {
     try {
         const resp = cursorUrl
             ? await api.get(cursorUrl, { signal })
-            : await api.get<ChatHistoryApiResponse>("/api/chat/thread/", {
+            : await api.get<ChatHistoryApiResponse>("/chat/thread/", {
                 params: { challenge_id: challengeId, page_size: pageSize },
                 signal,
             });
@@ -287,7 +308,7 @@ export async function clearChatThread(args: {
     const { challengeId, signal } = args;
 
     try {
-        const resp = await api.delete("/api/chat/thread/clear/", {
+        const resp = await api.delete("/chat/thread/clear/", {
             params: { challenge_id: challengeId },
             signal,
         });
@@ -312,7 +333,7 @@ export async function sendChatMessage(
 
     try {
         const resp = await api.post<ChatSendApiResponse>(
-            "/api/chat/practice/",
+            "/chat/practice/",
             { text: args.text, challenge_id: challengeId },
             { signal }
         );
