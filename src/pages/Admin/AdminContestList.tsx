@@ -1,10 +1,10 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 import api from "../../api/axios";
-import {FiPlus, FiEye, FiEdit2, FiTrash2} from "react-icons/fi";
+import {FiPlus, FiEye, FiEdit2, FiTrash2, FiAlertCircle, FiInfo} from "react-icons/fi";
 
 type ContestType = "daily" | "weekly" | "monthly" | "custom";
 
@@ -21,6 +21,7 @@ type ContestDTO = {
 };
 
 type ContestStatus = "ONGOING" | "UPCOMING" | "ENDED";
+type StatusFilter = ContestStatus | "ALL";
 
 function getContestStatus(contest: ContestDTO): { label: string; status: ContestStatus } {
     const now = Date.now();
@@ -32,6 +33,20 @@ function getContestStatus(contest: ContestDTO): { label: string; status: Contest
     return {label: "Ended", status: "ENDED"};
 }
 
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+
+const tagClass = (active: boolean) =>
+    cx(
+        "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+        focusRing,
+        active
+            ? "border-sky-200/70 bg-sky-50 text-sky-700"
+            : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90"
+    );
+
 const AdminContestList: React.FC = () => {
     const {user} = useAuth();
     const navigate = useNavigate();
@@ -42,12 +57,21 @@ const AdminContestList: React.FC = () => {
     const [message, setMessage] = useState<string | null>(null);
 
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<ContestStatus | "ALL">("ALL");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
-    // ---------------- SECURITY (TOP) ----------------
+    const alive = useRef(true);
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
+
+    const busyRef = useRef(false);
+
     useEffect(() => {
         if (!user) return;
         if (user.role !== "admin") {
@@ -55,34 +79,39 @@ const AdminContestList: React.FC = () => {
         }
     }, [user, navigate]);
 
-    useEffect(() => {
+    const flashMessage = useCallback((text: string | null) => {
+        setMessage(text);
+        if (!text) return;
+        window.setTimeout(() => {
+            if (!alive.current) return;
+            setMessage(null);
+        }, 3500);
+    }, []);
+
+    const fetchContests = useCallback(async () => {
         if (!user) return;
+        if (user.role !== "admin") return;
 
-        let mounted = true;
+        setLoading(true);
+        setError(null);
 
-        const fetchContests = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                // ✅ uses your existing contest endpoint you used elsewhere
-                const res = await api.get<ContestDTO[]>("/challenges/contests/");
-                if (!mounted) return;
-                setContests(res.data || []);
-            } catch (e) {
-                console.error(e);
-                if (!mounted) return;
-                setError("Failed to load contests. Please try again.");
-            } finally {
-                if (!mounted) return;
-                setLoading(false);
-            }
-        };
-
-        fetchContests();
-        return () => {
-            mounted = false;
-        };
+        try {
+            const res = await api.get<ContestDTO[]>("/challenges/contests/");
+            if (!alive.current) return;
+            setContests(Array.isArray(res.data) ? res.data : []);
+        } catch (e) {
+            console.error(e);
+            if (!alive.current) return;
+            setError("Failed to load contests. Please try again.");
+        } finally {
+            if (!alive.current) return;
+            setLoading(false);
+        }
     }, [user]);
+
+    useEffect(() => {
+        fetchContests();
+    }, [fetchContests]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -97,17 +126,18 @@ const AdminContestList: React.FC = () => {
             const slug = (c.slug || "").toLowerCase();
             const desc = (c.description || "").toLowerCase();
             const type = (c.contest_type || "").toLowerCase();
-            return (
-                name.includes(q) ||
-                slug.includes(q) ||
-                desc.includes(q) ||
-                type.includes(q)
-            );
+
+            return name.includes(q) || slug.includes(q) || desc.includes(q) || type.includes(q);
         });
     }, [contests, search, statusFilter]);
 
     const total = filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+    useEffect(() => {
+        if (page > pageCount) setPage(1);
+    }, [pageCount, page]);
+
     const pageItems = useMemo(() => {
         const start = (page - 1) * pageSize;
         return filtered.slice(start, start + pageSize);
@@ -116,43 +146,49 @@ const AdminContestList: React.FC = () => {
     const handleDelete = useCallback(
         async (id: number) => {
             if (!user || user.role !== "admin") {
-                setMessage("Unauthorized: admin only.");
+                flashMessage("Unauthorized: admin only.");
                 return;
             }
+            if (busyRef.current) return;
 
             if (!window.confirm("Are you sure you want to delete this contest? This cannot be undone.")) return;
 
+            busyRef.current = true;
+            setError(null);
+
             const backup = contests;
             setContests((prev) => prev.filter((c) => c.id !== id));
-            setMessage("Deleting contest...");
+            flashMessage("Deleting contest...");
 
             try {
                 await api.delete(`/challenges/contests/${id}/`);
-                setMessage("Contest deleted.");
+                if (!alive.current) return;
+                flashMessage("Contest deleted.");
             } catch (err) {
                 console.error(err);
+                if (!alive.current) return;
                 setContests(backup);
-                setMessage("Failed to delete contest.");
+                flashMessage("Failed to delete contest.");
             } finally {
-                setTimeout(() => setMessage(null), 3500);
+                busyRef.current = false;
             }
         },
-        [contests, user]
+        [contests, user, flashMessage]
     );
 
-    const handleClearFilters = () => {
+    const handleClearFilters = useCallback(() => {
         setStatusFilter("ALL");
         setSearch("");
         setPage(1);
-    };
+    }, []);
 
-    // --- full-screen responsive shell for all states ---
+    // --- responsive full-screen shell for guard states (match your AdminPracticeList style) ---
     if (!user) {
         return (
-            <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
                 <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <div className="w-full rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
                     </div>
                 </main>
@@ -162,11 +198,17 @@ const AdminContestList: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
                 <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <div className="w-full whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg font-normal text-rose-700 shadow-sm backdrop-blur-xl">
-                        Unauthorized – admin access required.
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0"/>
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Unauthorized</p>
+                                <p className="mt-1 text-sm text-rose-700/90">Admin access required.</p>
+                            </div>
+                        </div>
                     </div>
                 </main>
             </div>
@@ -174,250 +216,300 @@ const AdminContestList: React.FC = () => {
     }
 
     return (
-        <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
             <Navbar/>
 
-            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                 <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
-                    <div className="w-full rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                        {/* Header */}
-                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/40 bg-white/40 px-6 py-5 backdrop-blur-xl">
-                            <div className="min-w-0">
-                                <h1 className="truncate text-2xl sm:text-3xl font-normal text-slate-700 tracking-tight">
-                                    Manage Contests
-                                </h1>
-                                <p className="mt-1 text-sm sm:text-base text-slate-600">
-                                    Admin view of all contests. Create, review, edit, and delete contests from here.
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => navigate("/admin/contests/new")}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/70 px-5 py-2.5 text-sm sm:text-base font-normal text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/15"
-                            >
-                                <FiPlus size={18}/>
-                                <span>New Contest</span>
-                            </button>
+                    <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
+                                Manage Contests
+                            </h1>
+                            <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                Admin view of all contests. Create, review, edit, and delete contests from here.
+                            </p>
                         </div>
 
-                        {/* Filters */}
-                        <section className="px-6 py-6">
-                            <div className="mb-4 rounded-2xl border border-slate-200/70 bg-white/40 shadow-sm backdrop-blur-xl">
-                                <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                                    <div className="flex w-full items-center gap-3 md:w-auto">
-                                        <div className="relative w-full md:w-[360px]">
-                                            <input
-                                                type="search"
-                                                value={search}
-                                                onChange={(e) => {
-                                                    setSearch(e.target.value);
+                        <button
+                            type="button"
+                            onClick={() => navigate("/admin/contests/new")}
+                            className={cx(
+                                "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
+                                "ring-1 ring-emerald-200/60 text-emerald-700 hover:bg-white/90",
+                                focusRing
+                            )}
+                        >
+                            <FiPlus size={18}/>
+                            <span>New Contest</span>
+                        </button>
+                    </header>
+
+                    {/* Filters */}
+                    <section className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+                        <div className="px-4 sm:px-5 py-4 space-y-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="min-w-[240px] flex-1">
+                                    <label className="sr-only" htmlFor="admin-contest-search">
+                                        Search contests
+                                    </label>
+                                    <input
+                                        id="admin-contest-search"
+                                        type="search"
+                                        value={search}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search by name, slug, description, type…"
+                                        className={cx(
+                                            "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                        )}
+                                    />
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="mr-1 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                                        Status
+                                    </span>
+
+                                    {(
+                                        [
+                                            {key: "ALL", label: "All"},
+                                            {key: "ONGOING", label: "Ongoing"},
+                                            {key: "UPCOMING", label: "Upcoming"},
+                                            {key: "ENDED", label: "Ended"},
+                                        ] as { key: StatusFilter; label: string }[]
+                                    ).map((opt) => {
+                                        const active = statusFilter === opt.key;
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onClick={() => {
+                                                    setStatusFilter(opt.key);
                                                     setPage(1);
                                                 }}
-                                                placeholder="Search contests..."
-                                                className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                            />
-                                        </div>
-                                    </div>
+                                                className={tagClass(active)}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
 
-                                    <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            {(
-                                                [
-                                                    {key: "ALL", label: "All"},
-                                                    {key: "ONGOING", label: "Ongoing"},
-                                                    {key: "UPCOMING", label: "Upcoming"},
-                                                    {key: "ENDED", label: "Ended"},
-                                                ] as { key: ContestStatus | "ALL"; label: string }[]
-                                            ).map((opt) => {
-                                                const active = statusFilter === opt.key;
-                                                return (
-                                                    <button
-                                                        key={opt.key}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setStatusFilter(opt.key);
-                                                            setPage(1);
-                                                        }}
-                                                        className={[
-                                                            "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
-                                                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
-                                                            active
-                                                                ? "border-blue-200/70 bg-blue-50 text-blue-700"
-                                                                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
-                                                        ].join(" ")}
-                                                    >
-                                                        {opt.label}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                <button
+                                    type="button"
+                                    onClick={handleClearFilters}
+                                    className={cx(
+                                        "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                        "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                        focusRing
+                                    )}
+                                >
+                                    Reset
+                                </button>
 
-                                        <button
-                                            type="button"
-                                            onClick={handleClearFilters}
-                                            className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                        >
-                                            Reset
-                                        </button>
+                                <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm text-slate-600">
+                                    <span className="text-slate-500">Total:</span>
+                                    <span className="ml-1">{total}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </section>
 
-                                        <span className="ml-1 inline-flex h-10 items-center rounded-xl border border-slate-200/70 bg-slate-100/70 px-4 text-sm sm:text-base text-slate-700">
-                                            <span className="text-slate-500">Total:</span>
-                                            <span className="ml-1 font-normal text-slate-800">{total}</span>
-                                        </span>
-                                    </div>
+                    {loading ? (
+                        <div className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0"/>
+                                <div className="min-w-0 space-y-2">
+                                    <div className="h-4 w-52 bg-slate-200/80 rounded animate-pulse"/>
+                                    <div className="h-4 w-72 bg-slate-100 rounded animate-pulse"/>
                                 </div>
                             </div>
+                            <p className="mt-3 text-center text-sm text-slate-500">Loading contests…</p>
+                        </div>
+                    ) : null}
 
-                            {loading && (
-                                <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    Loading contests…
+                    {error ? (
+                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                            <div className="flex items-start gap-3">
+                                <FiAlertCircle className="mt-0.5 shrink-0"/>
+                                <div className="min-w-0">
+                                    <p className="font-normal tracking-tight">Couldn’t load contests</p>
+                                    <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
                                 </div>
-                            )}
-                            {error && (
-                                <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
-                                    {error}
-                                </div>
-                            )}
-                            {message && (
-                                <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50/80 px-5 py-4 text-sm sm:text-base text-blue-800 shadow-sm backdrop-blur-xl">
-                                    {message}
-                                </div>
-                            )}
+                            </div>
+                        </div>
+                    ) : null}
 
-                            {!loading && !error && (
-                                <>
-                                    {total === 0 ? (
-                                        <div className="rounded-2xl border border-white/30 bg-white/55 px-5 py-8 text-center text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                            No contests found.
-                                        </div>
-                                    ) : (
-                                        <div className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-xl">
-                                            <table className="min-w-full divide-y divide-slate-200/70 text-sm sm:text-base">
-                                                <thead className="bg-slate-50/70">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Name
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Type
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Window
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Status
-                                                    </th>
-                                                    <th className="px-4 py-3 text-right text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Actions
-                                                    </th>
+                    {message ? (
+                        <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50/80 p-4 text-sky-700">
+                            {message}
+                        </div>
+                    ) : null}
+
+                    {!loading && !error ? (
+                        <>
+                            {total === 0 ? (
+                                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                                    <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                        <FiInfo className="text-slate-500"/>
+                                    </div>
+                                    <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                        No matches
+                                    </div>
+                                    <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                        No contests match your filters. Try resetting or broadening your search.
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-x-auto">
+                                    <table className="min-w-full text-sm sm:text-base">
+                                        <thead className="bg-white/40 sticky top-0">
+                                        <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 font-normal">Name</th>
+                                            <th className="px-4 py-3 font-normal">Type</th>
+                                            <th className="px-4 py-3 font-normal">Window</th>
+                                            <th className="px-4 py-3 font-normal">Status</th>
+                                            <th className="px-4 py-3 text-right font-normal">Actions</th>
+                                        </tr>
+                                        </thead>
+
+                                        <tbody className="bg-transparent">
+                                        {pageItems.map((c) => {
+                                            const meta = getContestStatus(c);
+
+                                            const start = new Date(c.start_time);
+                                            const end = new Date(c.end_time);
+
+                                            const windowLabel = `${start.toLocaleString()} → ${end.toLocaleString()}`;
+
+                                            return (
+                                                <tr
+                                                    key={c.id}
+                                                    className="border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition"
+                                                >
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="max-w-[34rem]">
+                                                            <div className="truncate font-normal tracking-tight text-slate-700">
+                                                                {c.name}
+                                                            </div>
+                                                            <div className="mt-1 line-clamp-2 text-sm text-slate-600">
+                                                                {c.description || "—"}
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-slate-500">
+                                                                slug: <span className="font-mono">{c.slug}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top text-slate-600">{c.contest_type}</td>
+
+                                                    <td className="px-4 py-3 align-top text-slate-600">
+                                                        <div className="max-w-sm line-clamp-2">{windowLabel}</div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top text-slate-600">{meta.label}</td>
+
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => navigate(`/admin/contests/${c.id}/view`)}
+                                                                className={cx(
+                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
+                                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                                                    focusRing
+                                                                )}
+                                                            >
+                                                                <FiEye size={16}/>
+                                                                <span>View</span>
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => navigate(`/admin/contests/${c.id}`)}
+                                                                className={cx(
+                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
+                                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                                                    focusRing
+                                                                )}
+                                                            >
+                                                                <FiEdit2 size={16}/>
+                                                                <span>Edit</span>
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDelete(c.id)}
+                                                                className={cx(
+                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
+                                                                    "ring-1 ring-rose-200/60 text-rose-700 hover:bg-white/90",
+                                                                    focusRing
+                                                                )}
+                                                            >
+                                                                <FiTrash2 size={16}/>
+                                                                <span>Delete</span>
+                                                            </button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
-                                                </thead>
-
-                                                <tbody className="divide-y divide-slate-100/70 bg-white/60">
-                                                {pageItems.map((c) => {
-                                                    const meta = getContestStatus(c);
-                                                    const start = new Date(c.start_time);
-                                                    const end = new Date(c.end_time);
-
-                                                    const windowLabel = `${start.toLocaleString()} → ${end.toLocaleString()}`;
-
-                                                    return (
-                                                        <tr key={c.id}>
-                                                            <td className="px-4 py-3 align-top">
-                                                                <div className="max-w-xs">
-                                                                    <div className="truncate font-normal text-slate-800 text-sm sm:text-base">
-                                                                        {c.name}
-                                                                    </div>
-                                                                    <div className="mt-1 line-clamp-2 text-sm text-slate-600">
-                                                                        {c.description || "—"}
-                                                                    </div>
-                                                                    <div className="mt-1 text-xs text-slate-500">
-                                                                        slug: <span className="font-mono">{c.slug}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
-                                                                {c.contest_type}
-                                                            </td>
-
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
-                                                                <div className="max-w-sm line-clamp-2">{windowLabel}</div>
-                                                            </td>
-
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
-                                                                {meta.label}
-                                                            </td>
-
-                                                            <td className="px-4 py-3 align-top">
-                                                                <div className="flex justify-end gap-2 text-sm">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => navigate(`/admin/contests/${c.id}/view`)}
-                                                                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                                                    >
-                                                                        <FiEye size={16}/>
-                                                                        <span>View</span>
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => navigate(`/admin/contests/${c.id}`)}
-                                                                        className="inline-flex items-center gap-1 rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                                                    >
-                                                                        <FiEdit2 size={16}/>
-                                                                        <span>Edit</span>
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDelete(c.id)}
-                                                                        className="inline-flex items-center gap-1 rounded-2xl border border-rose-200 bg-rose-50/70 px-4 py-2 text-sm font-normal text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/15"
-                                                                    >
-                                                                        <FiTrash2 size={16}/>
-                                                                        <span>Delete</span>
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
-                                    {total > 0 && (
-                                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
-                                            <div>
-                                                Page <span className="font-normal text-slate-800">{page}</span> of{" "}
-                                                <span className="font-normal text-slate-800">{pageCount}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    disabled={page <= 1}
-                                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    Prev
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled={page >= pageCount}
-                                                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    Next
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
+                                            );
+                                        })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
-                        </section>
-                    </div>
+
+                            {total > 0 ? (
+                                <div className="mt-6 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="text-sm sm:text-base text-slate-600">
+                                            Page <span className="text-slate-700">{page}</span> of{" "}
+                                            <span className="text-slate-700">{pageCount}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={page <= 1}
+                                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
+                                            >
+                                                Prev
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                disabled={page >= pageCount}
+                                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+
+                                        <div className="text-sm sm:text-base text-slate-600">
+                                            Showing{" "}
+                                            <span className="text-slate-700">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                            – <span className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                            <span className="text-slate-700">{total}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </>
+                    ) : null}
                 </motion.div>
             </main>
         </div>

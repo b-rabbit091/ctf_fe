@@ -1,9 +1,9 @@
-import React, {FormEvent, useCallback, useEffect, useMemo, useState} from "react";
+import React, {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 import api from "../../api/axios";
-import {FiTrash2} from "react-icons/fi";
+import {FiTrash2, FiAlertCircle, FiInfo} from "react-icons/fi";
 
 type ContestType = "daily" | "weekly" | "monthly" | "custom";
 type TabKey = "details" | "questions";
@@ -18,7 +18,7 @@ type ContestDTO = {
     end_time: string;
     is_active: boolean;
     publish_result: boolean;
-    challenges?: any[]; // expects [ids...] from backend
+    challenges?: any[]; // expects [ids...] or [{id:..}]
 };
 
 type ChallengeRow = {
@@ -30,6 +30,11 @@ type ChallengeRow = {
     question_type?: string | null;
 };
 
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+
 const generateSlug = (value: string) =>
     value
         .toLowerCase()
@@ -39,12 +44,24 @@ const generateSlug = (value: string) =>
 
 const toLocalInput = (iso: string) => {
     const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
+const extractChallengeIds = (c: any): number[] => {
+    const raw = c?.challenges ?? [];
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((x: any) => (typeof x === "number" ? x : x?.id))
+        .filter((n: any) => typeof n === "number") as number[];
 };
 
 const AdminContestEdit: React.FC = () => {
     const {id} = useParams<{ id: string }>();
-    const contestId = id ? Number(id) : NaN;
+    const contestId = useMemo(() => {
+        const n = id ? Number(id) : NaN;
+        return Number.isFinite(n) ? n : NaN;
+    }, [id]);
 
     const navigate = useNavigate();
     const {user} = useAuth();
@@ -53,7 +70,9 @@ const AdminContestEdit: React.FC = () => {
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [initialError, setInitialError] = useState<string | null>(null);
+
     const [submitting, setSubmitting] = useState(false);
+    const [questionsLoading, setQuestionsLoading] = useState(false);
 
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -71,31 +90,48 @@ const AdminContestEdit: React.FC = () => {
     const [publishResult, setPublishResult] = useState(false);
 
     // questions tab state
-    const [questionsLoading, setQuestionsLoading] = useState(false);
     const [attachedIds, setAttachedIds] = useState<number[]>([]);
     const [attachedRows, setAttachedRows] = useState<ChallengeRow[]>([]);
     const [qSearch, setQSearch] = useState("");
 
+    // lifecycle + concurrency guards
+    const alive = useRef(true);
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
+
+    const busyRef = useRef(false);
+    const msgTimer = useRef<number | null>(null);
+
+    const resetMessages = useCallback(() => {
+        setMessage(null);
+        setError(null);
+    }, []);
+
+    const flashMessage = useCallback((text: string | null) => {
+        setMessage(text);
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        if (!text) return;
+        msgTimer.current = window.setTimeout(() => {
+            if (!alive.current) return;
+            setMessage(null);
+        }, 3500);
+    }, []);
+
     // ---------------- SECURITY (TOP) ----------------
     useEffect(() => {
         if (!user) return;
-        if (user.role !== "admin") {
-            navigate("/dashboard");
-        }
+        if (user.role !== "admin") navigate("/dashboard");
     }, [user, navigate]);
 
-    const resetMessages = () => {
-        setMessage(null);
-        setError(null);
-    };
+    const handleNameBlur = useCallback(() => {
+        if (!slug.trim() && name.trim()) setSlug(generateSlug(name));
+    }, [slug, name]);
 
-    const handleNameBlur = () => {
-        if (!slug.trim() && name.trim()) {
-            setSlug(generateSlug(name));
-        }
-    };
-
-    const validate = () => {
+    const validate = useCallback(() => {
         if (!name.trim()) return "Contest name is required.";
         if (!startTime || !endTime) return "Start time and end time are required.";
 
@@ -104,21 +140,12 @@ const AdminContestEdit: React.FC = () => {
 
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "Invalid start or end time.";
         if (end <= start) return "End time must be after start time.";
-
         return null;
-    };
+    }, [name, startTime, endTime]);
 
-    const extractChallengeIds = (c: any): number[] => {
-        const raw = c?.challenges ?? [];
-        if (!Array.isArray(raw)) return [];
-        return raw
-            .map((x: any) => (typeof x === "number" ? x : x?.id))
-            .filter((n: any) => typeof n === "number") as number[];
-    };
-
-    // ---------------- LOAD CONTEST (DETAILS) ----------------
-    useEffect(() => {
+    const fetchContest = useCallback(async () => {
         if (!user) return;
+        if (user.role !== "admin") return;
 
         if (!contestId || Number.isNaN(contestId)) {
             setInitialError("Invalid contest id.");
@@ -126,100 +153,42 @@ const AdminContestEdit: React.FC = () => {
             return;
         }
 
-        let mounted = true;
+        setInitialLoading(true);
+        setInitialError(null);
 
-        (async () => {
-            setInitialLoading(true);
-            setInitialError(null);
-
-            try {
-                const res = await api.get<ContestDTO>(`/challenges/contests/${contestId}/`);
-                if (!mounted) return;
-
-                const c = res.data;
-                setLoaded(c);
-
-                setName(c.name || "");
-                setSlug(c.slug || "");
-                setDescription(c.description || "");
-                setContestType(c.contest_type || "custom");
-                setStartTime(toLocalInput(c.start_time));
-                setEndTime(toLocalInput(c.end_time));
-                setIsActive(Boolean(c.is_active));
-                setPublishResult(Boolean(c.publish_result));
-
-                const ids = extractChallengeIds(c);
-                setAttachedIds(ids);
-            } catch (e: any) {
-                console.error(e);
-                if (!mounted) return;
-                setInitialError(
-                    e?.response?.status === 404 ? "Contest not found." : "Failed to load contest. Please try again."
-                );
-            } finally {
-                if (!mounted) return;
-                setInitialLoading(false);
-            }
-        })();
-
-        return () => {
-            mounted = false;
-        };
-    }, [user, contestId]);
-
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        resetMessages();
-
-        if (!user || user.role !== "admin") {
-            setError("Unauthorized – admin only.");
-            return;
-        }
-        if (!contestId || Number.isNaN(contestId)) {
-            setError("Invalid contest id.");
-            return;
-        }
-
-        const err = validate();
-        if (err) {
-            setError(err);
-            return;
-        }
-
-        const finalSlug = slug.trim() ? slug.trim() : generateSlug(name);
-
-        setSubmitting(true);
         try {
-            const payload = {
-                name: name.trim(),
-                slug: finalSlug,
-                description: description || "",
-                contest_type: contestType,
-                start_time: new Date(startTime).toISOString(),
-                end_time: new Date(endTime).toISOString(),
-                is_active: isActive,
-                publish_result: publishResult,
-            };
+            const res = await api.get<ContestDTO>(`/challenges/contests/${contestId}/`);
+            if (!alive.current) return;
 
-            const res = await api.patch<ContestDTO>(`/challenges/contests/${contestId}/`, payload);
+            const c = res.data;
+            setLoaded(c);
 
-            setLoaded(res.data);
-            setMessage("Contest updated successfully.");
-            setTimeout(() => setMessage(null), 2500);
+            setName(c.name || "");
+            setSlug(c.slug || "");
+            setDescription(c.description || "");
+            setContestType(c.contest_type || "custom");
+            setStartTime(toLocalInput(c.start_time));
+            setEndTime(toLocalInput(c.end_time));
+            setIsActive(Boolean(c.is_active));
+            setPublishResult(Boolean(c.publish_result));
 
-            navigate("/admin/contests");
+            const ids = extractChallengeIds(c);
+            setAttachedIds(ids);
         } catch (e: any) {
             console.error(e);
-            setError(e?.response?.data?.detail || "Failed to update contest. Please review and try again.");
+            if (!alive.current) return;
+            setInitialError(e?.response?.status === 404 ? "Contest not found." : "Failed to load contest. Please try again.");
         } finally {
-            setSubmitting(false);
+            if (!alive.current) return;
+            setInitialLoading(false);
         }
-    };
+    }, [user, contestId]);
 
-    // ---------------- QUESTIONS TAB ----------------
-    // IMPORTANT:
-    // This fetches ONLY attached challenges (not all challenges),
-    // using query param: ?id__in=1,2,3 (backend must support it).
+    useEffect(() => {
+        fetchContest();
+    }, [fetchContest]);
+
+    // fetch ONLY attached challenges
     const hydrateAttachedRows = useCallback(async (ids: number[]) => {
         if (ids.length === 0) {
             setAttachedRows([]);
@@ -228,9 +197,7 @@ const AdminContestEdit: React.FC = () => {
 
         const idIn = ids.join(",");
 
-        const res = await api.get<any[]>(`/challenges/challenges/`, {
-            params: {"id__in": idIn},
-        });
+        const res = await api.get<any[]>(`/challenges/challenges/`, {params: {"id__in": idIn}});
 
         const rows: ChallengeRow[] = (res.data || []).map((ch: any) => ({
             id: ch.id,
@@ -241,11 +208,11 @@ const AdminContestEdit: React.FC = () => {
             question_type: ch.question_type ?? null,
         }));
 
-        // keep same order as contest.challenges
         const byId = new Map<number, ChallengeRow>(rows.map((r) => [r.id, r]));
         setAttachedRows(ids.map((cid) => byId.get(cid)).filter(Boolean) as ChallengeRow[]);
     }, []);
 
+    // load questions when tab is opened
     useEffect(() => {
         if (activeTab !== "questions") return;
         if (!loaded) return;
@@ -259,8 +226,10 @@ const AdminContestEdit: React.FC = () => {
                 await hydrateAttachedRows(ids);
             } catch (e) {
                 console.error(e);
+                if (!alive.current) return;
                 setError("Failed to load attached questions.");
             } finally {
+                if (!alive.current) return;
                 setQuestionsLoading(false);
             }
         })();
@@ -279,8 +248,79 @@ const AdminContestEdit: React.FC = () => {
         });
     }, [attachedRows, qSearch]);
 
-    // REMOVE semantics:
-    // Your backend should interpret PATCH {"challenges":[id]} as "remove id from this contest"
+    const handleSubmit = useCallback(
+        async (e: FormEvent) => {
+            e.preventDefault();
+            resetMessages();
+
+            if (!user || user.role !== "admin") {
+                setError("Unauthorized – admin only.");
+                return;
+            }
+            if (!contestId || Number.isNaN(contestId)) {
+                setError("Invalid contest id.");
+                return;
+            }
+
+            const err = validate();
+            if (err) {
+                setError(err);
+                return;
+            }
+
+            const finalSlug = slug.trim() ? slug.trim() : generateSlug(name);
+
+            if (busyRef.current) return;
+            busyRef.current = true;
+            setSubmitting(true);
+
+            try {
+                const payload = {
+                    name: name.trim(),
+                    slug: finalSlug,
+                    description: description || "",
+                    contest_type: contestType,
+                    start_time: new Date(startTime).toISOString(),
+                    end_time: new Date(endTime).toISOString(),
+                    is_active: isActive,
+                    publish_result: publishResult,
+                };
+
+                const res = await api.patch<ContestDTO>(`/challenges/contests/${contestId}/`, payload);
+                if (!alive.current) return;
+
+                setLoaded(res.data);
+                flashMessage("Contest updated successfully.");
+                navigate("/admin/contests");
+            } catch (e: any) {
+                console.error(e);
+                if (!alive.current) return;
+                setError(e?.response?.data?.detail || "Failed to update contest. Please review and try again.");
+            } finally {
+                busyRef.current = false;
+                if (!alive.current) return;
+                setSubmitting(false);
+            }
+        },
+        [
+            resetMessages,
+            user,
+            contestId,
+            validate,
+            slug,
+            name,
+            description,
+            contestType,
+            startTime,
+            endTime,
+            isActive,
+            publishResult,
+            flashMessage,
+            navigate,
+        ]
+    );
+
+    // REMOVE semantics: backend interprets PATCH {"challenges":[id]} as remove id
     const handleRemoveQuestion = useCallback(
         async (challengeId: number) => {
             resetMessages();
@@ -293,34 +333,38 @@ const AdminContestEdit: React.FC = () => {
                 setError("Invalid contest id.");
                 return;
             }
+            if (busyRef.current) return;
 
             if (!window.confirm("Remove this question from the contest? (It will NOT be deleted.)")) return;
+
+            busyRef.current = true;
 
             // optimistic
             const prevIds = attachedIds;
             setAttachedIds((prev) => prev.filter((x) => x !== challengeId));
             setAttachedRows((prev) => prev.filter((r) => r.id !== challengeId));
-            setMessage("Removing question...");
+            flashMessage("Removing question...");
 
             try {
-                await api.patch(`/challenges/contests/${contestId}/`, {
-                    challenges: [challengeId], // remove only this id
-                });
+                await api.patch(`/challenges/contests/${contestId}/`, {challenges: [challengeId]});
 
-                // refresh contest + rows (source of truth)
+                // refresh contest source-of-truth
                 const res = await api.get<ContestDTO>(`/challenges/contests/${contestId}/`);
+                if (!alive.current) return;
+
                 setLoaded(res.data);
 
                 const ids = extractChallengeIds(res.data);
                 setAttachedIds(ids);
                 await hydrateAttachedRows(ids);
 
-                setMessage("Question removed from contest.");
+                flashMessage("Question removed from contest.");
             } catch (e: any) {
                 console.error(e);
+                if (!alive.current) return;
+
                 setAttachedIds(prevIds);
                 setError(e?.response?.data?.detail || "Remove failed.");
-                setMessage(null);
 
                 // best-effort restore rows
                 try {
@@ -329,19 +373,21 @@ const AdminContestEdit: React.FC = () => {
                     // ignore
                 }
             } finally {
-                setTimeout(() => setMessage(null), 3500);
+                busyRef.current = false;
             }
         },
-        [user, contestId, attachedIds, hydrateAttachedRows]
+        [resetMessages, user, contestId, attachedIds, hydrateAttachedRows, flashMessage]
     );
 
     // ---------------- RENDER ----------------
     if (!user) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
+                        Checking permissions…
+                    </div>
                 </main>
             </div>
         );
@@ -349,12 +395,18 @@ const AdminContestEdit: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        Unauthorized – admin access required.
-                    </p>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Unauthorized</p>
+                                <p className="mt-1 text-sm text-rose-700/90">Admin access required.</p>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         );
@@ -362,10 +414,19 @@ const AdminContestEdit: React.FC = () => {
 
     if (initialLoading) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Loading contest…</div>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                            <div className="min-w-0 space-y-2">
+                                <div className="h-4 w-52 bg-slate-200/80 rounded animate-pulse" />
+                                <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
+                            </div>
+                        </div>
+                        <p className="mt-3 text-center text-sm text-slate-500">Loading contest…</p>
+                    </div>
                 </main>
             </div>
         );
@@ -373,138 +434,166 @@ const AdminContestEdit: React.FC = () => {
 
     if (initialError || !loaded) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {initialError || "Unable to load contest."}
-                    </p>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Couldn’t load contest</p>
+                                <p className="mt-1 text-sm break-words text-rose-700/90">
+                                    {initialError || "Unable to load contest."}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar />
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                <div className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                        <div className="min-w-0">
-                            <h1 className="truncate text-xl font-semibold text-slate-900 md:text-2xl">
-                                Edit Contest
-                            </h1>
-                            <p className="mt-1 text-xs text-slate-500 md:text-sm">
-                                Update contest metadata, schedule, publish settings, and attached questions.
-                            </p>
-                        </div>
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden">
+                    {/* Header */}
+                    <header className="px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
+                                    Edit Contest
+                                </h1>
+                                <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                    Update contest metadata, schedule, publish settings, and attached questions.
+                                </p>
+                            </div>
 
-                        <div className="flex flex-col items-end gap-1 text-[11px] text-slate-500">
-                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">
-                                Admin Panel
-                            </span>
-                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
+                            <span className="inline-flex items-center rounded-full ring-1 ring-emerald-200/60 bg-emerald-50/70 px-3.5 py-2 text-xs sm:text-sm text-emerald-700">
                                 Contest #{loaded.id}
                             </span>
                         </div>
-                    </div>
+                    </header>
 
                     {/* Tabs */}
-                    <div className="border-b border-slate-200 px-6 pt-2">
+                    <div className="px-4 sm:px-5 pt-2 border-b border-slate-200/70">
                         <div className="flex gap-4">
                             <button
                                 type="button"
                                 onClick={() => setActiveTab("details")}
-                                className={`relative pb-2 text-sm font-medium ${
-                                    activeTab === "details" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-                                }`}
+                                className={cx(
+                                    "relative pb-3 text-sm font-normal tracking-tight",
+                                    activeTab === "details" ? "text-slate-700" : "text-slate-500 hover:text-slate-700",
+                                    focusRing
+                                )}
                             >
                                 Contest Details
-                                {activeTab === "details" && (
-                                    <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
-                                )}
+                                {activeTab === "details" ? (
+                                    <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-sky-400" />
+                                ) : null}
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setActiveTab("questions")}
-                                className={`relative pb-2 text-sm font-medium ${
-                                    activeTab === "questions" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-                                }`}
+                                className={cx(
+                                    "relative pb-3 text-sm font-normal tracking-tight",
+                                    activeTab === "questions" ? "text-slate-700" : "text-slate-500 hover:text-slate-700",
+                                    focusRing
+                                )}
                             >
                                 Questions
-                                {activeTab === "questions" && (
-                                    <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
-                                )}
+                                {activeTab === "questions" ? (
+                                    <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-sky-400" />
+                                ) : null}
                             </button>
                         </div>
                     </div>
 
-                    {(error || message) && (
-                        <div className="px-6 pt-4">
-                            {error && (
-                                <div className="mb-3 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                                    {error}
+                    {/* Alerts */}
+                    {(error || message) ? (
+                        <div className="px-4 sm:px-5 pt-4">
+                            {error ? (
+                                <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                                    <div className="flex items-start gap-3">
+                                        <FiAlertCircle className="mt-0.5 shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="font-normal tracking-tight">Fix required</p>
+                                            <p className="mt-1 text-sm whitespace-pre-line break-words text-rose-700/90">{error}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                            {message && (
-                                <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            ) : null}
+
+                            {message ? (
+                                <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-800">
                                     {message}
                                 </div>
-                            )}
+                            ) : null}
                         </div>
-                    )}
+                    ) : null}
 
                     {/* DETAILS TAB */}
-                    {activeTab === "details" && (
+                    {activeTab === "details" ? (
                         <form onSubmit={handleSubmit}>
-                            <div className="space-y-6 px-6 py-6">
-                                <div className="grid gap-6 md:grid-cols-3">
+                            <div className="space-y-6 px-4 sm:px-5 py-5">
+                                <div className="grid gap-4 md:grid-cols-3">
                                     <div className="md:col-span-2">
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Contest Name <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm font-normal text-slate-600">
+                                            Contest Name <span className="text-rose-500">*</span>
                                         </label>
                                         <input
                                             value={name}
                                             onChange={(e) => setName(e.target.value)}
                                             onBlur={handleNameBlur}
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                            )}
                                             placeholder="e.g. Weekly Challenge – Mixed Bag"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Slug
-                                        </label>
+                                        <label className="mb-1 block text-sm font-normal text-slate-600">Slug</label>
                                         <input
                                             value={slug}
                                             onChange={(e) => setSlug(e.target.value)}
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                            )}
                                             placeholder="weekly-challenge-mixed-bag"
                                         />
-                                        <p className="mt-1 text-xs text-slate-400">Auto-generated from name if blank.</p>
+                                        <p className="mt-1 text-xs text-slate-500">Auto-generated from name if blank.</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                                    <label className="mb-1 block text-sm font-normal text-slate-600">Description</label>
                                     <textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
-                                        className="block h-28 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className={cx(
+                                            "min-h-[112px] w-full rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                        )}
                                         placeholder="Rules, scoring, eligibility, etc."
                                     />
                                 </div>
 
-                                <div className="grid gap-6 md:grid-cols-4">
+                                <div className="grid gap-4 md:grid-cols-4">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Contest Type</label>
+                                        <label className="mb-1 block text-sm font-normal text-slate-600">Contest Type</label>
                                         <select
                                             value={contestType}
                                             onChange={(e) => setContestType(e.target.value as ContestType)}
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                            )}
                                         >
                                             <option value="daily">Daily</option>
                                             <option value="weekly">Weekly</option>
@@ -514,31 +603,37 @@ const AdminContestEdit: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Start <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm font-normal text-slate-600">
+                                            Start <span className="text-rose-500">*</span>
                                         </label>
                                         <input
                                             type="datetime-local"
                                             value={startTime}
                                             onChange={(e) => setStartTime(e.target.value)}
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                            )}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            End <span className="text-red-500">*</span>
+                                        <label className="mb-1 block text-sm font-normal text-slate-600">
+                                            End <span className="text-rose-500">*</span>
                                         </label>
                                         <input
                                             type="datetime-local"
                                             value={endTime}
                                             onChange={(e) => setEndTime(e.target.value)}
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                            )}
                                         />
                                     </div>
 
-                                    <div className="flex flex-col gap-3 pt-6">
-                                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                                    <div className="flex flex-col gap-3 md:pt-7">
+                                        <label className="flex items-center gap-2 text-sm text-slate-600">
                                             <input
                                                 type="checkbox"
                                                 checked={isActive}
@@ -548,7 +643,7 @@ const AdminContestEdit: React.FC = () => {
                                             Active
                                         </label>
 
-                                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                                        <label className="flex items-center gap-2 text-sm text-slate-600">
                                             <input
                                                 type="checkbox"
                                                 checked={publishResult}
@@ -560,11 +655,11 @@ const AdminContestEdit: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100/70 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => navigate("/admin/contests")}
-                                        className="text-sm text-slate-500 hover:text-slate-700"
+                                        className={cx("rounded-xl px-3 py-2 text-sm text-slate-500 hover:text-slate-700", focusRing)}
                                     >
                                         ← Back to contests list
                                     </button>
@@ -572,18 +667,27 @@ const AdminContestEdit: React.FC = () => {
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="inline-flex items-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 disabled:opacity-60"
+                                        className={cx(
+                                            "inline-flex items-center justify-center rounded-xl bg-white/70 px-5 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                            submitting
+                                                ? "cursor-not-allowed ring-1 ring-slate-200/60 text-slate-300"
+                                                : "ring-1 ring-emerald-200/60 text-emerald-700 hover:bg-white/90",
+                                            focusRing
+                                        )}
                                     >
                                         {submitting ? "Saving..." : "Save Changes"}
                                     </button>
                                 </div>
+
+                                <div className="pt-1 text-xs text-slate-500">
+                                    <FiInfo className="inline -mt-0.5 mr-1" />
+                                    Times are stored in UTC; your local inputs are converted automatically.
+                                </div>
                             </div>
                         </form>
-                    )}
-
-                    {/* QUESTIONS TAB */}
-                    {activeTab === "questions" && (
-                        <div className="px-6 py-6 space-y-4">
+                    ) : (
+                        /* QUESTIONS TAB */
+                        <div className="px-4 sm:px-5 py-5 space-y-4">
                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div className="w-full md:w-[420px]">
                                     <input
@@ -591,81 +695,83 @@ const AdminContestEdit: React.FC = () => {
                                         value={qSearch}
                                         onChange={(e) => setQSearch(e.target.value)}
                                         placeholder="Search attached questions..."
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className={cx(
+                                            "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                        )}
                                     />
                                 </div>
 
-                                <span className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                                <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm text-slate-600">
                                     <span className="text-slate-500">Total:</span>
-                                    <span className="ml-1 font-semibold text-slate-900">{filteredQuestions.length}</span>
+                                    <span className="ml-1">{filteredQuestions.length}</span>
                                 </span>
                             </div>
 
                             {questionsLoading ? (
-                                <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm text-slate-600">
                                     Loading questions…
                                 </div>
                             ) : filteredQuestions.length === 0 ? (
-                                <div className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-base text-slate-500 shadow-sm">
-                                    No questions attached.
+                                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                                    <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                        <FiInfo className="text-slate-500" />
+                                    </div>
+                                    <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                        No questions attached
+                                    </div>
+                                    <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                        This contest currently has no attached challenges.
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                    <table className="min-w-full divide-y divide-slate-200 text-sm sm:text-base">
-                                        <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                                Title
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                                Category
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                                Difficulty
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                                Type
-                                            </th>
-                                            <th className="px-4 py-3 text-right text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-500">
-                                                Actions
-                                            </th>
+                                <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-x-auto">
+                                    <table className="min-w-full text-sm sm:text-base">
+                                        <thead className="bg-white/40 sticky top-0">
+                                        <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 font-normal">Title</th>
+                                            <th className="px-4 py-3 font-normal">Category</th>
+                                            <th className="px-4 py-3 font-normal">Difficulty</th>
+                                            <th className="px-4 py-3 font-normal">Type</th>
+                                            <th className="px-4 py-3 text-right font-normal">Actions</th>
                                         </tr>
                                         </thead>
 
-                                        <tbody className="divide-y divide-slate-100 bg-white">
+                                        <tbody className="bg-transparent">
                                         {filteredQuestions.map((q) => (
-                                            <tr key={q.id}>
+                                            <tr
+                                                key={q.id}
+                                                className="border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition"
+                                            >
                                                 <td className="px-4 py-3 align-top">
-                                                    <div className="max-w-xl">
-                                                        <div className="truncate font-medium text-slate-900">
+                                                    <div className="max-w-[34rem]">
+                                                        <div className="truncate font-normal tracking-tight text-slate-700">
                                                             {q.title}
                                                         </div>
-                                                        <div className="mt-1 line-clamp-2 text-sm text-slate-500">
+                                                        <div className="mt-1 line-clamp-2 text-sm text-slate-600">
                                                             {q.description}
                                                         </div>
                                                     </div>
                                                 </td>
 
-                                                <td className="px-4 py-3 align-top text-slate-700">
-                                                    {q.category?.name || "—"}
-                                                </td>
+                                                <td className="px-4 py-3 align-top text-slate-600">{q.category?.name || "—"}</td>
 
-                                                <td className="px-4 py-3 align-top text-slate-700">
-                                                    {q.difficulty?.level || "N/A"}
-                                                </td>
+                                                <td className="px-4 py-3 align-top text-slate-600">{q.difficulty?.level || "N/A"}</td>
 
-                                                <td className="px-4 py-3 align-top text-slate-700">
-                                                    {q.question_type || "—"}
-                                                </td>
+                                                <td className="px-4 py-3 align-top text-slate-600">{q.question_type || "—"}</td>
 
                                                 <td className="px-4 py-3 align-top">
                                                     <div className="flex justify-end">
                                                         <button
                                                             type="button"
                                                             onClick={() => handleRemoveQuestion(q.id)}
-                                                            className="inline-flex items-center gap-1 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                                                            className={cx(
+                                                                "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
+                                                                "ring-1 ring-rose-200/60 text-rose-700 hover:bg-white/90",
+                                                                focusRing
+                                                            )}
                                                         >
-                                                            <FiTrash2 size={16}/>
+                                                            <FiTrash2 size={16} />
                                                             <span>Remove</span>
                                                         </button>
                                                     </div>
@@ -685,4 +791,3 @@ const AdminContestEdit: React.FC = () => {
 };
 
 export default AdminContestEdit;
-    

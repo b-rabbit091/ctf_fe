@@ -1,10 +1,15 @@
 // src/pages/CompetePage/CompetitionList.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Navbar from "../../components/Navbar";
-import { getChallenges, getCategories, getDifficulties } from "./api";
-import { useNavigate } from "react-router-dom";
-import { FiEye, FiUsers, FiTag } from "react-icons/fi";
-import { Challenge } from "./types";
+import {getChallenges, getCategories, getDifficulties} from "./api";
+import {useNavigate} from "react-router-dom";
+import {FiAlertCircle, FiEye, FiInfo, FiRefreshCw, FiTag, FiUsers} from "react-icons/fi";
+import type {Challenge} from "./types";
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
 
 /** Truncate text safely */
 const truncateText = (text: string, maxLength: number) =>
@@ -28,25 +33,25 @@ type ContestTypeFilter = "ALL" | "daily" | "weekly" | "monthly" | "custom";
 const DIFFICULTY_TAGS = ["Easy", "Medium", "Hard"] as const;
 
 const STATUS_TAGS: Array<{ label: string; value: ContestStatus | "ALL" }> = [
-    { label: "All", value: "ALL" },
-    { label: "Ongoing", value: "ONGOING" },
-    { label: "Upcoming", value: "UPCOMING" },
-    { label: "Ended", value: "ENDED" },
-    { label: "No contest", value: "NONE" },
+    {label: "All", value: "ALL"},
+    {label: "Ongoing", value: "ONGOING"},
+    {label: "Upcoming", value: "UPCOMING"},
+    {label: "Ended", value: "ENDED"},
+    {label: "No contest", value: "NONE"},
 ];
 
 const CONTEST_TYPE_TAGS: Array<{ label: string; value: ContestTypeFilter }> = [
-    { label: "All", value: "ALL" },
-    { label: "Daily", value: "daily" },
-    { label: "Weekly", value: "weekly" },
-    { label: "Monthly", value: "monthly" },
-    { label: "Custom", value: "custom" },
+    {label: "All", value: "ALL"},
+    {label: "Daily", value: "daily"},
+    {label: "Weekly", value: "weekly"},
+    {label: "Monthly", value: "monthly"},
+    {label: "Custom", value: "custom"},
 ];
 
 const PARTICIPATION_TAGS: Array<{ label: string; value: GroupFilter }> = [
-    { label: "All", value: "ALL" },
-    { label: "Group only", value: "GROUP_ONLY" },
-    { label: "Open", value: "SOLO_ONLY" },
+    {label: "All", value: "ALL"},
+    {label: "Group only", value: "GROUP_ONLY"},
+    {label: "Open", value: "SOLO_ONLY"},
 ];
 
 interface ContestMeta {
@@ -79,7 +84,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
 
     const baseNone: ContestMeta = {
         label: "NO CONTEST",
-        badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
+        badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
         timingPrimary: null,
         timingSecondary: null,
         status: "NONE",
@@ -109,7 +114,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
         return {
             label: "SCHEDULED",
-            badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
+            badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
             timingPrimary: startIso ? `Opens: ${formatDateTimeLocal(startIso)}` : null,
             timingSecondary: endIso ? `Ends: ${formatDateTimeLocal(endIso)}` : null,
             status: "UPCOMING",
@@ -124,7 +129,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (nowMs < startMs) {
         return {
             label: "UPCOMING",
-            badgeClass: "bg-sky-100/70 text-sky-700 border-sky-200/70",
+            badgeClass: "bg-sky-100/70 text-sky-700 ring-sky-200/60",
             timingPrimary: `Opens: ${formatDateTimeLocal(startIso!)}`,
             timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "UPCOMING",
@@ -139,7 +144,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
     if (nowMs >= startMs && nowMs < endMs) {
         return {
             label: "ONGOING",
-            badgeClass: "bg-emerald-100/70 text-emerald-700 border-emerald-200/70",
+            badgeClass: "bg-emerald-100/70 text-emerald-700 ring-emerald-200/60",
             timingPrimary: null,
             timingSecondary: `Ends: ${formatDateTimeLocal(endIso!)}`,
             status: "ONGOING",
@@ -153,7 +158,7 @@ function getContestMeta(challenge: Challenge): ContestMeta {
 
     return {
         label: "ENDED",
-        badgeClass: "bg-slate-100/70 text-slate-600 border-slate-200/70",
+        badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
         timingPrimary: null,
         timingSecondary: `Ended: ${formatDateTimeLocal(endIso!)}`,
         status: "ENDED",
@@ -214,6 +219,43 @@ function groupByContestName(items: { challenge: Challenge; contest: ContestMeta 
     return groups;
 }
 
+const Card = memo(function Card({
+                                    title,
+                                    right,
+                                    children,
+                                }: {
+    title?: string;
+    right?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    return (
+        <section className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            {title ? (
+                <>
+                    <div className="px-4 sm:px-5 py-4 flex items-start justify-between gap-3">
+                        <h2 className="min-w-0 truncate text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                            {title}
+                        </h2>
+                        {right}
+                    </div>
+                    <div className="h-px bg-slate-200/70"/>
+                </>
+            ) : null}
+            <div className={cx("px-4 sm:px-5", title ? "py-4" : "py-4")}>{children}</div>
+        </section>
+    );
+});
+
+// Tag chip: no bold, no black backgrounds; pleasant sky when active
+const tagClass = (active: boolean) =>
+    cx(
+        "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+        focusRing,
+        active
+            ? "border-sky-200/70 bg-sky-50 text-sky-700"
+            : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90"
+    );
+
 const CompetitionList: React.FC = () => {
     const navigate = useNavigate();
 
@@ -237,40 +279,46 @@ const CompetitionList: React.FC = () => {
 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(12);
-    const pageSizeOptions = [6, 9, 12, 24];
+    const pageSizeOptions = useMemo(() => [6, 9, 12, 24], []);
 
+    // avoid setState after unmount
+    const alive = useRef(true);
     useEffect(() => {
-        let mounted = true;
-
-        const fetchInitial = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [cats, diffs, chals] = await Promise.all([
-                    getCategories(),
-                    getDifficulties(),
-                    getChallenges({ type: "competition" }),
-                ]);
-                if (!mounted) return;
-                setCategories(cats || []);
-                setDifficulties(diffs || []);
-                setAllChallenges(chals || []);
-            } catch (err) {
-                console.error("Failed to fetch competition data:", err);
-                if (!mounted) return;
-                setError("Failed to load competition challenges. Please try again.");
-            } finally {
-                if (!mounted) return;
-                setLoading(false);
-            }
-        };
-
-        fetchInitial();
+        alive.current = true;
         return () => {
-            mounted = false;
+            alive.current = false;
         };
     }, []);
 
+    const fetchInitial = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const [cats, diffs, chals] = await Promise.all([
+                getCategories(),
+                getDifficulties(),
+                getChallenges({type: "competition"}),
+            ]);
+
+            if (!alive.current) return;
+
+            setCategories(cats || []);
+            setDifficulties(diffs || []);
+            setAllChallenges(chals || []);
+        } catch (err) {
+            console.error("Failed to fetch competition data:", err);
+            if (!alive.current) return;
+            setError("Failed to load competition challenges. Please try again.");
+        } finally {
+            if (!alive.current) return;
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchInitial();
+    }, [fetchInitial]);
 
     const filteredChallenges = useMemo(() => {
         const searchLower = debouncedSearch.trim().toLowerCase();
@@ -303,12 +351,7 @@ const CompetitionList: React.FC = () => {
             const cat = (c.category?.name || "").toLowerCase();
             const contestName = (meta.contestName || "").toLowerCase();
 
-            return (
-                title.includes(searchLower) ||
-                desc.includes(searchLower) ||
-                cat.includes(searchLower) ||
-                contestName.includes(searchLower)
-            );
+            return title.includes(searchLower) || desc.includes(searchLower) || cat.includes(searchLower) || contestName.includes(searchLower);
         });
     }, [
         allChallenges,
@@ -340,13 +383,13 @@ const CompetitionList: React.FC = () => {
 
         currentPageItems.forEach((c) => {
             const meta = getContestMeta(c);
-            const entry = { challenge: c, contest: meta };
+            const entry = {challenge: c, contest: meta};
             if (meta.status === "ONGOING") ongoing.push(entry);
             else if (meta.status === "UPCOMING") upcoming.push(entry);
             else others.push(entry);
         });
 
-        return { ongoing, upcoming, others };
+        return {ongoing, upcoming, others};
     }, [currentPageItems]);
 
     const groupedOngoing = useMemo(() => groupByContestName(byStatus.ongoing), [byStatus.ongoing]);
@@ -364,448 +407,577 @@ const CompetitionList: React.FC = () => {
         setPage(1);
     }, []);
 
-    const onPageChange = (newPage: number) => {
-        if (newPage < 1 || newPage > pageCount) return;
-        setPage(newPage);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
+    const onPageChange = useCallback(
+        (newPage: number) => {
+            if (newPage < 1 || newPage > pageCount) return;
+            setPage(newPage);
+            window.scrollTo({top: 0, behavior: "smooth"});
+        },
+        [pageCount]
+    );
 
-    const renderChallengeCard = ({ challenge: c, contest }: { challenge: Challenge; contest: ContestMeta }) => {
-        const cc: any = c;
+    const renderChallengeCard = useCallback(
+        ({challenge: c, contest}: { challenge: Challenge; contest: ContestMeta }) => {
+            const cc: any = c;
 
-        const difficulty = cc.difficulty?.level || "N/A";
-        const category = cc.category?.name || "N/A";
+            const difficulty = cc.difficulty?.level || "N/A";
+            const category = cc.category?.name || "N/A";
 
-        const isGroupOnly = cc.group_only;
-        const canParticipate = cc.can_participate !== undefined ? !!cc.can_participate : true;
+            const isGroupOnly = !!cc.group_only;
+            const canParticipate = cc.can_participate !== undefined ? !!cc.can_participate : true;
 
-        const difficultyLower = String(difficulty || "").toLowerCase();
+            const difficultyLower = String(difficulty || "").toLowerCase();
 
-        const difficultyColor =
-            difficultyLower === "easy"
-                ? "bg-emerald-100/70 text-emerald-700 border-emerald-200/70"
-                : difficultyLower === "medium"
-                    ? "bg-amber-100/70 text-amber-700 border-amber-200/70"
-                    : difficultyLower === "hard"
-                        ? "bg-rose-100/70 text-rose-700 border-rose-200/70"
-                        : "bg-slate-100/70 text-slate-600 border-slate-200/70";
+            const difficultyColor =
+                difficultyLower === "easy"
+                    ? "bg-emerald-100/70 text-emerald-700 ring-emerald-200/60"
+                    : difficultyLower === "medium"
+                        ? "bg-amber-100/70 text-amber-800 ring-amber-200/60"
+                        : difficultyLower === "hard"
+                            ? "bg-rose-100/70 text-rose-700 ring-rose-200/60"
+                            : "bg-slate-100/70 text-slate-600 ring-slate-200/60";
 
-        const groupBadgeClass = isGroupOnly
-            ? "bg-indigo-100/70 text-indigo-700 border-indigo-200/70"
-            : "bg-slate-100/70 text-slate-600 border-slate-200/70";
+            const groupBadgeClass = isGroupOnly
+                ? "bg-indigo-100/70 text-indigo-700 ring-indigo-200/60"
+                : "bg-slate-100/70 text-slate-600 ring-slate-200/60";
 
-        const cardShell =
-            "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl " +
-            "ring-1 ring-slate-200/50 transition hover:bg-white/70 hover:shadow-md";
-
-        return (
-            <article key={cc.id} className={`flex flex-col ${cardShell}`}>
-                <div className="flex flex-1 flex-col p-6 md:p-7">
-                    <div className="flex items-start justify-between gap-3">
-                        {/* Title is the ONLY thing that is bigger; keep it normal weight */}
-                        <h3 className="line-clamp-2 text-lg sm:text-xl md:text-2xl font-normal text-slate-700 leading-snug">
-                            {cc.title}
-                        </h3>
-
-                        <span
-                            className={`hidden sm:inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${contest.badgeClass}`}
-                            title="Contest status"
-                        >
-                            {contest.label}
-                        </span>
-                    </div>
-
-                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-600 leading-relaxed">
-                        {truncateText(cc.description || "", 260)}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
-                            <FiTag size={14} />
-                            <span>Category:</span>
-                            <span>{category}</span>
-                        </span>
-
-                        <span
-                            className={`inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${difficultyColor}`}
-                        >
-                            <span className="mr-1">Difficulty:</span>
-                            <span>{difficulty}</span>
-                        </span>
-
-                        <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${groupBadgeClass}`}
-                            title={isGroupOnly ? "Group-only competition" : "Open competition"}
-                        >
-                            <FiUsers size={16} />
-                            {isGroupOnly ? "GROUP" : "INDIVIDUAL"}
-                        </span>
-
-                        <span className={`sm:hidden inline-flex items-center rounded-full border px-3.5 py-2 text-xs font-normal ${contest.badgeClass}`}>
-                            {contest.label}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
-                    {isGroupOnly && !canParticipate ? (
-                        <div className="inline-flex items-center gap-2 text-sm sm:text-base md:text-lg font-normal text-slate-600">
-                            <FiUsers size={18} />
-                            <span>Join or create a group to participate.</span>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => navigate(`/compete/${cc.id}`)}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-blue-200/70 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                            aria-label={`Participate in competition challenge ${cc.title}`}
-                        >
-                            <FiEye size={18} />
-                            <span>Participate</span>
-                        </button>
+            return (
+                <article
+                    key={cc.id}
+                    className={cx(
+                        "flex flex-col rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm",
+                        "transition hover:bg-white/75 hover:shadow-md"
                     )}
-
-                    <span className="text-xs sm:text-sm md:text-base text-slate-600">
-                        Access: <span className="text-slate-600">{isGroupOnly ? "Group" : "Open"}</span>
-                    </span>
-                </div>
-            </article>
-        );
-    };
-
-
-
-    // Tag chip: no bold, no black backgrounds; pleasant blue when active
-    const tagClass = (active: boolean) =>
-        [
-            "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
-            active
-                ? "border-blue-200/70 bg-blue-50 text-blue-700"
-                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
-        ].join(" ");
-
-    const renderContestGroup = (g: ContestGroup, accent: "emerald" | "sky" | "slate") => {
-        const chip =
-            accent === "emerald"
-                ? "border-emerald-200/70 bg-emerald-100/70 text-emerald-700"
-                : accent === "sky"
-                    ? "border-sky-200/70 bg-sky-100/70 text-sky-700"
-                    : "border-slate-200/70 bg-slate-100/70 text-slate-600";
-
-        return (
-            <section key={g.contestId} className="space-y-6">
-                <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent opacity-90" />
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-lg sm:text-xl md:text-2xl font-normal text-slate-700 tracking-tight">
-                                {g.contestName}
+                >
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                        <div className="flex items-start justify-between gap-3">
+                            <h3 className="min-w-0 line-clamp-2 text-lg sm:text-xl md:text-2xl font-normal tracking-tight text-slate-700 leading-snug">
+                                {cc.title}
                             </h3>
 
-                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs sm:text-sm md:text-base font-normal ${chip}`}>
-                                {g.entries.length} challenge{g.entries.length === 1 ? "" : "s"}
+                            <span
+                                className={cx(
+                                    "hidden sm:inline-flex items-center rounded-full px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ring-1",
+                                    contest.badgeClass
+                                )}
+                                title="Contest status"
+                            >
+                                {contest.label}
+                            </span>
+                        </div>
+
+                        <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-600 leading-relaxed">
+                            {truncateText(cc.description || "", 260)}
+                        </p>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                            <span
+                                className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-slate-200/60 bg-slate-50/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
+                                <FiTag size={14}/>
+                                <span>Category:</span>
+                                <span className="truncate max-w-[14rem]">{category}</span>
                             </span>
 
-                            {g.contestType && (
-                                <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-white/60 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600">
-                                    {(g.contestType || "").toUpperCase()}
-                                </span>
-                            )}
+                            <span
+                                className={cx("inline-flex items-center rounded-full px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ring-1", difficultyColor)}>
+                                <span className="mr-1">Difficulty:</span>
+                                <span>{difficulty}</span>
+                            </span>
+
+                            <span
+                                className={cx(
+                                    "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ring-1",
+                                    groupBadgeClass
+                                )}
+                                title={isGroupOnly ? "Group-only competition" : "Open competition"}
+                            >
+                                <FiUsers size={16}/>
+                                {isGroupOnly ? "GROUP" : "INDIVIDUAL"}
+                            </span>
+
+                            <span
+                                className={cx(
+                                    "sm:hidden inline-flex items-center rounded-full px-3.5 py-2 text-xs font-normal ring-1",
+                                    contest.badgeClass
+                                )}
+                            >
+                                {contest.label}
+                            </span>
                         </div>
 
-                        {(g.timingPrimary || g.timingSecondary) && (
-                            <div className="mt-1 text-sm sm:text-base text-slate-600">
-                                {g.timingPrimary ? <span className="mr-3">{g.timingPrimary}</span> : null}
-                                {g.timingSecondary ? <span>{g.timingSecondary}</span> : null}
+                        {contest.timingPrimary || contest.timingSecondary ? (
+                            <div className="mt-4 text-xs sm:text-sm text-slate-500">
+                                {contest.timingPrimary ? <span className="mr-3">{contest.timingPrimary}</span> : null}
+                                {contest.timingSecondary ? <span>{contest.timingSecondary}</span> : null}
                             </div>
-                        )}
+                        ) : null}
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                    {g.entries.map((e) => renderChallengeCard(e))}
-                </div>
-            </section>
-        );
-    };
+                    <div
+                        className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/60 bg-white/40 px-5 sm:px-6 py-4 backdrop-blur-xl">
+                        {isGroupOnly && !canParticipate ? (
+                            <div
+                                className="inline-flex items-center gap-2 text-sm sm:text-base font-normal text-slate-600">
+                                <FiUsers size={18}/>
+                                <span>Join or create a group to participate.</span>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/compete/${cc.id}`)}
+                                className={cx(
+                                    "inline-flex items-center gap-2 rounded-xl bg-white/70 px-4 py-2.5 text-sm sm:text-base font-normal tracking-tight",
+                                    "ring-1 ring-sky-200/60 text-sky-700 hover:bg-white/90",
+                                    focusRing
+                                )}
+                                aria-label={`Participate in competition challenge ${cc.title}`}
+                            >
+                                <FiEye size={18}/>
+                                <span>Participate</span>
+                            </button>
+                        )}
+
+                        <span className="text-xs sm:text-sm text-slate-500">
+              Access: <span className="text-slate-600">{isGroupOnly ? "Group" : "Open"}</span>
+            </span>
+                    </div>
+                </article>
+            );
+        },
+        [navigate]
+    );
+
+    const renderContestGroup = useCallback(
+        (g: ContestGroup, accent: "emerald" | "sky" | "slate") => {
+            const chip =
+                accent === "emerald"
+                    ? "ring-emerald-200/60 bg-emerald-100/70 text-emerald-700"
+                    : accent === "sky"
+                        ? "ring-sky-200/60 bg-sky-100/70 text-sky-700"
+                        : "ring-slate-200/60 bg-slate-100/70 text-slate-600";
+
+            return (
+                <section key={g.contestId} className="space-y-4">
+                    <div className="h-px w-full bg-slate-200/70"/>
+
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <h3 className="text-lg sm:text-xl md:text-2xl font-normal tracking-tight text-slate-700">
+                                    {g.contestName}
+                                </h3>
+
+                                <span
+                                    className={cx("inline-flex items-center rounded-full px-3 py-1 text-xs sm:text-sm md:text-base font-normal ring-1", chip)}>
+                                    {g.entries.length} challenge{g.entries.length === 1 ? "" : "s"}
+                                </span>
+
+                                {g.contestType ? (
+                                    <span
+                                        className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-white/60 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600">
+                    {(g.contestType || "").toUpperCase()}
+                  </span>
+                                ) : null}
+                            </div>
+
+                            {(g.timingPrimary || g.timingSecondary) ? (
+                                <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                    {g.timingPrimary ? <span className="mr-3">{g.timingPrimary}</span> : null}
+                                    {g.timingSecondary ? <span>{g.timingSecondary}</span> : null}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {g.entries.map((e) => renderChallengeCard(e))}
+                    </div>
+                </section>
+            );
+        },
+        [renderChallengeCard]
+    );
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
-            <Navbar />
+        <div
+            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar/>
 
-            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                <div className="w-full">
-                    <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-                        <div className="min-w-0">
-                            {/* Title only: bigger; no bold; avoid slate-900 */}
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight">
-                                Competition Challenges
-                            </h1>
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
+                            Competition Challenges
+                        </h1>
+                        <p className="mt-1 text-sm sm:text-base text-slate-500">
+                            Filter contests by status, type, and participation — then jump in.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={fetchInitial}
+                        className={cx(
+                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
+                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
+                            focusRing
+                        )}
+                        disabled={loading}
+                        aria-label="Refresh competition challenges"
+                        title="Refresh"
+                    >
+                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                </header>
+
+                {/* Filters panel */}
+                <Card>
+                    <div className="space-y-3">
+                        {/* Row 1 */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="min-w-[240px] flex-1">
+                                <label className="sr-only" htmlFor="competition-search">
+                                    Search competition challenges
+                                </label>
+                                <input
+                                    id="competition-search"
+                                    type="search"
+                                    placeholder="Search title, description, category, contest..."
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className={cx(
+                                        "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                        "placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 focus:outline-none"
+                                    )}
+                                    aria-label="Search competition challenges"
+                                />
+                            </div>
+
+                            <div className="shrink-0">
+                                <label className="sr-only" htmlFor="category-filter">
+                                    Category filter
+                                </label>
+                                <select
+                                    id="category-filter"
+                                    value={categoryFilter}
+                                    onChange={(e) => {
+                                        setCategoryFilter(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className={cx(
+                                        "h-10 w-[190px] max-w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
+                                        "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                    )}
+                                >
+                                    <option value="">Category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.name}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className={cx(
+                                    "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                    focusRing
+                                )}
+                            >
+                                Reset
+                            </button>
                         </div>
 
-
-                    </header>
-
-                    {/* Filters panel */}
-                    <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                        <div className="px-4 py-4 space-y-3">
-                            {/* Row 1 */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="min-w-[260px] flex-1 max-w-[720px]">
-                                    <label className="sr-only" htmlFor="competition-search">
-                                        Search competition challenges
-                                    </label>
-                                    <input
-                                        id="competition-search"
-                                        type="search"
-                                        placeholder="Search title, description, category, contest..."
-                                        value={search}
-                                        onChange={(e) => {
-                                            setSearch(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                        aria-label="Search competition challenges"
-                                    />
-                                </div>
-
-                                <div className="shrink-0">
-                                    <label className="sr-only" htmlFor="category-filter">
-                                        Category filter
-                                    </label>
-                                    <select
-                                        id="category-filter"
-                                        value={categoryFilter}
-                                        onChange={(e) => {
-                                            setCategoryFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-10 w-[190px] rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                    >
-                                        <option value="">Category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>
-                                                {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                        {/* Row 2 */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Difficulty */}
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Difficulty
+                </span>
 
                                 <button
                                     type="button"
-                                    onClick={handleClearFilters}
-                                    className="h-10 shrink-0 rounded-xl border border-slate-200/70 bg-white/80 px-4 text-sm sm:text-base font-normal text-slate-600 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                    onClick={() => {
+                                        setDifficultyFilter("");
+                                        setPage(1);
+                                    }}
+                                    className={tagClass(!difficultyFilter)}
+                                    aria-pressed={!difficultyFilter}
                                 >
-                                    Reset
+                                    All
                                 </button>
 
+                                {DIFFICULTY_TAGS.map((d) => {
+                                    const active = difficultyFilter === d;
+                                    return (
+                                        <button
+                                            key={d}
+                                            type="button"
+                                            onClick={() => {
+                                                setDifficultyFilter(active ? "" : d);
+                                                setPage(1);
+                                            }}
+                                            className={tagClass(active)}
+                                            aria-pressed={active}
+                                        >
+                                            {d}
+                                        </button>
+                                    );
+                                })}
                             </div>
 
-                            {/* Row 2: Tag filters */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                {/* Difficulty */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Difficulty</span>
+                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setDifficultyFilter("");
-                                            setPage(1);
-                                        }}
-                                        className={tagClass(!difficultyFilter)}
-                                    >
-                                        All
-                                    </button>
+                            {/* Status */}
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Status
+                </span>
 
-                                    {DIFFICULTY_TAGS.map((d) => {
-                                        const active = difficultyFilter === d;
-                                        return (
-                                            <button
-                                                key={d}
-                                                type="button"
-                                                onClick={() => {
-                                                    setDifficultyFilter(active ? "" : d);
-                                                    setPage(1);
-                                                }}
-                                                className={tagClass(active)}
-                                            >
-                                                {d}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
-
-                                {/* Status */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Status</span>
-                                    {STATUS_TAGS.map((t) => {
-                                        const active = statusFilter === t.value;
-                                        return (
-                                            <button
-                                                key={t.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setStatusFilter(t.value);
-                                                    setPage(1);
-                                                }}
-                                                className={tagClass(active)}
-                                            >
-                                                {t.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
-
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Contest type</span>
-                                    {CONTEST_TYPE_TAGS.map((t) => {
-                                        const active = contestTypeFilter === t.value;
-                                        return (
-                                            <button
-                                                key={t.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setContestTypeFilter(t.value);
-                                                    setPage(1);
-                                                }}
-                                                className={tagClass(active)}
-                                            >
-                                                {t.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1" />
-
-                                {/* Participation */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">Participation</span>
-                                    {PARTICIPATION_TAGS.map((t) => {
-                                        const active = groupFilter === t.value;
-                                        return (
-                                            <button
-                                                key={t.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setGroupFilter(t.value);
-                                                    setPage(1);
-                                                }}
-                                                className={tagClass(active)}
-                                            >
-                                                {t.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                {STATUS_TAGS.map((t) => {
+                                    const active = statusFilter === t.value;
+                                    return (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => {
+                                                setStatusFilter(t.value);
+                                                setPage(1);
+                                            }}
+                                            className={tagClass(active)}
+                                            aria-pressed={active}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
 
+                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
 
-                        </div>
-                    </section>
+                            {/* Contest type */}
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Contest type
+                </span>
 
-                    {loading && (
-                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                            Loading competition challenges...
-                        </div>
-                    )}
-                    {error && (
-                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-rose-700 shadow-sm backdrop-blur-xl">
-                            {error}
-                        </div>
-                    )}
+                                {CONTEST_TYPE_TAGS.map((t) => {
+                                    const active = contestTypeFilter === t.value;
+                                    return (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => {
+                                                setContestTypeFilter(t.value);
+                                                setPage(1);
+                                            }}
+                                            className={tagClass(active)}
+                                            aria-pressed={active}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                    {!loading && !error && (
-                        <>
-                            {total === 0 ? (
-                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    <div className="text-base md:text-lg font-normal text-slate-700">No matches</div>
-                                    <div className="mt-1 text-sm md:text-base text-slate-600">
-                                        No competition challenges match your filters. Try resetting or broadening your search.
-                                    </div>
+                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
+
+                            {/* Participation */}
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Participation
+                </span>
+
+                                {PARTICIPATION_TAGS.map((t) => {
+                                    const active = groupFilter === t.value;
+                                    return (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => {
+                                                setGroupFilter(t.value);
+                                                setPage(1);
+                                            }}
+                                            className={tagClass(active)}
+                                            aria-pressed={active}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Loading / Error */}
+                {loading ? (
+                    <div
+                        className="mt-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0"/>
+                            <div className="min-w-0 space-y-2">
+                                <div className="h-4 w-44 bg-slate-200/80 rounded animate-pulse"/>
+                                <div className="h-4 w-72 bg-slate-100 rounded animate-pulse"/>
+                            </div>
+                        </div>
+                        <p className="mt-3 text-center text-sm text-slate-500">Loading competition challenges…</p>
+                    </div>
+                ) : null}
+
+                {error ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0"/>
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Couldn’t load competition challenges</p>
+                                <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
+                                <button
+                                    type="button"
+                                    onClick={fetchInitial}
+                                    className={cx(
+                                        "mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-sm font-normal tracking-tight",
+                                        "ring-1 ring-rose-200 hover:bg-white/90",
+                                        focusRing
+                                    )}
+                                >
+                                    <FiRefreshCw size={14}/>
+                                    Try again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                {/* Content */}
+                {!loading && !error ? (
+                    <>
+                        {total === 0 ? (
+                            <div
+                                className="mt-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                                <div
+                                    className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                    <FiInfo className="text-slate-500"/>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="space-y-12">
-                                        {groupedOngoing.length > 0 && (
-                                            <section className="space-y-6">
-                                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-emerald-700">
-                                                            Ongoing Contests
-                                                        </h2>
-                                                        <span className="inline-flex items-center rounded-full border border-emerald-200/70 bg-emerald-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-emerald-700">
-                                                            LIVE: {byStatus.ongoing.length}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
+                                <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                    No matches
+                                </div>
+                                <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                    No competition challenges match your filters. Try resetting or broadening your
+                                    search.
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mt-4 space-y-10">
+                                    {groupedOngoing.length > 0 ? (
+                                        <section className="space-y-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="text-sm sm:text-base font-normal uppercase tracking-wide text-emerald-700">
+                                                        Ongoing Contests
+                                                    </h2>
+                                                    <span
+                                                        className="inline-flex items-center rounded-full ring-1 ring-emerald-200/60 bg-emerald-100/70 px-3 py-1 text-xs sm:text-sm font-normal text-emerald-700">
+                                                        LIVE: {byStatus.ongoing.length}
+                                                    </span>
                                                 </div>
+                                                <p className="text-sm sm:text-base text-slate-500">Grouped by contest
+                                                    name.</p>
+                                            </div>
 
-                                                <div className="space-y-10">{groupedOngoing.map((g) => renderContestGroup(g, "emerald"))}</div>
-                                            </section>
-                                        )}
+                                            <div
+                                                className="space-y-8">{groupedOngoing.map((g) => renderContestGroup(g, "emerald"))}</div>
+                                        </section>
+                                    ) : null}
 
-                                        {groupedUpcoming.length > 0 && (
-                                            <section className="space-y-6">
-                                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-sky-700">
-                                                            Upcoming Contests
-                                                        </h2>
-                                                        <span className="inline-flex items-center rounded-full border border-sky-200/70 bg-sky-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-sky-700">
-                                                            {byStatus.upcoming.length} upcoming
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
+                                    {groupedUpcoming.length > 0 ? (
+                                        <section className="space-y-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="text-sm sm:text-base font-normal uppercase tracking-wide text-sky-700">
+                                                        Upcoming Contests
+                                                    </h2>
+                                                    <span
+                                                        className="inline-flex items-center rounded-full ring-1 ring-sky-200/60 bg-sky-100/70 px-3 py-1 text-xs sm:text-sm font-normal text-sky-700">
+                                                        {byStatus.upcoming.length} upcoming
+                                                    </span>
                                                 </div>
+                                                <p className="text-sm sm:text-base text-slate-500">Grouped by contest
+                                                    name.</p>
+                                            </div>
 
-                                                <div className="space-y-10">{groupedUpcoming.map((g) => renderContestGroup(g, "sky"))}</div>
-                                            </section>
-                                        )}
+                                            <div
+                                                className="space-y-8">{groupedUpcoming.map((g) => renderContestGroup(g, "sky"))}</div>
+                                        </section>
+                                    ) : null}
 
-                                        {groupedOthers.length > 0 && (
-                                            <section className="space-y-6">
-                                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <h2 className="text-sm sm:text-base md:text-lg font-normal uppercase tracking-wide text-slate-600">
-                                                            Other Challenges
-                                                        </h2>
-                                                        <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm md:text-base font-normal text-slate-600">
-                                                            {byStatus.others.length} listed
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm sm:text-base text-slate-600">Grouped by contest name.</p>
+                                    {groupedOthers.length > 0 ? (
+                                        <section className="space-y-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="text-sm sm:text-base font-normal uppercase tracking-wide text-slate-600">
+                                                        Other Challenges
+                                                    </h2>
+                                                    <span
+                                                        className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm font-normal text-slate-600">
+                                                        {byStatus.others.length} listed
+                                                    </span>
                                                 </div>
+                                                <p className="text-sm sm:text-base text-slate-500">Grouped by contest
+                                                    name.</p>
+                                            </div>
 
-                                                <div className="space-y-10">{groupedOthers.map((g) => renderContestGroup(g, "slate"))}</div>
-                                            </section>
-                                        )}
-                                    </div>
+                                            <div
+                                                className="space-y-8">{groupedOthers.map((g) => renderContestGroup(g, "slate"))}</div>
+                                        </section>
+                                    ) : null}
+                                </div>
 
-                                    {/* Pagination */}
-                                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                {/* Pagination */}
+                                <div
+                                    className="mt-6 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="flex items-center gap-2">
                                             <button
+                                                type="button"
                                                 onClick={() => onPageChange(page - 1)}
                                                 disabled={page <= 1}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
                                             >
                                                 Prev
                                             </button>
-                                            <span className="text-sm sm:text-base md:text-lg text-slate-600">
-                                                Page <span className="text-slate-600">{page}</span> of{" "}
-                                                <span className="text-slate-600">{pageCount}</span>
-                                            </span>
+
+                                            <span className="text-sm sm:text-base text-slate-600">
+                        Page <span className="text-slate-700">{page}</span> of{" "}
+                                                <span className="text-slate-700">{pageCount}</span>
+                      </span>
+
                                             <button
+                                                type="button"
                                                 onClick={() => onPageChange(page + 1)}
                                                 disabled={page >= pageCount}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
                                             >
                                                 Next
                                             </button>
@@ -813,7 +985,7 @@ const CompetitionList: React.FC = () => {
 
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-normal text-slate-600">Per page</span>
+                                                <span className="text-sm sm:text-base text-slate-600">Per page</span>
                                                 <label className="sr-only" htmlFor="page-size">
                                                     Items per page
                                                 </label>
@@ -824,7 +996,11 @@ const CompetitionList: React.FC = () => {
                                                         setPageSize(Number(e.target.value));
                                                         setPage(1);
                                                     }}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                    className={cx(
+                                                        "rounded-xl bg-white/70 px-3 py-2 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                        "ring-1 ring-slate-200/60 hover:bg-white/90",
+                                                        focusRing
+                                                    )}
                                                 >
                                                     {pageSizeOptions.map((opt) => (
                                                         <option key={opt} value={opt}>
@@ -834,22 +1010,22 @@ const CompetitionList: React.FC = () => {
                                                 </select>
                                             </div>
 
-                                            <div className="text-slate-600">
+                                            <div className="text-sm sm:text-base text-slate-600">
                                                 Showing{" "}
-                                                <span className="text-slate-600">
-                                                    {total === 0 ? 0 : (page - 1) * pageSize + 1}
-                                                </span>{" "}
-                                                –{" "}
-                                                <span className="text-slate-600">{Math.min(page * pageSize, total)}</span> of{" "}
-                                                <span className="text-slate-600">{total}</span>
+                                                <span className="text-slate-700">
+                          {total === 0 ? 0 : (page - 1) * pageSize + 1}
+                        </span>{" "}
+                                                – <span
+                                                className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="text-slate-700">{total}</span>
                                             </div>
                                         </div>
                                     </div>
-                                </>
-                            )}
-                        </>
-                    )}
-                </div>
+                                </div>
+                            </>
+                        )}
+                    </>
+                ) : null}
             </main>
         </div>
     );

@@ -1,8 +1,8 @@
 // src/pages/challenges/PracticeAnswerSubmit.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Challenge } from "./types";
-import { submitFlag, submitTextSolution } from "./practice";
-import { useAuth } from "../../contexts/AuthContext";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {Challenge} from "./types";
+import {submitFlag, submitTextSolution} from "./practice";
+import {useAuth} from "../../contexts/AuthContext";
 
 interface Props {
     challenge: Challenge;
@@ -28,8 +28,11 @@ type TimerStore = {
     updated_at: number;
 };
 
-const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
-    const { user } = useAuth();
+const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
+    const {user} = useAuth();
+
+    const userId = (user as any)?.id ?? (user as any)?.user_id ?? "anon";
+    const challengeId = challenge?.id ?? 0;
 
     const [flagText, setFlagText] = useState("");
     const [procedureText, setProcedureText] = useState("");
@@ -38,48 +41,92 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
     const [error, setError] = useState<string | null>(null);
     const [info, setInfo] = useState<string | null>(null);
 
-    const userId = (user as any)?.id ?? (user as any)?.user_id ?? "anon";
-    const challengeId = challenge?.id ?? 0;
-
     const [timer, setTimer] = useState<TimerStore | null>(null);
     const [elapsedMs, setElapsedMs] = useState(0);
-
-    const intervalRef = useRef<number | null>(null);
     const timerRef = useRef<TimerStore | null>(null);
+    const intervalRef = useRef<number | null>(null);
 
-    const [lastScore, setLastScore] = useState<{ flag?: number | null; procedure?: number | null }>({});
+    const alive = useRef(true);
+    const msgTimer = useRef<number | null>(null);
+    const busyRef = useRef(false);
 
-    const stopTick = () => {
+    const [lastScore, setLastScore] = useState<{flag?: number | null; procedure?: number | null}>({});
+
+    // ----------------------------
+    // Stable helpers (no behavior changes)
+    // ----------------------------
+    const stopTick = useCallback(() => {
         if (intervalRef.current !== null) {
             window.clearInterval(intervalRef.current);
             intervalRef.current = null;
         }
-    };
+    }, []);
 
-    const computeElapsed = (t: TimerStore) => {
+    const computeElapsed = useCallback((t: TimerStore) => {
         if (!t.running || !t.started_at) return t.accumulated_ms;
         return t.accumulated_ms + (Date.now() - t.started_at);
-    };
+    }, []);
 
-    const safeInitTimer = (): TimerStore => ({
-        v: 1,
-        user_id: userId,
-        challenge_id: challengeId,
-        running: false,
-        accumulated_ms: 0,
-        started_at: null,
-        updated_at: Date.now(),
-    });
+    const safeInitTimer = useCallback((): TimerStore => {
+        return {
+            v: 1,
+            user_id: userId,
+            challenge_id: challengeId,
+            running: false,
+            accumulated_ms: 0,
+            started_at: null,
+            updated_at: Date.now(),
+        };
+    }, [userId, challengeId]);
 
-    const startTick = () => {
+    const startTick = useCallback(() => {
         stopTick();
         intervalRef.current = window.setInterval(() => {
             const t = timerRef.current;
             if (!t) return;
             setElapsedMs(computeElapsed(t));
         }, 1000);
-    };
+    }, [stopTick, computeElapsed]);
 
+    const clearBannersSoon = useCallback(() => {
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        msgTimer.current = window.setTimeout(() => {
+            if (!alive.current) return;
+            setError(null);
+            setInfo(null);
+        }, 3500);
+    }, []);
+
+    const extractScore = useCallback((data: any): number | null => {
+        if (!data) return null;
+
+        if (typeof data.score === "number") return data.score;
+        if (typeof data.user_score === "number") return data.user_score;
+
+        const r0 = Array.isArray(data.results) ? data.results[0] : null;
+        if (r0) {
+            if (typeof r0.score === "number") return r0.score;
+            if (typeof r0.user_score === "number") return r0.user_score;
+        }
+
+        return null;
+    }, []);
+
+    // ----------------------------
+    // Lifecycle safety
+    // ----------------------------
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+            if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        };
+    }, []);
+
+    // ----------------------------
+    // Timer init / reset per (challengeId,userId)
+    // (same behavior as your original)
+    // ----------------------------
     useEffect(() => {
         stopTick();
 
@@ -96,11 +143,12 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
         setElapsedMs(computeElapsed(base));
 
         return () => stopTick();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [challengeId, userId]);
+    }, [challengeId, userId, stopTick, safeInitTimer, computeElapsed]);
 
+    // Keep ref in sync + start/stop ticking when relevant fields change
     useEffect(() => {
         if (!timer) return;
+
         timerRef.current = timer;
         setElapsedMs(computeElapsed(timer));
 
@@ -108,23 +156,18 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
         else stopTick();
 
         return () => {};
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timer?.running, timer?.accumulated_ms, timer?.started_at]);
+        // keep same dependency intent, but explicit and stable
+    }, [timer, computeElapsed, startTick, stopTick]);
 
-    const startTimer = () => {
+    const startTimer = useCallback(() => {
         setTimer((prev) => {
             const base = prev ?? safeInitTimer();
             if (base.running) return base;
-            return {
-                ...base,
-                running: true,
-                started_at: Date.now(),
-                updated_at: Date.now(),
-            };
+            return {...base, running: true, started_at: Date.now(), updated_at: Date.now()};
         });
-    };
+    }, [safeInitTimer]);
 
-    const pauseTimer = () => {
+    const pauseTimer = useCallback(() => {
         setTimer((prev) => {
             const base = prev ?? safeInitTimer();
             if (!base.running) return base;
@@ -140,20 +183,14 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
                 updated_at: now,
             };
         });
-    };
+    }, [safeInitTimer]);
 
-    const resetTimer = () => {
+    const resetTimer = useCallback(() => {
         setTimer((prev) => {
             const base = prev ?? safeInitTimer();
-            return {
-                ...base,
-                running: false,
-                accumulated_ms: 0,
-                started_at: null,
-                updated_at: Date.now(),
-            };
+            return {...base, running: false, accumulated_ms: 0, started_at: null, updated_at: Date.now()};
         });
-    };
+    }, [safeInitTimer]);
 
     // ----------------------------
     // Challenge input logic (UNCHANGED)
@@ -166,29 +203,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
         return (showFlag && flagText.trim().length > 0) || (showProcedure && procedureText.trim().length > 0);
     }, [flagText, procedureText, showFlag, showProcedure]);
 
-    const clearBannersSoon = () => {
-        window.setTimeout(() => {
-            setError(null);
-            setInfo(null);
-        }, 3500);
-    };
-
-    const extractScore = (data: any): number | null => {
-        if (!data) return null;
-
-        if (typeof data.score === "number") return data.score;
-        if (typeof data.user_score === "number") return data.user_score;
-
-        const r0 = Array.isArray(data.results) ? data.results[0] : null;
-        if (r0) {
-            if (typeof r0.score === "number") return r0.score;
-            if (typeof r0.user_score === "number") return r0.user_score;
-        }
-
-        return null;
-    };
-
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         setError(null);
         setInfo(null);
 
@@ -197,6 +212,9 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
             clearBannersSoon();
             return;
         }
+
+        if (busyRef.current) return;
+        busyRef.current = true;
 
         setSubmitting(true);
         try {
@@ -216,8 +234,8 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
             }
 
             setLastScore({
-                ...(flagScore !== undefined ? { flag: flagScore } : {}),
-                ...(procedureScore !== undefined ? { procedure: procedureScore } : {}),
+                ...(flagScore !== undefined ? {flag: flagScore} : {}),
+                ...(procedureScore !== undefined ? {procedure: procedureScore} : {}),
             });
 
             const parts: string[] = [];
@@ -235,9 +253,20 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
             setError(err?.message || "Submission failed.");
             clearBannersSoon();
         } finally {
+            busyRef.current = false;
+            if (!alive.current) return;
             setSubmitting(false);
         }
-    };
+    }, [
+        hasInput,
+        clearBannersSoon,
+        showFlag,
+        showProcedure,
+        flagText,
+        procedureText,
+        challenge.id,
+        extractScore,
+    ]);
 
     const typeBadge = useMemo(() => {
         if (solutionType === "flag") return "flag";
@@ -249,7 +278,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
     const timerRunning = !!timer?.running;
 
     // ----------------------------
-    // Styling: match other pages (glassy, slate-700, no black buttons)
+    // Styling: same family, minimal changes
     // ----------------------------
     const shell =
         "min-w-0 w-full flex flex-col rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 overflow-hidden";
@@ -366,6 +395,9 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
                                 disabled={submitting}
                                 className={inputBase}
                                 placeholder="Enter flag…"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
                             />
                         </div>
 
@@ -394,6 +426,9 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
                                 disabled={submitting}
                                 className={`${inputBase} h-56 resize-none`}
                                 placeholder="Explain your approach…"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
                             />
                         </div>
 

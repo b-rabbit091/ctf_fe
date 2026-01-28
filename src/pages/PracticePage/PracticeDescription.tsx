@@ -1,5 +1,6 @@
-import React from "react";
-import type { Challenge } from "./types";
+import React, {useMemo} from "react";
+import type {Challenge} from "./types";
+import {FiFileText, FiHash} from "react-icons/fi";
 
 interface Props {
     challenge: Challenge;
@@ -7,150 +8,193 @@ interface Props {
 
 const isNonEmpty = (v?: string | null) => (v ?? "").trim().length > 0;
 
-const PracticeDescription: React.FC<Props> = ({ challenge }) => {
+const safeDate = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const safeExt = (name?: string) => {
+    const raw = (name || "").split(".").pop() || "FILE";
+    const cleaned = raw.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    return cleaned.slice(0, 6) || "FILE";
+};
+
+const isSafeUrl = (url: string) => {
+    try {
+        const u = new URL(url, window.location.origin);
+        return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+        return false;
+    }
+};
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const PracticeDescription: React.FC<Props> = ({challenge}) => {
     const categoryLabel = (challenge as any).category?.name || "Uncategorized";
     const difficultyLabel = (challenge as any).difficulty?.level || "N/A";
     const solutionTypeLabel = (challenge as any).solution_type?.type || "Solution";
 
-    const difficultyLower = String(difficultyLabel || "").toLowerCase();
-    const difficultyPill =
-        difficultyLower === "easy"
-            ? "bg-emerald-100/70 text-emerald-700 border-emerald-200/70"
-            : difficultyLower === "medium" || difficultyLower === "moderate"
-                ? "bg-amber-100/70 text-amber-700 border-amber-200/70"
-                : difficultyLower === "hard"
-                    ? "bg-rose-100/70 text-rose-700 border-rose-200/70"
-                    : "bg-slate-100/70 text-slate-600 border-slate-200/70";
+    const createdLabel = useMemo(() => {
+        const d = safeDate((challenge as any)?.created_at ?? null);
+        return d
+            ? d.toLocaleDateString(undefined, {year: "numeric", month: "long", day: "numeric"})
+            : null;
+    }, [challenge]);
 
-    const cardShell =
-        "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50";
+    // EXACT same styling approach as your CompetitionDescription (minimal LeetCode-ish card)
+    const shell =
+        "w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden";
+    const header = "px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40";
+    const body = "px-4 sm:px-5 py-4";
+    const h1 = "text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-slate-800";
+    const metaRow = "mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600";
+    const pillBase = "inline-flex items-center gap-2 rounded-full ring-1 px-3 py-1 text-xs sm:text-sm";
+    const sec = "pt-4 pb-5 border-b border-slate-200/70 last:border-b-0";
+    const secTitle = "text-sm sm:text-base font-normal text-slate-800";
+    const text = "mt-2 text-sm sm:text-base leading-relaxed text-slate-700 whitespace-pre-wrap";
+    const code =
+        "mt-2 rounded-xl ring-1 ring-slate-200/60 bg-white/70 px-4 py-3 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words overflow-auto";
 
-    // Match CompetitionDescription (tight spacing)
-    const sectionTitle = "text-base md:text-lg font-normal text-slate-700";
-    const section = "pt-4 pb-5 border-b border-slate-200 last:border-b-0";
-    const firstSection = "pt-2 pb-5 border-b border-slate-200 last:border-b-0";
-    const bodyText =
-        "mt-1 text-sm sm:text-base md:text-[17px] leading-relaxed text-slate-600 whitespace-pre-wrap";
-    const mono =
-        "mt-2 rounded-xl border border-slate-200/70 bg-white/70 px-4 py-3 font-mono text-sm md:text-base leading-relaxed text-slate-700 whitespace-pre-wrap overflow-auto";
-
-    // Glassy pill (same vibe as CompetitionList/CompetitionDescription)
-    const pill =
-        "inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal";
+    const difficultyTone = useMemo(() => {
+        const d = String(difficultyLabel || "").toLowerCase();
+        if (d === "easy") return "ring-emerald-200/60 bg-emerald-50/70 text-emerald-700";
+        if (d === "medium" || d === "moderate") return "ring-amber-200/60 bg-amber-50/70 text-amber-800";
+        if (d === "hard") return "ring-rose-200/60 bg-rose-50/70 text-rose-700";
+        return "ring-slate-200/60 bg-slate-100/70 text-slate-700";
+    }, [difficultyLabel]);
 
     return (
         <div className="text-slate-900">
-            <div className={cardShell}>
-                {/* Header block (tight like CompetitionDescription) */}
-                <div className="px-6 md:px-7 pt-5 pb-2">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className={shell}>
+                {/* Header */}
+                <div className={header}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                            {/* Subtle meta row */}
-                            <div className="mb-2 flex flex-wrap items-center gap-2.5">
-                                <span className={`${pill} bg-slate-100/60 text-slate-600 border-slate-200/70`}>
-                                    {categoryLabel}
+                            <h1 className={cx(h1, "truncate")}>{challenge.title}</h1>
+
+                            <div className={metaRow}>
+                                <span className={cx(pillBase, "ring-slate-200/60 bg-slate-100/70 text-slate-700")}>
+                                    <FiHash size={14} />
+                                    {challenge.id}
                                 </span>
 
-                                <span className={`${pill} ${difficultyPill}`}>{difficultyLabel}</span>
+                                <span className="text-slate-300">•</span>
 
-                                <span className={`${pill} bg-indigo-100/70 text-indigo-700 border-indigo-200/70`}>
-                                    {(solutionTypeLabel || "Solution").toUpperCase()}
+                                <span>
+                                    <span className="text-slate-500">Category:</span>{" "}
+                                    <span className="text-slate-700">{categoryLabel}</span>
                                 </span>
 
-                                <span className={`${pill} bg-emerald-100/70 text-emerald-700 border-emerald-200/70`}>
-                                    PRACTICE
+                                <span className="text-slate-300">•</span>
+
+                                <span className={cx(pillBase, difficultyTone)}>{difficultyLabel}</span>
+
+                                <span className="text-slate-300">•</span>
+
+                                <span className={cx(pillBase, "ring-slate-200/60 bg-white/70 text-slate-700")}>
+                                    {String(solutionTypeLabel || "Solution")}
                                 </span>
+
+                                {createdLabel ? (
+                                    <>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="text-slate-500">Created:</span>
+                                        <span className="text-slate-700">{createdLabel}</span>
+                                    </>
+                                ) : null}
                             </div>
-
-                            {/* Title (same as CompetitionDescription) */}
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight leading-tight">
-                                {challenge.title}
-                            </h1>
                         </div>
+
+                        <span className={cx(pillBase, "ring-emerald-200/60 bg-emerald-50/70 text-emerald-700")}>
+                            PRACTICE
+                        </span>
                     </div>
                 </div>
 
-                {/* Divider line (no extra spacing) */}
-                <div className="h-px w-full bg-slate-200/70" />
-
-                {/* Body sections (tight top padding) */}
-                <div className="px-6 md:px-7 pt-1 pb-4">
-                    {isNonEmpty((challenge as any).description) && (
-                        <section className={firstSection}>
-                            <h2 className={sectionTitle}>Description</h2>
-                            <div className={bodyText}>{(challenge as any).description}</div>
+                {/* Body */}
+                <div className={body}>
+                    {isNonEmpty((challenge as any).description) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Description</h2>
+                            <div className={text}>{(challenge as any).description}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {isNonEmpty((challenge as any).constraints) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Constraints</h2>
-                            <div className={bodyText}>{(challenge as any).constraints}</div>
+                    {isNonEmpty((challenge as any).constraints) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Constraints</h2>
+                            <div className={text}>{(challenge as any).constraints}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {isNonEmpty((challenge as any).input_format) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Input</h2>
-                            <div className={bodyText}>{(challenge as any).input_format}</div>
+                    {isNonEmpty((challenge as any).input_format) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Input</h2>
+                            <div className={text}>{(challenge as any).input_format}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {isNonEmpty((challenge as any).output_format) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Output</h2>
-                            <div className={bodyText}>{(challenge as any).output_format}</div>
+                    {isNonEmpty((challenge as any).output_format) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Output</h2>
+                            <div className={text}>{(challenge as any).output_format}</div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {(isNonEmpty((challenge as any).sample_input) || isNonEmpty((challenge as any).sample_output)) && (
-                        <section className={section}>
-                            <h2 className={sectionTitle}>Examples</h2>
+                    {isNonEmpty((challenge as any).sample_input) || isNonEmpty((challenge as any).sample_output) ? (
+                        <section className={sec}>
+                            <h2 className={secTitle}>Examples</h2>
 
-                            <div className="mt-4 space-y-5">
+                            <div className="mt-3 grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <div className="text-xs sm:text-sm font-normal text-slate-600 uppercase tracking-wide">
-                                        Example Input
-                                    </div>
-                                    <div className={mono}>{(challenge as any).sample_input || "—"}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-500">Example Input</div>
+                                    <div className={code}>{(challenge as any).sample_input || "—"}</div>
                                 </div>
 
                                 <div>
-                                    <div className="text-xs sm:text-sm font-normal text-slate-600 uppercase tracking-wide">
-                                        Example Output
-                                    </div>
-                                    <div className={mono}>{(challenge as any).sample_output || "—"}</div>
+                                    <div className="text-xs uppercase tracking-wide text-slate-500">Example Output</div>
+                                    <div className={code}>{(challenge as any).sample_output || "—"}</div>
                                 </div>
                             </div>
                         </section>
-                    )}
+                    ) : null}
 
-                    {(challenge as any).files && (challenge as any).files.length > 0 && (
-                        <section className="pt-4">
-                            <h2 className={sectionTitle}>Files</h2>
+                    {(challenge as any).files && (challenge as any).files.length > 0 ? (
+                        <section className={cx(sec, "pb-2")}>
+                            <h2 className={secTitle}>Files</h2>
 
-                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                {(challenge as any).files.map((file: any) => (
-                                    <a
-                                        key={file.url}
-                                        href={file.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 rounded-2xl border border-white/30 bg-white/55 px-4 py-3 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 transition hover:bg-white/70"
-                                    >
-                                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-slate-100/60 text-xs font-normal text-slate-600">
-                                            {file.name?.split(".").pop()?.toUpperCase() || "FILE"}
-                                        </div>
+                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                {(challenge as any).files
+                                    .filter((f: any) => f?.url && isSafeUrl(String(f.url)))
+                                    .map((file: any) => (
+                                        <a
+                                            key={String(file.url)}
+                                            href={String(file.url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={cx(
+                                                "flex items-center gap-3 rounded-xl bg-white/70 px-4 py-3",
+                                                "ring-1 ring-slate-200/60 hover:bg-white/90 transition",
+                                                "min-w-0"
+                                            )}
+                                        >
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-slate-200/60 bg-slate-100/70 text-slate-700">
+                                                <FiFileText size={16} />
+                                            </div>
 
-                                        <div className="min-w-0">
-                                            <div className="truncate font-normal text-slate-700">{file.name}</div>
-                                            <div className="text-xs sm:text-sm text-slate-500">Open in new tab</div>
-                                        </div>
-                                    </a>
-                                ))}
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm sm:text-base font-normal text-slate-800">
+                                                    {file.name || "File"}
+                                                </div>
+                                                <div className="text-xs text-slate-500">{safeExt(file.name)} • Open in new tab</div>
+                                            </div>
+                                        </a>
+                                    ))}
                             </div>
                         </section>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </div>

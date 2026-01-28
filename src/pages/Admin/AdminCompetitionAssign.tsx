@@ -1,10 +1,13 @@
-import React, {useEffect, useMemo, useState, useCallback} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Navbar from "../../components/Navbar";
 import {useNavigate} from "react-router-dom";
 import {useAuth} from "../../contexts/AuthContext";
 
 import api from "../../api/axios";
 import {getChallenges} from "../../api/practice";
+
+import {FiAlertCircle, FiInfo} from "react-icons/fi";
+import { motion } from "framer-motion";
 
 type ContestType = "daily" | "weekly" | "monthly" | "custom";
 
@@ -29,29 +32,22 @@ type ChallengeRow = {
     question_type?: string | null; // "N/A" | "practice" | "competition"
 };
 
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+
 const AdminCompetitionAssign: React.FC = () => {
     const navigate = useNavigate();
     const {user} = useAuth();
 
-    // ---------------- SECURITY (TOP) ----------------
-    useEffect(() => {
-        if (!user) return;
-        if (user.role !== "admin") navigate("/dashboard");
-    }, [user, navigate]);
-
     // Alerts
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const resetMessages = () => {
-        setMessage(null);
-        setError(null);
-    };
 
-    // Contest dropdown list + selected contest
     const [contests, setContests] = useState<ContestDTO[]>([]);
     const [selectedContestId, setSelectedContestId] = useState<number | "">("");
 
-    // Draft search + selection
     const [loadingDrafts, setLoadingDrafts] = useState(true);
     const [drafts, setDrafts] = useState<ChallengeRow[]>([]);
     const [search, setSearch] = useState("");
@@ -62,58 +58,86 @@ const AdminCompetitionAssign: React.FC = () => {
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
-    // Load contests (admin-only) - LIST ONLY (no create here)
+    // lifecycle guards
+    const alive = useRef(true);
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
+
+    // prevent double submits
+    const busyRef = useRef(false);
+
+    const resetMessages = useCallback(() => {
+        setMessage(null);
+        setError(null);
+    }, []);
+
+    const flashMessage = useCallback((text: string | null) => {
+        setMessage(text);
+        if (!text) return;
+        window.setTimeout(() => {
+            if (!alive.current) return;
+            setMessage(null);
+        }, 3500);
+    }, []);
+
+    // ---------------- SECURITY (TOP) ----------------
     useEffect(() => {
         if (!user) return;
+        if (user.role !== "admin") navigate("/dashboard");
+    }, [user, navigate]);
 
-        let mounted = true;
-        (async () => {
-            try {
-                const res = await api.get<ContestDTO[]>("/challenges/contests/");
-                if (!mounted) return;
-                setContests(res.data || []);
+    // Load contests (admin-only)
+    const fetchContests = useCallback(async () => {
+        if (!user) return;
+        if (user.role !== "admin") return;
 
-                if (!selectedContestId && res.data?.length) {
-                    setSelectedContestId(res.data[0].id);
-                }
-            } catch (e) {
-                if (!mounted) return;
-                setError("Failed to load contests for dropdown.");
-            }
-        })();
+        try {
+            const res = await api.get<ContestDTO[]>("/challenges/contests/");
+            if (!alive.current) return;
 
-        return () => {
-            mounted = false;
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+            const list = Array.isArray(res.data) ? res.data : [];
+            setContests(list);
+
+            // keep current selection if still exists; otherwise pick first
+            setSelectedContestId((prev) => {
+                if (prev && list.some((c) => c.id === prev)) return prev;
+                return list.length ? list[0].id : "";
+            });
+        } catch (e) {
+            if (!alive.current) return;
+            setError("Failed to load contests for dropdown.");
+        }
     }, [user]);
 
     // Load unassigned drafts (question_type === "N/A")
-    useEffect(() => {
+    const fetchDrafts = useCallback(async () => {
         if (!user) return;
+        if (user.role !== "admin") return;
 
-        let mounted = true;
-        (async () => {
-            setLoadingDrafts(true);
-            try {
-                const all = (await getChallenges()) as any[];
-                if (!mounted) return;
+        setLoadingDrafts(true);
+        try {
+            const all = (await getChallenges()) as any[];
+            if (!alive.current) return;
 
-                const unassigned = (all || []).filter((c) => (c?.question_type ?? "") === "N/A");
-                setDrafts(unassigned);
-            } catch (e) {
-                if (!mounted) return;
-                setError("Failed to load unassigned questions (question_type = N/A).");
-            } finally {
-                if (!mounted) return;
-                setLoadingDrafts(false);
-            }
-        })();
-
-        return () => {
-            mounted = false;
-        };
+            const unassigned = (all || []).filter((c) => (c?.question_type ?? "") === "N/A");
+            setDrafts(unassigned);
+        } catch (e) {
+            if (!alive.current) return;
+            setError("Failed to load unassigned questions (question_type = N/A).");
+        } finally {
+            if (!alive.current) return;
+            setLoadingDrafts(false);
+        }
     }, [user]);
+
+    useEffect(() => {
+        fetchContests();
+        fetchDrafts();
+    }, [fetchContests, fetchDrafts]);
 
     const filteredDrafts = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -128,7 +152,7 @@ const AdminCompetitionAssign: React.FC = () => {
         });
     }, [drafts, search]);
 
-    // ✅ checked ones float to top AFTER searching
+    // checked ones float to top AFTER searching
     const sortedFilteredDrafts = useMemo(() => {
         const arr = [...filteredDrafts];
         arr.sort((a, b) => {
@@ -142,6 +166,11 @@ const AdminCompetitionAssign: React.FC = () => {
 
     const total = sortedFilteredDrafts.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+    useEffect(() => {
+        if (page > pageCount) setPage(1);
+    }, [pageCount, page]);
+
     const pageItems = useMemo(() => {
         const start = (page - 1) * pageSize;
         return sortedFilteredDrafts.slice(start, start + pageSize);
@@ -159,26 +188,27 @@ const AdminCompetitionAssign: React.FC = () => {
     const toggleAllOnPage = useCallback(() => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            const allSelected = pageItems.every((c) => next.has(c.id));
+            const allSelected = pageItems.length > 0 && pageItems.every((c) => next.has(c.id));
             if (allSelected) pageItems.forEach((c) => next.delete(c.id));
             else pageItems.forEach((c) => next.add(c.id));
             return next;
         });
     }, [pageItems]);
 
-    const clearSelection = () => setSelectedIds(new Set());
+    const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
     /**
-     * ✅ Bulk assign selected drafts:
-     * - adds challenges to contest (M2M)
-     * - sets question_type="competition"
-     *
+     * Bulk assign selected drafts:
      * PATCH /challenges/challenges/bulk-update/
      * payload: { ids: [...], contest_id: <id>, question_type: "competition" }
      */
-    const handleAssignSelectedToContest = async () => {
+    const handleAssignSelectedToContest = useCallback(async () => {
         resetMessages();
 
+        if (!user || user.role !== "admin") {
+            setError("Unauthorized: admin only.");
+            return;
+        }
         if (!selectedContestId) {
             setError("Please select a contest from the dropdown first.");
             return;
@@ -187,10 +217,14 @@ const AdminCompetitionAssign: React.FC = () => {
             setError("Select at least one unassigned question.");
             return;
         }
+        if (busyRef.current) return;
 
-        if (!window.confirm(`Assign ${selectedIds.size} question(s) to contest #${selectedContestId}?`)) return;
+        const ok = window.confirm(`Assign ${selectedIds.size} question(s) to contest #${selectedContestId}?`);
+        if (!ok) return;
 
+        busyRef.current = true;
         setAssigning(true);
+
         try {
             const ids = Array.from(selectedIds);
 
@@ -200,26 +234,30 @@ const AdminCompetitionAssign: React.FC = () => {
                 question_type: "competition",
             });
 
-            // remove from this page (they are no longer N/A after assignment)
+            if (!alive.current) return;
+
+            // remove from list (they are no longer N/A)
             setDrafts((prev) => prev.filter((c) => !selectedIds.has(c.id)));
             clearSelection();
-            setMessage("Questions assigned to contest and marked as competition.");
+            flashMessage("Questions assigned to contest and marked as competition.");
         } catch (e: any) {
             console.error(e);
+            if (!alive.current) return;
             setError(e?.response?.data?.detail || "Bulk assign failed.");
         } finally {
+            busyRef.current = false;
+            if (!alive.current) return;
             setAssigning(false);
-            setTimeout(() => setMessage(null), 3500);
         }
-    };
+    }, [resetMessages, user, selectedContestId, selectedIds, clearSelection, flashMessage]);
 
-    // --- shell states ---
+    // --- shell states (match AdminPracticeList) ---
     if (!user) {
         return (
-            <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-                <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <div className="w-full rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
                     </div>
                 </main>
@@ -229,106 +267,123 @@ const AdminCompetitionAssign: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-                <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg font-normal text-rose-700 shadow-sm backdrop-blur-xl">
-                        Unauthorized – admin access required.
-                    </p>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Unauthorized</p>
+                                <p className="mt-1 text-sm text-rose-700/90">Admin access required.</p>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar />
 
-            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                <div className="w-full rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                    {/* Header */}
-                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/40 bg-white/40 px-6 py-5 backdrop-blur-xl">
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
+                    <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <h1 className="truncate text-2xl sm:text-3xl font-normal text-slate-700 tracking-tight">
+                            <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
                                 Assign Draft Questions to Contest
                             </h1>
-                            <p className="mt-1 text-sm sm:text-base text-slate-600">
-                                Admin-only. Select an existing contest, then search & select unassigned questions (question_type = N/A) and attach them in bulk.
+                            <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                Admin-only. Select a contest, then search & select unassigned questions (question_type = N/A) and attach them in bulk.
                             </p>
                         </div>
 
-                        <div className="flex flex-col items-end gap-1 text-xs text-slate-600">
-                            <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1">
-                                Admin Panel
-                            </span>
-                            <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1">
-                                Total drafts: <span className="ml-1 text-slate-800">{total}</span>
-                            </span>
-                        </div>
-                    </div>
+                        <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm text-slate-600">
+                            <span className="text-slate-500">Total drafts:</span>
+                            <span className="ml-1">{total}</span>
+                        </span>
+                    </header>
 
-                    {(error || message) && (
-                        <div className="px-6 pt-4">
-                            {error && (
-                                <div className="mb-3 whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
-                                    {error}
+                    {error ? (
+                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                            <div className="flex items-start gap-3">
+                                <FiAlertCircle className="mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="font-normal tracking-tight">Action failed</p>
+                                    <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
                                 </div>
-                            )}
-                            {message && (
-                                <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-4 text-sm sm:text-base text-emerald-800 shadow-sm backdrop-blur-xl">
-                                    {message}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Assign Drafts */}
-                    <section className="px-6 py-6">
-                        <div className="rounded-2xl border border-slate-200/70 bg-white/40 shadow-sm backdrop-blur-xl">
-                            <div className="border-b border-white/40 bg-white/40 px-6 py-4 backdrop-blur-xl">
-                                <h2 className="text-lg font-normal text-slate-700 tracking-tight">Assign Draft Questions</h2>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    Select a contest, then search unassigned questions (question_type = N/A). Checked items float to the top.
-                                </p>
                             </div>
+                        </div>
+                    ) : null}
 
-                            <div className="px-6 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                <div className="flex w-full items-center gap-3 md:w-auto">
-                                    <div className="w-full md:w-[380px]">
-                                        <input
-                                            type="search"
-                                            value={search}
-                                            onChange={(e) => {
-                                                setSearch(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            placeholder="Search drafts..."
-                                            className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                        />
-                                    </div>
+                    {message ? (
+                        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-800">
+                            {message}
+                        </div>
+                    ) : null}
 
-                                    <button
-                                        type="button"
-                                        onClick={toggleAllOnPage}
-                                        className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                    >
-                                        Toggle page
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={clearSelection}
-                                        className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                    >
-                                        Clear
-                                    </button>
+                    {/* Controls */}
+                    <section className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+                        <div className="px-4 sm:px-5 py-4 space-y-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="min-w-[240px] flex-1">
+                                    <label className="sr-only" htmlFor="draft-search">
+                                        Search drafts
+                                    </label>
+                                    <input
+                                        id="draft-search"
+                                        type="search"
+                                        value={search}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search drafts by title, description, category, difficulty…"
+                                        className={cx(
+                                            "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                        )}
+                                    />
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={toggleAllOnPage}
+                                    className={cx(
+                                        "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                        "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                        focusRing
+                                    )}
+                                >
+                                    Toggle page
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={clearSelection}
+                                    className={cx(
+                                        "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                        "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                        focusRing
+                                    )}
+                                >
+                                    Clear
+                                </button>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <label className="sr-only" htmlFor="contest-select">
+                                        Select contest
+                                    </label>
                                     <select
+                                        id="contest-select"
                                         value={selectedContestId}
                                         onChange={(e) => setSelectedContestId(e.target.value ? Number(e.target.value) : "")}
-                                        className="h-10 rounded-xl border border-slate-200/70 bg-white px-4 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                        className={cx(
+                                            "h-10 w-[220px] max-w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                        )}
                                     >
                                         <option value="">Select contest…</option>
                                         {contests.map((c) => (
@@ -342,130 +397,163 @@ const AdminCompetitionAssign: React.FC = () => {
                                         type="button"
                                         disabled={assigning || selectedIds.size === 0 || !selectedContestId}
                                         onClick={handleAssignSelectedToContest}
-                                        className={[
-                                            "h-10 rounded-2xl border px-5 text-sm sm:text-base font-normal shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/15",
+                                        className={cx(
+                                            "h-10 shrink-0 rounded-xl bg-white/70 px-5 text-sm sm:text-base font-normal tracking-tight",
                                             assigning || selectedIds.size === 0 || !selectedContestId
-                                                ? "cursor-not-allowed border-slate-200/70 bg-white/50 text-slate-300"
-                                                : "border-emerald-200/70 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-50",
-                                        ].join(" ")}
+                                                ? "cursor-not-allowed ring-1 ring-slate-200/60 text-slate-300"
+                                                : "ring-1 ring-emerald-200/60 text-emerald-700 hover:bg-white/90",
+                                            focusRing
+                                        )}
                                     >
                                         {assigning ? "Assigning..." : `Assign selected (${selectedIds.size})`}
                                     </button>
-
-                                    <span className="inline-flex h-10 items-center rounded-xl border border-slate-200/70 bg-slate-100/70 px-4 text-sm sm:text-base text-slate-700">
-                                        <span className="text-slate-500">Total:</span>
-                                        <span className="ml-1 font-normal text-slate-800">{total}</span>
-                                    </span>
                                 </div>
+
+                                <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm text-slate-600">
+                                    <span className="text-slate-500">Selected:</span>
+                                    <span className="ml-1">{selectedIds.size}</span>
+                                </span>
                             </div>
-
-                            {loadingDrafts ? (
-                                <div className="px-6 pb-6">
-                                    <div className="w-full rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                        Loading unassigned drafts…
-                                    </div>
-                                </div>
-                            ) : total === 0 ? (
-                                <div className="px-6 pb-8">
-                                    <div className="rounded-2xl border border-white/30 bg-white/55 px-5 py-8 text-center text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                        No unassigned questions found (question_type = N/A).
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="px-6 pb-6">
-                                    <div className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-xl">
-                                        <table className="min-w-full divide-y divide-slate-200/70 text-sm sm:text-base">
-                                            <thead className="bg-slate-50/70">
-                                            <tr>
-                                                <th className="w-12 px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                    Pick
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                    Title
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                    Category
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                    Difficulty
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                    Status
-                                                </th>
-                                            </tr>
-                                            </thead>
-
-                                            <tbody className="divide-y divide-slate-100/70 bg-white/60">
-                                            {pageItems.map((c) => {
-                                                const isSelected = selectedIds.has(c.id);
-                                                return (
-                                                    <tr key={c.id} className={isSelected ? "bg-emerald-50/40" : ""}>
-                                                        <td className="px-4 py-3 align-top">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => toggleOne(c.id)}
-                                                                className="h-4 w-4 rounded border-slate-300"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top">
-                                                            <div className="max-w-xl">
-                                                                <div className="truncate font-normal text-slate-800">
-                                                                    {c.title}
-                                                                </div>
-                                                                <div className="mt-1 line-clamp-2 text-sm text-slate-600">
-                                                                    {c.description}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top text-slate-700">
-                                                            {c.category?.name || "—"}
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top text-slate-700">
-                                                            {c.difficulty?.level || "N/A"}
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top text-slate-700">
-                                                            <span className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm">
-                                                                Draft (N/A)
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Pagination */}
-                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
-                                        <div>
-                                            Page <span className="font-normal text-slate-800">{page}</span> of{" "}
-                                            <span className="font-normal text-slate-800">{pageCount}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={page <= 1}
-                                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                Prev
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={page >= pageCount}
-                                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                Next
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </section>
-                </div>
+
+                    {/* Table */}
+                    {loadingDrafts ? (
+                        <div className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                                <div className="min-w-0 space-y-2">
+                                    <div className="h-4 w-52 bg-slate-200/80 rounded animate-pulse" />
+                                    <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
+                                </div>
+                            </div>
+                            <p className="mt-3 text-center text-sm text-slate-500">Loading unassigned drafts…</p>
+                        </div>
+                    ) : total === 0 ? (
+                        <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                            <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                <FiInfo className="text-slate-500" />
+                            </div>
+                            <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                No unassigned questions
+                            </div>
+                            <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                Nothing is currently marked as question_type = N/A.
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-x-auto">
+                                <table className="min-w-full text-sm sm:text-base">
+                                    <thead className="bg-white/40 sticky top-0">
+                                    <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                        <th className="w-14 px-4 py-3 font-normal">Pick</th>
+                                        <th className="px-4 py-3 font-normal">Title</th>
+                                        <th className="px-4 py-3 font-normal">Category</th>
+                                        <th className="px-4 py-3 font-normal">Difficulty</th>
+                                        <th className="px-4 py-3 font-normal">Status</th>
+                                    </tr>
+                                    </thead>
+
+                                    <tbody className="bg-transparent">
+                                    {pageItems.map((c) => {
+                                        const isSelected = selectedIds.has(c.id);
+                                        return (
+                                            <tr
+                                                key={c.id}
+                                                className={cx(
+                                                    "border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition",
+                                                    isSelected && "bg-emerald-50/40"
+                                                )}
+                                            >
+                                                <td className="px-4 py-3 align-top">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleOne(c.id)}
+                                                        className="h-4 w-4 rounded border-slate-300"
+                                                        aria-label={`Select ${c.title}`}
+                                                    />
+                                                </td>
+
+                                                <td className="px-4 py-3 align-top">
+                                                    <div className="max-w-[34rem]">
+                                                        <div className="truncate font-normal tracking-tight text-slate-700">
+                                                            {c.title}
+                                                        </div>
+                                                        <div className="mt-1 line-clamp-2 text-sm text-slate-600">
+                                                            {c.description}
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-4 py-3 align-top text-slate-600">
+                                                    {c.category?.name || "—"}
+                                                </td>
+
+                                                <td className="px-4 py-3 align-top text-slate-600">
+                                                    {c.difficulty?.level || "N/A"}
+                                                </td>
+
+                                                <td className="px-4 py-3 align-top text-slate-600">
+                                                        <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm">
+                                                            Draft (N/A)
+                                                        </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination */}
+                            <div className="mt-6 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="text-sm sm:text-base text-slate-600">
+                                        Page <span className="text-slate-700">{page}</span> of{" "}
+                                        <span className="text-slate-700">{pageCount}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            disabled={page <= 1}
+                                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                            className={cx(
+                                                "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                focusRing
+                                            )}
+                                        >
+                                            Prev
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            disabled={page >= pageCount}
+                                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                                            className={cx(
+                                                "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                focusRing
+                                            )}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+
+                                    <div className="text-sm sm:text-base text-slate-600">
+                                        Showing{" "}
+                                        <span className="text-slate-700">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                        – <span className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                        <span className="text-slate-700">{total}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </motion.div>
             </main>
         </div>
     );

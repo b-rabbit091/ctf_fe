@@ -1,16 +1,16 @@
 // src/components/chat/Chat.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChatMessage } from "./types";
-import { cx, uid, nowIso } from "./utils";
-import { sendChatMessage } from "./api";
-import type { Challenge } from "../../pages/PracticePage/types";
-import { fetchChatHistory } from "../../pages/PracticePage/practice";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import type {ChatMessage} from "./types";
+import {cx, uid, nowIso} from "./utils";
+import {sendChatMessage} from "./api";
+import type {Challenge} from "../../pages/PracticePage/types";
+import {fetchChatHistory} from "../../pages/PracticePage/practice";
 
-type Banner = { type: "error" | "info"; text: string } | null;
+type Banner = {type: "error" | "info"; text: string} | null;
 
 type HistoryResponse = {
     ok: boolean;
-    data: { messages: ChatMessage[]; next?: string | null };
+    data: {messages: ChatMessage[]; next?: string | null};
     error?: string;
 };
 
@@ -29,7 +29,7 @@ export function ChatWidget(props: {
     initialMessages?: ChatMessage[];
     active?: boolean;
 }) {
-    const { className, context, disabled = false, maxChars = 4000, initialMessages = [], active = false } = props;
+    const {className, context, disabled = false, maxChars = 4000, initialMessages = [], active = false} = props;
 
     const challengeId = Number(context?.challengeId ?? 0);
 
@@ -38,7 +38,7 @@ export function ChatWidget(props: {
     // ----------------------------
     const [messages, setMessages] = useState<ChatMessage[]>(() => initialMessages);
 
-    const [historyNext, setHistoryNext] = useState<string | null>(null); // older cursor URL
+    const [historyNext, setHistoryNext] = useState<string | null>(null);
     const [historyLoadingLatest, setHistoryLoadingLatest] = useState(false);
     const [historyLoadingOlder, setHistoryLoadingOlder] = useState(false);
 
@@ -57,45 +57,58 @@ export function ChatWidget(props: {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     const inFlightRef = useRef(false);
-
     const bannerTimerRef = useRef<number | null>(null);
 
     const shouldAutoScrollRef = useRef(true);
     const prevActiveRef = useRef(false);
+    const alive = useRef(true);
+
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+            abortRef.current?.abort();
+            historyAbortRef.current?.abort();
+            if (bannerTimerRef.current) window.clearTimeout(bannerTimerRef.current);
+        };
+    }, []);
 
     // ----------------------------
-    // Styling tokens (match PracticeAnswerSubmit: glassy, slate-700, no dark buttons)
+    // Styling tokens (match your “glassy slate” pages; minimal)
     // ----------------------------
     const bannerClass = (type: "error" | "info") =>
         cx(
-            "mb-3 rounded-xl border px-3 py-2 text-sm",
+            "mb-3 rounded-2xl border px-3 py-2 text-sm",
             type === "error"
                 ? "border-rose-200 bg-rose-50/80 text-rose-700"
                 : "border-emerald-200 bg-emerald-50/80 text-emerald-700"
         );
 
     const userBubble =
-        "max-w-[85%] rounded-2xl border border-blue-200/70 bg-blue-50/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
+        "max-w-[85%] rounded-2xl ring-1 ring-sky-200/70 bg-sky-50/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
     const botBubble =
-        "max-w-[85%] rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
+        "max-w-[85%] rounded-2xl ring-1 ring-slate-200/60 bg-white/70 px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap break-words";
 
     const inputShell =
-        "rounded-2xl border border-slate-200/70 bg-white/70 focus-within:bg-white focus-within:border-blue-200/70 focus-within:ring-2 focus-within:ring-blue-500/10";
+        "rounded-2xl ring-1 ring-slate-200/60 bg-white/70 focus-within:bg-white focus-within:ring-sky-200/70";
     const inputBase =
-        "w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400";
+        "w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 disabled:text-slate-400";
 
     const sendBtn =
-        "rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-2.5 text-sm font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:bg-slate-100/60 disabled:text-slate-400";
+        "rounded-2xl ring-1 ring-emerald-200/60 bg-white/70 px-4 py-2.5 text-sm font-normal text-emerald-700 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-slate-300";
 
     const subtleBtn =
-        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:opacity-50";
+        "rounded-xl ring-1 ring-slate-200/60 bg-white/70 px-3 py-1.5 text-xs font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-sky-300/30 disabled:opacity-50";
 
     // ----------------------------
     // Helpers
     // ----------------------------
     const clearBannerSoon = useCallback(() => {
         if (bannerTimerRef.current) window.clearTimeout(bannerTimerRef.current);
-        bannerTimerRef.current = window.setTimeout(() => setBanner(null), 3000);
+        bannerTimerRef.current = window.setTimeout(() => {
+            if (!alive.current) return;
+            setBanner(null);
+        }, 3000);
     }, []);
 
     const stopAll = useCallback(() => {
@@ -119,86 +132,25 @@ export function ChatWidget(props: {
         arr.sort((a, b) => {
             const ta = Date.parse(a.createdAt || "") || 0;
             const tb = Date.parse(b.createdAt || "") || 0;
-            return ta - tb; // oldest -> newest
+            return ta - tb;
         });
         return arr;
     }, []);
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
-        bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+        bottomRef.current?.scrollIntoView({behavior, block: "end"});
     }, []);
 
     const isNearBottom = useCallback(() => {
         const el = scrollerRef.current;
         if (!el) return true;
-        const threshold = 140; // px
+        const threshold = 140;
         return el.scrollHeight - (el.scrollTop + el.clientHeight) <= threshold;
     }, []);
 
-    const onScroll = useCallback(() => {
-        const el = scrollerRef.current;
-        if (!el) return;
-
-        shouldAutoScrollRef.current = isNearBottom();
-
-        if (el.scrollTop <= 20) {
-            void loadOlder();
-        }
-    }, [isNearBottom]);
-
     // ----------------------------
-    // History loading
+    // History loading (optimized + safe)
     // ----------------------------
-    const loadLatest = useCallback(async () => {
-        if (!challengeId) {
-            setMessages(initialMessages);
-            setHistoryNext(null);
-            return;
-        }
-
-        setHistoryLoadingLatest(true);
-        historyAbortRef.current?.abort();
-        const ac = new AbortController();
-        historyAbortRef.current = ac;
-
-        try {
-            const res = (await fetchChatHistory({
-                challengeId,
-                pageSize: 20,
-                signal: ac.signal,
-            })) as HistoryResponse;
-
-            if (ac.signal.aborted) return;
-
-            setHistoryLoadingLatest(false);
-            historyAbortRef.current = null;
-
-            if (!res?.ok) {
-                setHistoryNext(null);
-                setBanner({ type: "error", text: res?.error || "Failed to load chat history." });
-                clearBannerSoon();
-                return;
-            }
-
-            const newestFirst = res.data.messages || [];
-            const oldestFirst = [...newestFirst].reverse();
-
-            const merged = dedupeByIdOldestFirst([...initialMessages, ...oldestFirst]);
-            setMessages(merged);
-
-            setHistoryNext(res.data.next ?? null);
-
-            requestAnimationFrame(() => scrollToBottom("auto"));
-        } catch (e: any) {
-            if (isAbort(e)) return;
-
-            setHistoryLoadingLatest(false);
-            historyAbortRef.current = null;
-            setBanner({ type: "error", text: e?.message || "Failed to load chat history." });
-            clearBannerSoon();
-        }
-    }, [challengeId, initialMessages, dedupeByIdOldestFirst, scrollToBottom, clearBannerSoon]);
-
     const loadOlder = useCallback(async () => {
         if (!challengeId) return;
         if (!historyNext) return;
@@ -244,6 +196,67 @@ export function ChatWidget(props: {
             historyAbortRef.current = null;
         }
     }, [challengeId, historyNext, historyLoadingOlder, dedupeByIdOldestFirst]);
+
+    const onScroll = useCallback(() => {
+        const el = scrollerRef.current;
+        if (!el) return;
+
+        shouldAutoScrollRef.current = isNearBottom();
+
+        if (el.scrollTop <= 20) {
+            void loadOlder();
+        }
+    }, [isNearBottom, loadOlder]);
+
+    const loadLatest = useCallback(async () => {
+        if (!challengeId) {
+            setMessages(initialMessages);
+            setHistoryNext(null);
+            return;
+        }
+
+        setHistoryLoadingLatest(true);
+        historyAbortRef.current?.abort();
+        const ac = new AbortController();
+        historyAbortRef.current = ac;
+
+        try {
+            const res = (await fetchChatHistory({
+                challengeId,
+                pageSize: 20,
+                signal: ac.signal,
+            })) as HistoryResponse;
+
+            if (ac.signal.aborted) return;
+
+            setHistoryLoadingLatest(false);
+            historyAbortRef.current = null;
+
+            if (!res?.ok) {
+                setHistoryNext(null);
+                setBanner({type: "error", text: res?.error || "Failed to load chat history."});
+                clearBannerSoon();
+                return;
+            }
+
+            const newestFirst = res.data.messages || [];
+            const oldestFirst = [...newestFirst].reverse();
+
+            const merged = dedupeByIdOldestFirst([...initialMessages, ...oldestFirst]);
+            setMessages(merged);
+
+            setHistoryNext(res.data.next ?? null);
+
+            requestAnimationFrame(() => scrollToBottom("auto"));
+        } catch (e: any) {
+            if (isAbort(e)) return;
+
+            setHistoryLoadingLatest(false);
+            historyAbortRef.current = null;
+            setBanner({type: "error", text: e?.message || "Failed to load chat history."});
+            clearBannerSoon();
+        }
+    }, [challengeId, initialMessages, dedupeByIdOldestFirst, scrollToBottom, clearBannerSoon]);
 
     useEffect(() => {
         void loadLatest();
@@ -296,14 +309,9 @@ export function ChatWidget(props: {
         const userText = input.trim();
         setInput("");
 
-        const userMsg: ChatMessage = { id: uid(), role: "user", content: userText, createdAt: nowIso() };
+        const userMsg: ChatMessage = {id: uid(), role: "user", content: userText, createdAt: nowIso()};
         const placeholderId = uid();
-        const placeholder: ChatMessage = {
-            id: placeholderId,
-            role: "assistant",
-            content: "Thinking…",
-            createdAt: nowIso(),
-        };
+        const placeholder: ChatMessage = {id: placeholderId, role: "assistant", content: "Thinking…", createdAt: nowIso()};
 
         setMessages((prev) => [...prev, userMsg, placeholder]);
 
@@ -315,13 +323,13 @@ export function ChatWidget(props: {
         abortRef.current = ac;
 
         try {
-            const res = await sendChatMessage({ text: userText, context }, ac.signal);
+            const res = await sendChatMessage({text: userText, context}, ac.signal);
 
             if (ac.signal.aborted) return;
 
             if (!res.ok) {
                 setMessages((prev) => prev.filter((m) => m.id !== placeholderId));
-                setBanner({ type: "error", text: res.error || "Send failed." });
+                setBanner({type: "error", text: res.error || "Send failed."});
                 clearBannerSoon();
                 return;
             }
@@ -335,14 +343,12 @@ export function ChatWidget(props: {
             const aborted = isAbort(e) || abortRef.current?.signal?.aborted;
 
             setMessages((prev) => prev.filter((m) => m.id !== placeholderId));
-            setBanner({
-                type: "error",
-                text: aborted ? "Request aborted." : e?.message || "Send failed.",
-            });
+            setBanner({type: "error", text: aborted ? "Request aborted." : e?.message || "Send failed."});
             clearBannerSoon();
         } finally {
             abortRef.current = null;
             inFlightRef.current = false;
+            if (!alive.current) return;
             setSending(false);
         }
     }, [canSend, input, context, clearBannerSoon, scrollToBottom]);
@@ -358,14 +364,19 @@ export function ChatWidget(props: {
     // Render (NO outer card kept; style updates only)
     // ----------------------------
     return (
-        <div className={cx("flex min-h-0 flex-1 flex-col bg-white", className)}>
+        <div className={cx("flex min-h-0 flex-1 flex-col bg-white/40 backdrop-blur-xl", className)}>
             {/* Messages */}
-            <div ref={scrollerRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-3">
-                {historyLoadingOlder && (
+            <div
+                ref={scrollerRef}
+                onScroll={onScroll}
+                className="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+                aria-label="Chat messages"
+            >
+                {historyLoadingOlder ? (
                     <div className="mb-2 text-center text-xs text-slate-500">Loading older…</div>
-                )}
+                ) : null}
 
-                {banner && <div className={bannerClass(banner.type)}>{banner.text}</div>}
+                {banner ? <div className={bannerClass(banner.type)}>{banner.text}</div> : null}
 
                 {historyLoadingLatest && messages.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
@@ -392,8 +403,8 @@ export function ChatWidget(props: {
             </div>
 
             {/* Composer */}
-            <div className="shrink-0 bg-white px-3 py-3">
-                <div className="flex items-end gap-3">
+            <div className="shrink-0 px-3 py-3 border-t border-white/40 bg-white/40 backdrop-blur-xl">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1">
                         <div className={inputShell}>
                             <textarea
@@ -408,10 +419,12 @@ export function ChatWidget(props: {
                             />
                         </div>
 
-                        <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>{Math.min(input.trim().length, maxChars)}/{maxChars}</span>
+                        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                            <span>
+                                {Math.min(input.trim().length, maxChars)}/{maxChars}
+                            </span>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 {historyNext && !historyLoadingLatest ? (
                                     <button
                                         type="button"
@@ -493,33 +506,22 @@ function PracticeAssistPanel(props: {
 
     const headerLabel = tab === "ai" ? aiTitle : answerTitle;
 
-    // styling tokens (match other pages)
+    // styling tokens (match your admin/contest pages)
     const shell =
-        "flex min-h-0 flex-1 flex-col rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50 overflow-hidden";
-    const header =
-        "shrink-0 border-b border-white/40 bg-white/40 px-3 py-2 backdrop-blur-xl";
-    const headerTitle = "text-sm font-normal text-slate-700";
+        "flex min-h-0 flex-1 flex-col rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden";
+    const header = "shrink-0 border-b border-slate-200/70 bg-white/40 px-4 sm:px-5 py-3";
+    const headerTitle = "text-sm font-normal text-slate-800";
     const subtitle = "text-xs text-slate-500";
-    const segmentedWrap =
-        "hidden sm:flex items-center rounded-2xl border border-slate-200/70 bg-white/70 p-1";
+    const segmentedWrap = "hidden sm:flex items-center rounded-2xl ring-1 ring-slate-200/60 bg-white/70 p-1";
     const segBtn = (activeBtn: boolean) =>
         cx(
-            "rounded-xl px-3 py-1.5 text-xs font-normal transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
-            activeBtn ? "bg-blue-50 text-blue-700 border border-blue-200/70" : "text-slate-600 hover:text-slate-700"
-        );
-    const menuBtn =
-        "rounded-xl border border-slate-200/70 bg-white/70 px-3 py-1.5 text-xs font-normal text-slate-600 shadow-sm hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15";
-    const menuPanel =
-        "absolute right-0 top-10 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-xl";
-    const menuItem = (activeItem: boolean) =>
-        cx(
-            "w-full px-3 py-2 text-left text-sm hover:bg-slate-50/70",
-            activeItem ? "bg-slate-50/70 font-normal text-slate-700" : "text-slate-600"
+            "rounded-xl px-3 py-1.5 text-xs font-normal transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
+            activeBtn ? "bg-sky-50 text-sky-700 ring-1 ring-sky-200/70" : "text-slate-600 hover:text-slate-700"
         );
     const mobileBtn = (activeBtn: boolean) =>
         cx(
-            "rounded-xl border px-3 py-2 text-xs font-normal",
-            activeBtn ? "border-blue-200/70 bg-blue-50 text-blue-700" : "border-slate-200/70 bg-white/70 text-slate-600"
+            "rounded-xl ring-1 px-3 py-2 text-xs font-normal transition",
+            activeBtn ? "ring-sky-200/70 bg-sky-50 text-sky-700" : "ring-slate-200/60 bg-white/70 text-slate-600 hover:bg-white/90"
         );
 
     return (
@@ -532,19 +534,16 @@ function PracticeAssistPanel(props: {
                         {tab === "ai" && aiSubtitle ? <div className={subtitle}>{aiSubtitle}</div> : null}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {showSegmentedTabs && (
-                            <div className={segmentedWrap}>
-                                <button type="button" onClick={() => setTab("answer")} className={segBtn(tab === "answer")}>
-                                    Answer
-                                </button>
-                                <button type="button" onClick={() => setTab("ai")} className={segBtn(tab === "ai")}>
-                                    AI Assistant
-                                </button>
-                            </div>
-                        )}
-
-                    </div>
+                    {showSegmentedTabs ? (
+                        <div className={segmentedWrap}>
+                            <button type="button" onClick={() => setTab("answer")} className={segBtn(tab === "answer")}>
+                                Answer
+                            </button>
+                            <button type="button" onClick={() => setTab("ai")} className={segBtn(tab === "ai")}>
+                                AI Assistant
+                            </button>
+                        </div>
+                    ) : null}
                 </div>
 
                 {/* Mobile quick buttons */}
@@ -559,12 +558,12 @@ function PracticeAssistPanel(props: {
             </div>
 
             {/* Body */}
-            <div className="min-h-0 flex-1 overflow-y-auto bg-white/40 backdrop-blur-xl p-0">
+            <div className="min-h-0 flex-1 overflow-y-auto">
                 {tab === "answer" ? (
-                    <div className="p-4">
+                    <div className="p-4 sm:p-5 bg-white/40 backdrop-blur-xl">
                         <div className="mx-auto max-w-4xl">
                             {answerSlot ?? (
-                                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/60 p-4 text-sm text-slate-600">
+                                <div className="rounded-2xl ring-1 ring-slate-200/60 bg-white/70 p-4 text-sm text-slate-600">
                                     No answer slot provided.
                                 </div>
                             )}

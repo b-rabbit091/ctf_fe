@@ -1,11 +1,16 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 import {bulkUpdateChallenges, getChallenges} from "../../api/practice";
 import {Challenge} from "../CompetitionPage/types";
-import {FiCheckSquare, FiSquare} from "react-icons/fi";
+import {FiCheckSquare, FiSquare, FiAlertCircle, FiInfo} from "react-icons/fi";
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
 
 const AdminDraftAssignPracticeList: React.FC = () => {
     const {user} = useAuth();
@@ -22,44 +27,66 @@ const AdminDraftAssignPracticeList: React.FC = () => {
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
+    const alive = useRef(true);
+    useEffect(() => {
+        alive.current = true;
+        return () => {
+            alive.current = false;
+        };
+    }, []);
+
+    const busyRef = useRef(false);
+    const msgTimer = useRef<number | null>(null);
+
+    const resetMessages = useCallback(() => {
+        setMessage(null);
+        setError(null);
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        msgTimer.current = null;
+    }, []);
+
+    const flashMessage = useCallback((text: string | null) => {
+        setMessage(text);
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        if (!text) return;
+        msgTimer.current = window.setTimeout(() => {
+            if (!alive.current) return;
+            setMessage(null);
+        }, 3500);
+    }, []);
+
     // ---------------- SECURITY (TOP) ----------------
     useEffect(() => {
         if (!user) return;
-        if (user.role !== "admin") {
-            navigate("/dashboard");
-        }
+        if (user.role !== "admin") navigate("/dashboard");
     }, [user, navigate]);
 
-    // Fetch WITHOUT filters; then filter question_type === "N/A"
-    useEffect(() => {
+    const fetchDrafts = useCallback(async () => {
         if (!user) return;
+        if (user.role !== "admin") return;
 
-        let mounted = true;
+        setLoading(true);
+        setError(null);
 
-        const fetchDrafts = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const chals = await getChallenges(); // no filters
-                if (!mounted) return;
+        try {
+            const chals = await getChallenges();
+            if (!alive.current) return;
 
-                const draftsOnly = (chals || []).filter((c: any) => (c?.question_type ?? "") === "N/A");
-                setAllDrafts(draftsOnly);
-            } catch (e) {
-                console.error(e);
-                if (!mounted) return;
-                setError("Failed to load drafted questions (question_type = N/A). Please try again.");
-            } finally {
-                if (!mounted) return;
-                setLoading(false);
-            }
-        };
-
-        fetchDrafts();
-        return () => {
-            mounted = false;
-        };
+            const draftsOnly = (chals || []).filter((c: any) => (c?.question_type ?? "") === "N/A");
+            setAllDrafts(draftsOnly);
+        } catch (e) {
+            console.error(e);
+            if (!alive.current) return;
+            setError("Failed to load drafted questions (question_type = N/A). Please try again.");
+        } finally {
+            if (!alive.current) return;
+            setLoading(false);
+        }
     }, [user]);
+
+    useEffect(() => {
+        fetchDrafts();
+    }, [fetchDrafts]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -73,14 +100,14 @@ const AdminDraftAssignPracticeList: React.FC = () => {
         });
     }, [allDrafts, search]);
 
-    // ✅ Selected items float to top AFTER searching is applied
+    // ✅ selected float to top after filtering
     const sortedFiltered = useMemo(() => {
         const arr = [...filtered];
         arr.sort((a, b) => {
             const aSel = selectedIds.has(a.id) ? 1 : 0;
             const bSel = selectedIds.has(b.id) ? 1 : 0;
-            if (aSel !== bSel) return bSel - aSel; // selected first
-            return (b.id ?? 0) - (a.id ?? 0); // tie-break: newest first by id
+            if (aSel !== bSel) return bSel - aSel;
+            return (b.id ?? 0) - (a.id ?? 0);
         });
         return arr;
     }, [filtered, selectedIds]);
@@ -88,10 +115,16 @@ const AdminDraftAssignPracticeList: React.FC = () => {
     const total = sortedFiltered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
+    useEffect(() => {
+        if (page > pageCount) setPage(1);
+    }, [pageCount, page]);
+
     const pageItems = useMemo(() => {
         const start = (page - 1) * pageSize;
         return sortedFiltered.slice(start, start + pageSize);
     }, [sortedFiltered, page]);
+
+    const selectedCount = selectedIds.size;
 
     const toggleOne = useCallback((id: number) => {
         setSelectedIds((prev) => {
@@ -105,31 +138,39 @@ const AdminDraftAssignPracticeList: React.FC = () => {
     const toggleAllOnPage = useCallback(() => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            const allSelected = pageItems.every((c) => next.has(c.id));
-            if (allSelected) {
-                pageItems.forEach((c) => next.delete(c.id));
-            } else {
-                pageItems.forEach((c) => next.add(c.id));
-            }
+            const allSelected = pageItems.length > 0 && pageItems.every((c) => next.has(c.id));
+            if (allSelected) pageItems.forEach((c) => next.delete(c.id));
+            else pageItems.forEach((c) => next.add(c.id));
             return next;
         });
     }, [pageItems]);
 
-    const clearSelection = () => setSelectedIds(new Set());
+    const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-    const selectedCount = selectedIds.size;
+    const resetSearch = useCallback(() => {
+        setSearch("");
+        setPage(1);
+    }, []);
 
     const handleAssignToPractice = useCallback(async () => {
+        resetMessages();
+
         if (!user || user.role !== "admin") {
-            setMessage("Unauthorized: admin only.");
+            setError("Unauthorized: admin only.");
             return;
         }
-        if (selectedIds.size === 0) return;
+        if (selectedIds.size === 0) {
+            setError("Select at least one draft to assign.");
+            return;
+        }
+        if (busyRef.current) return;
 
-        if (!window.confirm(`Assign ${selectedIds.size} draft question(s) as PRACTICE?`)) return;
+        const ok = window.confirm(`Assign ${selectedIds.size} draft question(s) as PRACTICE?`);
+        if (!ok) return;
 
+        busyRef.current = true;
         setError(null);
-        setMessage("Assigning selected drafts as practice...");
+        flashMessage("Assigning selected drafts as practice...");
 
         const ids = Array.from(selectedIds);
 
@@ -140,28 +181,28 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                 contest_id: null,
             });
 
+            if (!alive.current) return;
+
             setAllDrafts((prev) => prev.filter((c) => !selectedIds.has(c.id)));
             clearSelection();
-
-            setMessage("Assigned successfully.");
+            flashMessage("Assigned successfully.");
         } catch (e: any) {
             console.error(e);
-            setError(e?.message || "Failed to assign drafts as practice.");
+            if (!alive.current) return;
+            setError(e?.response?.data?.detail || e?.message || "Failed to assign drafts as practice.");
             setMessage(null);
         } finally {
-            setTimeout(() => setMessage(null), 3500);
+            busyRef.current = false;
         }
-    }, [selectedIds, user]);
+    }, [resetMessages, user, selectedIds, flashMessage, clearSelection]);
 
-    // --- full-screen responsive shell for all states ---
+    // --- full-screen responsive shell (match AdminPracticeList) ---
     if (!user) {
         return (
-            <div
-                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-                <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <div
-                        className="w-full rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
                     </div>
                 </main>
@@ -171,38 +212,38 @@ const AdminDraftAssignPracticeList: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div
-                className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-                <Navbar/>
-                <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg font-normal text-rose-700 shadow-sm backdrop-blur-xl">
-                        Unauthorized – admin access required.
-                    </p>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Unauthorized</p>
+                                <p className="mt-1 text-sm text-rose-700/90">Admin access required.</p>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div
-            className='min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-["Inter"] flex flex-col'>
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar />
 
-            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                 <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
-                    <div
-                        className="w-full rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                    <div className="w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden">
                         {/* Header */}
-                        <div
-                            className="flex flex-wrap items-start justify-between gap-4 border-b border-white/40 bg-white/40 px-6 py-5 backdrop-blur-xl">
+                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/70 bg-white/40 px-4 sm:px-5 py-4">
                             <div className="min-w-0">
-                                <h1 className="truncate text-2xl sm:text-3xl font-normal text-slate-700 tracking-tight">
+                                <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
                                     Assign Drafts → Practice
                                 </h1>
-                                <p className="mt-1 text-sm sm:text-base text-slate-600">
-                                    This page lists only drafts where{" "}
-                                    <span className="font-normal text-slate-700">question_type = N/A</span>. Select
-                                    drafts and assign them as practice questions.
+                                <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                    Lists drafts where <span className="text-slate-700">question_type = N/A</span>. Select drafts and assign them as practice.
                                 </p>
                             </div>
 
@@ -211,29 +252,27 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                                     type="button"
                                     disabled={selectedCount === 0 || loading}
                                     onClick={handleAssignToPractice}
-                                    className={[
-                                        "inline-flex items-center gap-2 rounded-2xl border px-5 py-2.5 text-sm sm:text-base font-normal shadow-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/15",
+                                    className={cx(
+                                        "inline-flex items-center gap-2 rounded-xl bg-white/70 px-5 py-2 text-sm sm:text-base font-normal tracking-tight",
                                         selectedCount === 0 || loading
-                                            ? "cursor-not-allowed border-slate-200/70 bg-white/50 text-slate-300"
-                                            : "border-emerald-200/70 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-50",
-                                    ].join(" ")}
+                                            ? "cursor-not-allowed ring-1 ring-slate-200/60 text-slate-300"
+                                            : "ring-1 ring-emerald-200/60 text-emerald-700 hover:bg-white/90",
+                                        focusRing
+                                    )}
                                 >
-                                    Assign these as practice question
-                                    {selectedCount > 0 && (
-                                        <span
-                                            className="ml-1 inline-flex items-center rounded-full border border-emerald-200/60 bg-white/40 px-2 py-0.5 text-xs text-emerald-700">
+                                    Assign as practice
+                                    {selectedCount > 0 ? (
+                                        <span className="ml-1 inline-flex items-center rounded-full ring-1 ring-emerald-200/60 bg-emerald-50/60 px-2 py-0.5 text-xs text-emerald-700">
                                             {selectedCount}
                                         </span>
-                                    )}
+                                    ) : null}
                                 </button>
 
                                 <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-600">
-                                    <span
-                                        className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1">
+                                    <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1">
                                         Total: <span className="ml-1 text-slate-800">{total}</span>
                                     </span>
-                                    <span
-                                        className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1">
+                                    <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1">
                                         Selected: <span className="ml-1 text-slate-800">{selectedCount}</span>
                                     </span>
                                 </div>
@@ -241,14 +280,12 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                         </div>
 
                         {/* Body */}
-                        <div className="px-6 py-6">
-                            {/* Search + selection controls */}
-                            <section
-                                className="mb-4 rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-xl">
-                                <div
-                                    className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                        <div className="px-4 sm:px-5 py-5">
+                            {/* Controls */}
+                            <section className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+                                <div className="px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div className="flex w-full items-center gap-3 md:w-auto">
-                                        <div className="relative w-full md:w-[420px]">
+                                        <div className="w-full md:w-[420px]">
                                             <input
                                                 type="search"
                                                 value={search}
@@ -256,15 +293,22 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                                                     setSearch(e.target.value);
                                                     setPage(1);
                                                 }}
-                                                placeholder="Search drafts by title, description, category..."
-                                                className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                placeholder="Search drafts by title, description, category…"
+                                                className={cx(
+                                                    "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                    "placeholder:text-slate-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                                )}
                                             />
                                         </div>
 
                                         <button
                                             type="button"
                                             onClick={toggleAllOnPage}
-                                            className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            className={cx(
+                                                "h-10 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                                "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                                focusRing
+                                            )}
                                         >
                                             Toggle page
                                         </button>
@@ -272,20 +316,25 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={clearSelection}
-                                            className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            className={cx(
+                                                "h-10 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                                "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                                focusRing
+                                            )}
                                         >
                                             Clear
                                         </button>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                                    <div className="flex items-center gap-2 md:justify-end">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setSearch("");
-                                                setPage(1);
-                                            }}
-                                            className="h-10 rounded-xl border border-slate-200/70 bg-white/70 px-4 text-sm sm:text-base font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                            onClick={resetSearch}
+                                            className={cx(
+                                                "h-10 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                                "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                                focusRing
+                                            )}
                                         >
                                             Reset search
                                         </button>
@@ -293,100 +342,115 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                                 </div>
                             </section>
 
-                            {loading && (
-                                <div
-                                    className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    Loading drafts…
+                            {/* Alerts */}
+                            {loading ? (
+                                <div className="mb-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                                        <div className="min-w-0 space-y-2">
+                                            <div className="h-4 w-52 bg-slate-200/80 rounded animate-pulse" />
+                                            <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
+                                        </div>
+                                    </div>
+                                    <p className="mt-3 text-center text-sm text-slate-500">Loading drafts…</p>
                                 </div>
-                            )}
-                            {error && (
-                                <div
-                                    className="mb-4 whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base text-rose-700 shadow-sm backdrop-blur-xl">
-                                    {error}
+                            ) : null}
+
+                            {error ? (
+                                <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                                    <div className="flex items-start gap-3">
+                                        <FiAlertCircle className="mt-0.5 shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="font-normal tracking-tight">Couldn’t load drafts</p>
+                                            <p className="mt-1 text-sm whitespace-pre-line break-words text-rose-700/90">{error}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                            {message && (
-                                <div
-                                    className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-4 text-sm sm:text-base text-emerald-800 shadow-sm backdrop-blur-xl">
+                            ) : null}
+
+                            {message ? (
+                                <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-800">
                                     {message}
                                 </div>
-                            )}
+                            ) : null}
 
-                            {!loading && !error && (
+                            {/* Table / empty */}
+                            {!loading && !error ? (
                                 <>
                                     {total === 0 ? (
-                                        <div
-                                            className="rounded-2xl border border-white/30 bg-white/55 px-5 py-8 text-center text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                            No drafts found with question_type = N/A.
+                                        <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                                            <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                                <FiInfo className="text-slate-500" />
+                                            </div>
+                                            <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                                No drafts found
+                                            </div>
+                                            <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                                No items currently have <span className="text-slate-700">question_type = N/A</span>.
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div
-                                            className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-xl">
-                                            <table
-                                                className="min-w-full divide-y divide-slate-200/70 text-sm sm:text-base">
-                                                <thead className="bg-slate-50/70">
-                                                <tr>
-                                                    <th className="w-12 px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Select
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Title
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Category
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Difficulty
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-normal uppercase tracking-[0.25em] text-slate-500">
-                                                        Status
-                                                    </th>
+                                        <div className="overflow-x-auto rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+                                            <table className="min-w-full text-sm sm:text-base">
+                                                <thead className="bg-white/40 sticky top-0">
+                                                <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                                    <th className="w-14 px-4 py-3 font-normal">Select</th>
+                                                    <th className="px-4 py-3 font-normal">Title</th>
+                                                    <th className="px-4 py-3 font-normal">Category</th>
+                                                    <th className="px-4 py-3 font-normal">Difficulty</th>
+                                                    <th className="px-4 py-3 font-normal">Status</th>
                                                 </tr>
                                                 </thead>
 
-                                                <tbody className="divide-y divide-slate-100/70 bg-white/60">
+                                                <tbody className="bg-transparent">
                                                 {pageItems.map((c: any) => {
                                                     const isSelected = selectedIds.has(c.id);
                                                     return (
-                                                        <tr key={c.id} className={isSelected ? "bg-emerald-50/40" : ""}>
+                                                        <tr
+                                                            key={c.id}
+                                                            className={cx(
+                                                                "border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition",
+                                                                isSelected && "bg-emerald-50/40"
+                                                            )}
+                                                        >
                                                             <td className="px-4 py-3 align-top">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => toggleOne(c.id)}
-                                                                    className="inline-flex items-center justify-center rounded-xl border border-slate-200/70 bg-white/70 p-2 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                                    className={cx(
+                                                                        "inline-flex items-center justify-center rounded-xl bg-white/70 p-2",
+                                                                        "ring-1 ring-slate-200/60 hover:bg-white/90",
+                                                                        focusRing
+                                                                    )}
                                                                     aria-label={isSelected ? "Unselect" : "Select"}
                                                                 >
-                                                                    {isSelected ? <FiCheckSquare size={18}/> :
-                                                                        <FiSquare size={18}/>}
+                                                                    {isSelected ? <FiCheckSquare size={18} /> : <FiSquare size={18} />}
                                                                 </button>
                                                             </td>
 
                                                             <td className="px-4 py-3 align-top">
-                                                                <div className="max-w-xl">
-                                                                    <div
-                                                                        className="truncate font-normal text-slate-800 text-sm sm:text-base">
+                                                                <div className="max-w-[34rem]">
+                                                                    <div className="truncate font-normal tracking-tight text-slate-700">
                                                                         {c.title}
                                                                     </div>
-                                                                    <div
-                                                                        className="mt-1 line-clamp-2 text-sm text-slate-600">
+                                                                    <div className="mt-1 line-clamp-2 text-sm text-slate-600">
                                                                         {c.description}
                                                                     </div>
                                                                 </div>
                                                             </td>
 
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                            <td className="px-4 py-3 align-top text-slate-600">
                                                                 {c.category?.name || "—"}
                                                             </td>
 
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
+                                                            <td className="px-4 py-3 align-top text-slate-600">
                                                                 {c.difficulty?.level || "N/A"}
                                                             </td>
 
-                                                            <td className="px-4 py-3 align-top text-sm sm:text-base text-slate-700">
-                                                                <span
-                                                                    className="inline-flex items-center rounded-full border border-slate-200/70 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm">
-                                                                    Draft (N/A)
-                                                                </span>
+                                                            <td className="px-4 py-3 align-top text-slate-600">
+                                                                    <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm">
+                                                                        Draft (N/A)
+                                                                    </span>
                                                             </td>
                                                         </tr>
                                                     );
@@ -396,37 +460,54 @@ const AdminDraftAssignPracticeList: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {total > 0 && (
-                                        <div
-                                            className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base text-slate-600">
-                                            <div>
-                                                Page <span className="font-normal text-slate-800">{page}</span> of{" "}
-                                                <span className="font-normal text-slate-800">{pageCount}</span>
-                                            </div>
+                                    {/* Pagination */}
+                                    {total > 0 ? (
+                                        <div className="mt-6 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="text-sm sm:text-base text-slate-600">
+                                                    Page <span className="text-slate-700">{page}</span> of{" "}
+                                                    <span className="text-slate-700">{pageCount}</span>
+                                                </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    disabled={page <= 1}
-                                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    Prev
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={page <= 1}
+                                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                                        className={cx(
+                                                            "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                            "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                            focusRing
+                                                        )}
+                                                    >
+                                                        Prev
+                                                    </button>
 
-                                                <button
-                                                    type="button"
-                                                    disabled={page >= pageCount}
-                                                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-5 py-2 text-sm font-normal text-slate-600 hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    Next
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={page >= pageCount}
+                                                        onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                                                        className={cx(
+                                                            "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                            "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                            focusRing
+                                                        )}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                </div>
+
+                                                <div className="text-sm sm:text-base text-slate-600">
+                                                    Showing{" "}
+                                                    <span className="text-slate-700">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span> –{" "}
+                                                    <span className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                    <span className="text-slate-700">{total}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
+                                    ) : null}
                                 </>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </motion.div>

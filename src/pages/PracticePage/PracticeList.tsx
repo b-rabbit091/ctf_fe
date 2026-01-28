@@ -1,11 +1,16 @@
 // src/pages/practice/PracticeList.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import { getChallenges, getCategories, getDifficulties } from "./practice";
-import { useNavigate } from "react-router-dom";
-import { FiEye, FiTag } from "react-icons/fi";
-import type { Challenge } from "./types";
+import {useAuth} from "../../contexts/AuthContext";
+import {getCategories, getChallenges, getDifficulties} from "./practice";
+import {FiEye, FiTag, FiAlertCircle, FiRefreshCw, FiInfo} from "react-icons/fi";
+import type {Challenge} from "./types";
+
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
 
 /** Truncate text safely */
 const truncateText = (text: string, maxLength: number) =>
@@ -29,7 +34,7 @@ type SubmissionStatus = "solved" | "partially_solved" | "attempted" | "not_attem
 // ✅ filters you asked
 type ProgressFilter = "" | "solved" | "partially_solved" | "attempted" | "unsolved";
 
-function normalizeStatus(raw: any): SubmissionStatus {
+function normalizeStatus(raw: unknown): SubmissionStatus {
     const v = String(raw ?? "").toLowerCase().trim();
     if (v === "solved") return "solved";
     if (v === "partially_solved") return "partially_solved";
@@ -37,8 +42,112 @@ function normalizeStatus(raw: any): SubmissionStatus {
     return "not_attempted";
 }
 
+const Card = memo(function Card({
+                                    title,
+                                    right,
+                                    children,
+                                }: {
+    title?: string;
+    right?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    return (
+        <section className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm">
+            {title ? (
+                <>
+                    <div className="px-4 sm:px-5 py-4 flex items-start justify-between gap-3">
+                        <h2 className="min-w-0 truncate text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                            {title}
+                        </h2>
+                        {right}
+                    </div>
+                    <div className="h-px bg-slate-200/70"/>
+                </>
+            ) : null}
+            <div className={cx("px-4 sm:px-5", title ? "py-4" : "py-4")}>{children}</div>
+        </section>
+    );
+});
+
+const Pill = memo(function Pill({className, children}: { className: string; children: React.ReactNode }) {
+    return (
+        <span
+            className={cx("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs sm:text-sm font-normal tracking-tight ring-1", className)}>
+      {children}
+    </span>
+    );
+});
+
+// Tag chip: no bold, no black backgrounds; pleasant when active
+const tagClass = (active: boolean) =>
+    cx(
+        "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+        focusRing,
+        active
+            ? "border-sky-200/70 bg-sky-50 text-sky-700"
+            : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90"
+    );
+
+// ✅ LeetCode-ish progress chips (bright)
+const progressChipClass = (key: ProgressFilter, active: boolean) => {
+    const base = cx(
+        "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-white/70"
+    );
+
+    const ring = "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300";
+
+    if (key === "solved") {
+        return cx(
+            base,
+            ring,
+            active
+                ? "border-emerald-300 bg-emerald-100 text-emerald-800"
+                : "border-emerald-200/70 bg-white/70 text-emerald-700 hover:bg-emerald-50"
+        );
+    }
+    if (key === "partially_solved") {
+        return cx(
+            base,
+            ring,
+            active
+                ? "border-amber-300 bg-amber-100 text-amber-900"
+                : "border-amber-200/70 bg-white/70 text-amber-800 hover:bg-amber-50"
+        );
+    }
+    if (key === "attempted") {
+        return cx(
+            base,
+            ring,
+            active
+                ? "border-sky-300 bg-sky-100 text-sky-900"
+                : "border-sky-200/70 bg-white/70 text-sky-800 hover:bg-sky-50"
+        );
+    }
+    // unsolved
+    return cx(
+        base,
+        ring,
+        active
+            ? "border-violet-300 bg-violet-100 text-violet-900"
+            : "border-violet-200/70 bg-white/70 text-violet-800 hover:bg-violet-50"
+    );
+};
+
+// ✅ show label above title only if user has a status other than not_attempted
+const ProgressLabel = memo(function ProgressLabel({challenge}: { challenge: Challenge }) {
+    const st = normalizeStatus((challenge as any).user_submission_status);
+    if (st === "not_attempted") return null;
+
+    const label = st === "solved" ? "Solved" : st === "partially_solved" ? "Partially Solved" : "Attempted";
+    const cls = st === "solved" ? "text-emerald-700" : st === "partially_solved" ? "text-amber-800" : "text-sky-700";
+
+    return <div className={cx("text-[11px] sm:text-xs font-normal leading-none", cls)}>{label}</div>;
+});
+
 const PracticeList: React.FC = () => {
-    const { user } = useAuth(); // kept (even if unused today)
+    const {user} = useAuth(); // kept (even if unused today)
+    void user;
     const navigate = useNavigate();
 
     const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
@@ -55,45 +164,58 @@ const PracticeList: React.FC = () => {
     const [categoryFilter, setCategoryFilter] = useState("");
     const [difficultyTag, setDifficultyTag] = useState<"" | (typeof DIFFICULTY_TAGS)[number]>("");
 
-    // ✅ NEW: progress filter (attempted/partial/solved/unsolved)
+    // ✅ progress filter
     const [progressFilter, setProgressFilter] = useState<ProgressFilter>("");
 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(12);
-    const pageSizeOptions = [6, 9, 12, 24];
+    const pageSizeOptions = useMemo(() => [6, 9, 12, 24], []);
 
-    /** Fetch initial data */
+    // avoid setState after unmount
+    const alive = useRef(true);
     useEffect(() => {
-        let mounted = true;
-
-        const fetchInitial = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [cats, diffs, chals] = await Promise.all([
-                    getCategories(),
-                    getDifficulties(),
-                    getChallenges({ type: "practice" }),
-                ]);
-                if (!mounted) return;
-
-                setCategories(cats || []);
-                setDifficulties(diffs || []);
-                setAllChallenges(chals || []);
-            } catch (err) {
-                console.error("Failed to fetch practice data:", err);
-                if (!mounted) return;
-                setError("Failed to load challenges. Please try again.");
-            } finally {
-                if (!mounted) return;
-                setLoading(false);
-            }
-        };
-
-        fetchInitial();
+        alive.current = true;
         return () => {
-            mounted = false;
+            alive.current = false;
         };
+    }, []);
+
+    const fetchInitial = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const [cats, diffs, chals] = await Promise.all([
+                getCategories(),
+                getDifficulties(),
+                getChallenges({type: "practice"}),
+            ]);
+
+            if (!alive.current) return;
+
+            setCategories(cats || []);
+            setDifficulties(diffs || []);
+            setAllChallenges(chals || []);
+        } catch (err) {
+            console.error("Failed to fetch practice data:", err);
+            if (!alive.current) return;
+            setError("Failed to load challenges. Please try again.");
+        } finally {
+            if (!alive.current) return;
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchInitial();
+    }, [fetchInitial]);
+
+    const handleClearFilters = useCallback(() => {
+        setCategoryFilter("");
+        setDifficultyTag("");
+        setProgressFilter("");
+        setSearch("");
+        setPage(1);
     }, []);
 
     /** Filtered + searched challenges */
@@ -116,7 +238,6 @@ const PracticeList: React.FC = () => {
                     // unsolved = attempted OR partially_solved
                     if (st === "solved" || st === "not_attempted") return false;
                 } else {
-                    // exact match (attempted / partially_solved / solved)
                     if (st !== progressFilter) return false;
                 }
             }
@@ -144,391 +265,406 @@ const PracticeList: React.FC = () => {
         return filteredChallenges.slice(start, start + pageSize);
     }, [filteredChallenges, page, pageSize]);
 
-    const handleClearFilters = useCallback(() => {
-        setCategoryFilter("");
-        setDifficultyTag("");
-        setProgressFilter("");
-        setSearch("");
-        setPage(1);
-    }, []);
+    const onPageChange = useCallback(
+        (newPage: number) => {
+            if (newPage < 1 || newPage > pageCount) return;
+            setPage(newPage);
+            window.scrollTo({top: 0, behavior: "smooth"});
+        },
+        [pageCount]
+    );
 
-    const onPageChange = (newPage: number) => {
-        if (newPage < 1 || newPage > pageCount) return;
-        setPage(newPage);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
+    const renderChallengeCard = useCallback(
+        (c: Challenge) => {
+            const difficulty = (c as any).difficulty?.level || "N/A";
+            const category = (c as any).category?.name || "N/A";
 
-    // Tag chip: no bold, no black backgrounds; pleasant blue when active
-    const tagClass = (active: boolean) =>
-        [
-            "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70",
-            active
-                ? "border-blue-200/70 bg-blue-50 text-blue-700"
-                : "border-slate-200/70 bg-white/70 text-slate-600 hover:bg-white/90",
-        ].join(" ");
+            const difficultyLower = String(difficulty || "").toLowerCase();
+            const difficultyColor =
+                difficultyLower === "easy"
+                    ? "bg-emerald-100/70 text-emerald-700 ring-emerald-200/60"
+                    : difficultyLower === "moderate" || difficultyLower === "medium"
+                        ? "bg-amber-100/70 text-amber-800 ring-amber-200/60"
+                        : difficultyLower === "hard"
+                            ? "bg-rose-100/70 text-rose-700 ring-rose-200/60"
+                            : "bg-slate-100/70 text-slate-600 ring-slate-200/60";
 
-    // ✅ LeetCode-ish progress chips (bright)
-    const progressChipClass = (key: ProgressFilter, active: boolean) => {
-        const base =
-            "rounded-full border px-3 py-1 text-xs sm:text-sm font-normal transition " +
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+            return (
+                <article
+                    key={c.id}
+                    className={cx(
+                        "flex flex-col rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm",
+                        "transition hover:bg-white/75 hover:shadow-md"
+                    )}
+                >
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                                <ProgressLabel challenge={c}/>
+                                <h3 className="mt-1 line-clamp-2 text-lg sm:text-xl md:text-2xl font-normal tracking-tight text-slate-700 leading-snug">
+                                    {c.title}
+                                </h3>
+                            </div>
 
-        const activeRing = "focus-visible:ring-blue-300";
-
-        if (key === "solved") {
-            return [
-                base,
-                activeRing,
-                active
-                    ? "border-emerald-300 bg-emerald-100 text-emerald-800"
-                    : "border-emerald-200/70 bg-white/70 text-emerald-700 hover:bg-emerald-50",
-            ].join(" ");
-        }
-
-        if (key === "partially_solved") {
-            return [
-                base,
-                activeRing,
-                active
-                    ? "border-amber-300 bg-amber-100 text-amber-900"
-                    : "border-amber-200/70 bg-white/70 text-amber-800 hover:bg-amber-50",
-            ].join(" ");
-        }
-
-        if (key === "attempted") {
-            return [
-                base,
-                activeRing,
-                active
-                    ? "border-sky-300 bg-sky-100 text-sky-900"
-                    : "border-sky-200/70 bg-white/70 text-sky-800 hover:bg-sky-50",
-            ].join(" ");
-        }
-
-        // unsolved (attempted OR partial)
-        return [
-            base,
-            activeRing,
-            active
-                ? "border-violet-300 bg-violet-100 text-violet-900"
-                : "border-violet-200/70 bg-white/70 text-violet-800 hover:bg-violet-50",
-        ].join(" ");
-    };
-
-    // ✅ show label above title only if user has a status other than not_attempted
-    const progressLabel = (c: Challenge) => {
-        const st = normalizeStatus((c as any).user_submission_status);
-        if (st === "not_attempted") return null;
-
-        const label =
-            st === "solved" ? "Solved" : st === "partially_solved" ? "Partially Solved" : "Attempted";
-
-        const cls =
-            st === "solved"
-                ? "text-emerald-700"
-                : st === "partially_solved"
-                    ? "text-amber-800"
-                    : "text-sky-700";
-
-        return <div className={`text-[11px] sm:text-xs font-normal ${cls} leading-none`}>{label}</div>;
-    };
-
-    /** Card renderer (match CompetitionList: normal weight, slate-700, glass) */
-    const renderChallengeCard = (c: Challenge) => {
-        const difficulty = (c as any).difficulty?.level || "N/A";
-        const category = (c as any).category?.name || "N/A";
-
-        const difficultyLower = String(difficulty || "").toLowerCase();
-
-        const difficultyColor =
-            difficultyLower === "easy"
-                ? "bg-emerald-100/70 text-emerald-700 border-emerald-200/70"
-                : difficultyLower === "moderate" || difficultyLower === "medium"
-                    ? "bg-amber-100/70 text-amber-700 border-amber-200/70"
-                    : difficultyLower === "hard"
-                        ? "bg-rose-100/70 text-rose-700 border-rose-200/70"
-                        : "bg-slate-100/70 text-slate-600 border-slate-200/70";
-
-        const cardShell =
-            "rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl " +
-            "ring-1 ring-slate-200/50 transition hover:bg-white/70 hover:shadow-md";
-
-        return (
-            <article key={c.id} className={`flex flex-col ${cardShell}`}>
-                <div className="flex flex-1 flex-col p-6 md:p-7">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                            {progressLabel(c)}
-                            <h3 className="mt-1 line-clamp-2 text-lg sm:text-xl md:text-2xl font-normal text-slate-700 leading-snug">
-                                {c.title}
-                            </h3>
+                            <span
+                                className={cx(
+                                    "hidden sm:inline-flex items-center rounded-full px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ring-1",
+                                    difficultyColor
+                                )}
+                                title="Difficulty"
+                            >
+                {difficulty}
+              </span>
                         </div>
 
-                        <span
-                            className={`hidden sm:inline-flex items-center rounded-full border px-3.5 py-2 text-xs sm:text-sm md:text-base font-normal ${difficultyColor}`}
-                            title="Difficulty"
-                        >
-              {difficulty}
-            </span>
+                        <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-600 leading-relaxed">
+                            {truncateText(c.description || "", 260)}
+                        </p>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+              <span
+                  className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-slate-200/60 bg-slate-50/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
+                <FiTag size={14}/>
+                <span>Category:</span>
+                <span className="truncate max-w-[14rem]">{category}</span>
+              </span>
+
+                            <span
+                                className={cx(
+                                    "sm:hidden inline-flex items-center rounded-full px-3.5 py-2 text-xs font-normal ring-1",
+                                    difficultyColor
+                                )}
+                                title="Difficulty"
+                            >
+                {difficulty}
+              </span>
+                        </div>
                     </div>
 
-                    <p className="mt-3 line-clamp-4 text-sm sm:text-base md:text-[17px] text-slate-600 leading-relaxed">
-                        {truncateText(c.description || "", 260)}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-100/60 px-3.5 py-2 text-xs sm:text-sm md:text-base text-slate-600">
-              <FiTag size={14} />
-              <span>Category:</span>
-              <span>{category}</span>
-            </span>
-
-                        <span
-                            className={`sm:hidden inline-flex items-center rounded-full border px-3.5 py-2 text-xs font-normal ${difficultyColor}`}
-                            title="Difficulty"
+                    <div
+                        className="flex items-center justify-between border-t border-slate-200/60 bg-white/40 px-5 sm:px-6 py-4 backdrop-blur-xl">
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/practice/${c.id}`)}
+                            className={cx(
+                                "inline-flex items-center gap-2 rounded-xl bg-white/70 px-4 py-2.5 text-sm sm:text-base font-normal tracking-tight",
+                                "ring-1 ring-sky-200/60 text-sky-700 hover:bg-white/90",
+                                focusRing
+                            )}
+                            aria-label={`Solve practice challenge ${c.title}`}
                         >
-              {difficulty}
-            </span>
+                            <FiEye size={18}/>
+                            <span>Solve</span>
+                        </button>
                     </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-white/40 bg-white/40 px-6 md:px-7 py-4 backdrop-blur-xl">
-                    <button
-                        onClick={() => navigate(`/practice/${c.id}`)}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-blue-200/70 bg-blue-50/70 px-5 py-2.5 text-sm sm:text-base md:text-lg font-normal text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                        aria-label={`Solve practice challenge ${c.title}`}
-                    >
-                        <FiEye size={18} />
-                        <span>Solve</span>
-                    </button>
-                </div>
-            </article>
-        );
-    };
+                </article>
+            );
+        },
+        [navigate]
+    );
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 font-sans flex flex-col">
-            <Navbar />
+        <div
+            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar/>
 
-            <main className="flex-1 w-full px-2 sm:px-3 md:px-5 lg:px-8 xl:px-10 2xl:px-12 py-6 md:py-8">
-                <div className="w-full">
-                    <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-                        <div className="min-w-0">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal text-slate-700 tracking-tight">
-                                Practice Challenges
-                            </h1>
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                {/* Header */}
+                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
+                            Practice Challenges
+                        </h1>
+                        <p className="mt-1 text-sm sm:text-base text-slate-500">
+                            Search, filter by difficulty and progress, then start solving.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={fetchInitial}
+                        className={cx(
+                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
+                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
+                            focusRing
+                        )}
+                        disabled={loading}
+                        aria-label="Refresh practice challenges"
+                        title="Refresh"
+                    >
+                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                </header>
+
+                {/* Filters */}
+                <Card>
+                    <div className="space-y-3">
+                        {/* Row 1 */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="min-w-[240px] flex-1">
+                                <label className="sr-only" htmlFor="practice-search">
+                                    Search practice challenges
+                                </label>
+                                <input
+                                    id="practice-search"
+                                    type="search"
+                                    placeholder="Search title, description, category…"
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className={cx(
+                                        "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm",
+                                        "placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30 focus:outline-none"
+                                    )}
+                                    aria-label="Search practice challenges"
+                                />
+                            </div>
+
+                            <div className="shrink-0">
+                                <label className="sr-only" htmlFor="practice-category-filter">
+                                    Category filter
+                                </label>
+                                <select
+                                    id="practice-category-filter"
+                                    value={categoryFilter}
+                                    onChange={(e) => {
+                                        setCategoryFilter(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    className={cx(
+                                        "h-10 w-[190px] max-w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
+                                        "hover:bg-slate-50/70 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300/30"
+                                    )}
+                                >
+                                    <option value="">Category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.name}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className={cx(
+                                    "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
+                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
+                                    focusRing
+                                )}
+                            >
+                                Reset
+                            </button>
                         </div>
-                    </header>
 
-                    <section className="mb-6 rounded-2xl border border-white/30 bg-white/55 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                        <div className="px-4 py-4 space-y-3">
-                            {/* Row 1 */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="min-w-[260px] flex-1 max-w-[720px]">
-                                    <label className="sr-only" htmlFor="practice-search">
-                                        Search practice challenges
-                                    </label>
-                                    <input
-                                        id="practice-search"
-                                        type="search"
-                                        placeholder="Search title, description, category…"
-                                        value={search}
-                                        onChange={(e) => {
-                                            setSearch(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-10 w-full rounded-xl border border-slate-200/70 bg-white px-4 text-sm sm:text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                        aria-label="Search practice challenges"
-                                    />
-                                </div>
-
-                                <div className="shrink-0">
-                                    <label className="sr-only" htmlFor="practice-category-filter">
-                                        Category filter
-                                    </label>
-                                    <select
-                                        id="practice-category-filter"
-                                        value={categoryFilter}
-                                        onChange={(e) => {
-                                            setCategoryFilter(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        className="h-10 w-[190px] rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm hover:bg-slate-50/70 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
-                                    >
-                                        <option value="">Category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>
-                                                {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                        {/* Row 2 */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Difficulty
+                </span>
 
                                 <button
                                     type="button"
-                                    onClick={handleClearFilters}
-                                    className="h-10 shrink-0 rounded-xl border border-slate-200/70 bg-white/80 px-4 text-sm sm:text-base font-normal text-slate-600 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                    onClick={() => {
+                                        setDifficultyTag("");
+                                        setPage(1);
+                                    }}
+                                    className={tagClass(!difficultyTag)}
                                 >
-                                    Reset
+                                    All
+                                </button>
+
+                                {DIFFICULTY_TAGS.map((lvl) => {
+                                    const active = difficultyTag === lvl;
+                                    return (
+                                        <button
+                                            key={lvl}
+                                            type="button"
+                                            onClick={() => {
+                                                setDifficultyTag(active ? "" : lvl);
+                                                setPage(1);
+                                            }}
+                                            className={tagClass(active)}
+                                            aria-pressed={active}
+                                        >
+                                            {lvl}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Progress chips */}
+                            <div className="flex flex-wrap items-center gap-2">
+                <span
+                    className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
+                  Progress
+                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setProgressFilter("");
+                                        setPage(1);
+                                    }}
+                                    className={tagClass(!progressFilter)}
+                                    aria-pressed={!progressFilter}
+                                >
+                                    All
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setProgressFilter((prev) => (prev === "attempted" ? "" : "attempted"));
+                                        setPage(1);
+                                    }}
+                                    className={progressChipClass("attempted", progressFilter === "attempted")}
+                                    aria-pressed={progressFilter === "attempted"}
+                                >
+                                    Attempted
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setProgressFilter((prev) => (prev === "partially_solved" ? "" : "partially_solved"));
+                                        setPage(1);
+                                    }}
+                                    className={progressChipClass("partially_solved", progressFilter === "partially_solved")}
+                                    aria-pressed={progressFilter === "partially_solved"}
+                                >
+                                    Partial
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setProgressFilter((prev) => (prev === "solved" ? "" : "solved"));
+                                        setPage(1);
+                                    }}
+                                    className={progressChipClass("solved", progressFilter === "solved")}
+                                    aria-pressed={progressFilter === "solved"}
+                                >
+                                    Solved
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setProgressFilter((prev) => (prev === "unsolved" ? "" : "unsolved"));
+                                        setPage(1);
+                                    }}
+                                    className={progressChipClass("unsolved", progressFilter === "unsolved")}
+                                    aria-pressed={progressFilter === "unsolved"}
+                                    title="Attempted or Partially Solved"
+                                >
+                                    Unsolved
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </Card>
 
-                            {/* Row 2: Difficulty chips + Progress filters (next to difficulty, leetcode-ish) */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                  <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
-                    Difficulty
-                  </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setDifficultyTag("");
-                                            setPage(1);
-                                        }}
-                                        className={tagClass(!difficultyTag)}
-                                    >
-                                        All
-                                    </button>
-
-                                    {DIFFICULTY_TAGS.map((lvl) => {
-                                        const active = difficultyTag === lvl;
-                                        return (
-                                            <button
-                                                key={lvl}
-                                                type="button"
-                                                onClick={() => {
-                                                    setDifficultyTag(active ? "" : lvl);
-                                                    setPage(1);
-                                                }}
-                                                className={tagClass(active)}
-                                            >
-                                                {lvl}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* ✅ Progress filter chips (side of difficulty) */}
-                                <div className="flex flex-wrap items-center gap-2">
-                  <span className="mr-2 text-xs sm:text-sm text-slate-600 underline underline-offset-4 decoration-slate-300">
-                    Progress
-                  </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setProgressFilter("");
-                                            setPage(1);
-                                        }}
-                                        className={tagClass(!progressFilter)}
-                                    >
-                                        All
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setProgressFilter((prev) => (prev === "attempted" ? "" : "attempted"));
-                                            setPage(1);
-                                        }}
-                                        className={progressChipClass("attempted", progressFilter === "attempted")}
-                                        aria-pressed={progressFilter === "attempted"}
-                                    >
-                                        Attempted
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setProgressFilter((prev) =>
-                                                prev === "partially_solved" ? "" : "partially_solved"
-                                            );
-                                            setPage(1);
-                                        }}
-                                        className={progressChipClass(
-                                            "partially_solved",
-                                            progressFilter === "partially_solved"
-                                        )}
-                                        aria-pressed={progressFilter === "partially_solved"}
-                                    >
-                                        Partial
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setProgressFilter((prev) => (prev === "solved" ? "" : "solved"));
-                                            setPage(1);
-                                        }}
-                                        className={progressChipClass("solved", progressFilter === "solved")}
-                                        aria-pressed={progressFilter === "solved"}
-                                    >
-                                        Solved
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setProgressFilter((prev) => (prev === "unsolved" ? "" : "unsolved"));
-                                            setPage(1);
-                                        }}
-                                        className={progressChipClass("unsolved", progressFilter === "unsolved")}
-                                        aria-pressed={progressFilter === "unsolved"}
-                                        title="Attempted or Partially Solved"
-                                    >
-                                        Unsolved
-                                    </button>
-                                </div>
+                {/* Loading / Error banners */}
+                {loading ? (
+                    <div
+                        className="mt-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="h-9 w-9 rounded-full bg-slate-200/80 animate-pulse shrink-0"/>
+                            <div className="min-w-0 space-y-2">
+                                <div className="h-4 w-40 bg-slate-200/80 rounded animate-pulse"/>
+                                <div className="h-4 w-72 bg-slate-100 rounded animate-pulse"/>
                             </div>
                         </div>
-                    </section>
+                        <p className="mt-3 text-center text-sm text-slate-500">Loading challenges…</p>
+                    </div>
+                ) : null}
 
-                    {loading && (
-                        <div className="mb-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                            Loading challenges...
+                {error ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
+                        <div className="flex items-start gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0"/>
+                            <div className="min-w-0">
+                                <p className="font-normal tracking-tight">Couldn’t load challenges</p>
+                                <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
+                                <button
+                                    type="button"
+                                    onClick={fetchInitial}
+                                    className={cx(
+                                        "mt-3 inline-flex items-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-sm font-normal tracking-tight",
+                                        "ring-1 ring-rose-200 hover:bg-white/90",
+                                        focusRing
+                                    )}
+                                >
+                                    <FiRefreshCw size={14}/>
+                                    Try again
+                                </button>
+                            </div>
                         </div>
-                    )}
-                    {error && (
-                        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/80 px-5 py-4 text-sm sm:text-base md:text-lg text-rose-700 shadow-sm backdrop-blur-xl">
-                            {error}
-                        </div>
-                    )}
+                    </div>
+                ) : null}
 
-                    {!loading && !error && (
-                        <>
-                            {total === 0 ? (
-                                <div className="rounded-2xl border border-white/30 bg-white/55 px-6 py-12 text-center text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
-                                    <div className="text-base md:text-lg font-normal text-slate-700">No matches</div>
-                                    <div className="mt-1 text-sm md:text-base text-slate-600">
-                                        No practice challenges match your filters. Try resetting or broadening your search.
-                                    </div>
+                {/* Content */}
+                {!loading && !error ? (
+                    <>
+                        {total === 0 ? (
+                            <div
+                                className="mt-4 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-6 text-center">
+                                <div
+                                    className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60">
+                                    <FiInfo className="text-slate-500"/>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                                        {currentPageItems.map((c) => renderChallengeCard(c))}
-                                    </div>
+                                <div className="mt-3 text-base sm:text-lg font-normal tracking-tight text-slate-700">
+                                    No matches
+                                </div>
+                                <div className="mt-1 text-sm sm:text-base text-slate-500">
+                                    No practice challenges match your filters. Try resetting or broadening your search.
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                    {currentPageItems.map((c) => renderChallengeCard(c))}
+                                </div>
 
-                                    {/* Pagination */}
-                                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/30 bg-white/55 px-5 py-4 text-sm sm:text-base md:text-lg text-slate-600 shadow-sm backdrop-blur-xl ring-1 ring-slate-200/50">
+                                {/* Pagination */}
+                                <div
+                                    className="mt-6 rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="flex items-center gap-2">
                                             <button
+                                                type="button"
                                                 onClick={() => onPageChange(page - 1)}
                                                 disabled={page <= 1}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
                                             >
                                                 Prev
                                             </button>
-                                            <span className="text-sm sm:text-base md:text-lg text-slate-600">
-                        Page <span className="text-slate-600">{page}</span> of{" "}
-                                                <span className="text-slate-600">{pageCount}</span>
+
+                                            <span className="text-sm sm:text-base text-slate-600">
+                        Page <span className="text-slate-700">{page}</span> of{" "}
+                                                <span className="text-slate-700">{pageCount}</span>
                       </span>
+
                                             <button
+                                                type="button"
                                                 onClick={() => onPageChange(page + 1)}
                                                 disabled={page >= pageCount}
-                                                className="rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-2 text-sm sm:text-base font-normal text-slate-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                className={cx(
+                                                    "rounded-xl bg-white/70 px-4 py-2 text-sm sm:text-base font-normal tracking-tight",
+                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed",
+                                                    focusRing
+                                                )}
                                             >
                                                 Next
                                             </button>
@@ -536,7 +672,7 @@ const PracticeList: React.FC = () => {
 
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-normal text-slate-600">Per page</span>
+                                                <span className="text-sm sm:text-base text-slate-600">Per page</span>
                                                 <label className="sr-only" htmlFor="practice-page-size">
                                                     Items per page
                                                 </label>
@@ -547,7 +683,11 @@ const PracticeList: React.FC = () => {
                                                         setPageSize(Number(e.target.value));
                                                         setPage(1);
                                                     }}
-                                                    className="rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm sm:text-base md:text-lg text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/15"
+                                                    className={cx(
+                                                        "rounded-xl bg-white/70 px-3 py-2 text-sm sm:text-base text-slate-700 shadow-sm",
+                                                        "ring-1 ring-slate-200/60 hover:bg-white/90",
+                                                        focusRing
+                                                    )}
                                                 >
                                                     {pageSizeOptions.map((opt) => (
                                                         <option key={opt} value={opt}>
@@ -557,22 +697,21 @@ const PracticeList: React.FC = () => {
                                                 </select>
                                             </div>
 
-                                            <div className="text-slate-600">
+                                            <div className="text-sm sm:text-base text-slate-600">
                                                 Showing{" "}
-                                                <span className="text-slate-600">
-                          {total === 0 ? 0 : (page - 1) * pageSize + 1}
-                        </span>{" "}
-                                                –{" "}
-                                                <span className="text-slate-600">{Math.min(page * pageSize, total)}</span> of{" "}
-                                                <span className="text-slate-600">{total}</span>
+                                                <span
+                                                    className="text-slate-700">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>{" "}
+                                                – <span
+                                                className="text-slate-700">{Math.min(page * pageSize, total)}</span> of{" "}
+                                                <span className="text-slate-700">{total}</span>
                                             </div>
                                         </div>
                                     </div>
-                                </>
-                            )}
-                        </>
-                    )}
-                </div>
+                                </div>
+                            </>
+                        )}
+                    </>
+                ) : null}
             </main>
         </div>
     );

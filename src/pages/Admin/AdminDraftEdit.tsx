@@ -1,4 +1,4 @@
-import React, {FormEvent, useEffect, useMemo, useState} from "react";
+import React, {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
@@ -14,11 +14,14 @@ import {Challenge} from "../CompetitionPage/types";
 type TabKey = "question" | "solution";
 type QuestionType = "practice" | "competition" | "N/A";
 
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+
+const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
+
 const toLocalInput = (iso: string) => {
     const d = new Date(iso);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
 const AdminDraftEdit: React.FC = () => {
@@ -37,14 +40,14 @@ const AdminDraftEdit: React.FC = () => {
     const [initialError, setInitialError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
-    // global messages
+    // messages
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // loaded challenge (for header + read-only contest info)
+    // loaded
     const [loadedChallenge, setLoadedChallenge] = useState<Challenge | null>(null);
 
-    // challenge fields
+    // fields
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [constraints, setConstraints] = useState("");
@@ -56,17 +59,14 @@ const AdminDraftEdit: React.FC = () => {
     const [difficulty, setDifficulty] = useState<number | "">("");
     const [solutionType, setSolutionType] = useState<number | "">("");
 
-    // ✅ question_type selectable: practice/competition/N/A
     const [questionType, setQuestionType] = useState<QuestionType>("N/A");
-
-    // ✅ lock the original type so user can only move to N/A (not swap practice<->competition)
     const [lockedQuestionType, setLockedQuestionType] = useState<"practice" | "competition" | null>(null);
 
-    // solution notes (local-only for now)
+    // local solution notes (not sent)
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
 
-    // file uploads (new attachments only)
+    // uploads
     const [uploadFiles, setUploadFiles] = useState<File[]>([]);
 
     // options
@@ -74,18 +74,54 @@ const AdminDraftEdit: React.FC = () => {
     const [difficulties, setDifficulties] = useState<any[]>([]);
     const [solutionTypes, setSolutionTypes] = useState<any[]>([]);
 
-    const resetMessages = () => {
-        setMessage(null);
-        setError(null);
-    };
+    // avoid setState after unmount + prevent double submit
+    const alive = useRef(true);
+    const busyRef = useRef(false);
+    const msgTimer = useRef<number | null>(null);
 
     useEffect(() => {
-        if (!user) return;
+        alive.current = true;
+        return () => {
+            alive.current = false;
+            if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        };
+    }, []);
 
-        if (user.role !== "admin") {
-            navigate("/dashboard");
-            return;
-        }
+    const resetMessages = useCallback(() => {
+        setMessage(null);
+        setError(null);
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        msgTimer.current = null;
+    }, []);
+
+    const flashMessage = useCallback((text: string | null, ms = 2500) => {
+        setMessage(text);
+        if (msgTimer.current) window.clearTimeout(msgTimer.current);
+        if (!text) return;
+        msgTimer.current = window.setTimeout(() => {
+            if (!alive.current) return;
+            setMessage(null);
+        }, ms);
+    }, []);
+
+    // ---------------- SECURITY (TOP) ----------------
+    useEffect(() => {
+        if (!user) return;
+        if (user.role !== "admin") navigate("/dashboard");
+    }, [user, navigate]);
+
+    // allowed options based on lock
+    const allowedQuestionTypeOptions = useMemo(() => {
+        if (lockedQuestionType) return ["N/A", lockedQuestionType] as QuestionType[];
+        return ["practice", "competition", "N/A"] as QuestionType[];
+    }, [lockedQuestionType]);
+
+    const contest = (loadedChallenge as any)?.active_contest || null;
+
+    // ---------------- LOAD INITIAL ----------------
+    const loadInitial = useCallback(async () => {
+        if (!user) return;
+        if (user.role !== "admin") return;
 
         if (!challengeId || Number.isNaN(challengeId)) {
             setInitialError("Invalid challenge id.");
@@ -93,90 +129,89 @@ const AdminDraftEdit: React.FC = () => {
             return;
         }
 
-        let mounted = true;
+        setInitialLoading(true);
+        setInitialError(null);
 
-        const loadInitial = async () => {
-            try {
-                setInitialLoading(true);
-                setInitialError(null);
+        try {
+            const [cats, diffs, sols, challenge] = await Promise.all([
+                getCategories(),
+                getDifficulties(),
+                getSolutionTypes(),
+                getChallengeById(challengeId),
+            ]);
 
-                const [cats, diffs, sols, challenge] = await Promise.all([
-                    getCategories(),
-                    getDifficulties(),
-                    getSolutionTypes(),
-                    getChallengeById(challengeId),
-                ]);
+            if (!alive.current) return;
 
-                if (!mounted) return;
+            setCategories(cats || []);
+            setDifficulties(diffs || []);
+            setSolutionTypes(sols || []);
+            setLoadedChallenge(challenge);
 
-                setCategories(cats || []);
-                setDifficulties(diffs || []);
-                setSolutionTypes(sols || []);
-                setLoadedChallenge(challenge);
+            setTitle(challenge.title || "");
+            setDescription(challenge.description || "");
+            setConstraints((challenge.constraints as string) || "");
+            setInputFormat((challenge.input_format as string) || "");
+            setOutputFormat((challenge.output_format as string) || "");
+            setSampleInput((challenge.sample_input as string) || "");
+            setSampleOutput((challenge.sample_output as string) || "");
+            setCategory(challenge.category?.id || "");
+            setDifficulty(challenge.difficulty?.id || "");
+            setSolutionType(challenge.solution_type?.id || "");
 
-                // Prefill challenge fields
-                setTitle(challenge.title || "");
-                setDescription(challenge.description || "");
-                setConstraints((challenge.constraints as string) || "");
-                setInputFormat((challenge.input_format as string) || "");
-                setOutputFormat((challenge.output_format as string) || "");
-                setSampleInput((challenge.sample_input as string) || "");
-                setSampleOutput((challenge.sample_output as string) || "");
-                setCategory(challenge.category?.id || "");
-                setDifficulty(challenge.difficulty?.id || "");
-                setSolutionType(challenge.solution_type?.id || "");
+            const apiQtRaw = String((challenge as any).question_type || "").toLowerCase();
+            const mapped: QuestionType =
+                apiQtRaw === "practice" ? "practice" : apiQtRaw === "competition" ? "competition" : "N/A";
+            setQuestionType(mapped);
 
-                // ✅ Prefill question_type from API (fallback -> N/A)
-                const apiQtRaw = String((challenge as any).question_type || "").toLowerCase();
-                const mapped: QuestionType =
-                    apiQtRaw === "practice" ? "practice" : apiQtRaw === "competition" ? "competition" : "N/A";
-                setQuestionType(mapped);
+            const lock = mapped === "practice" || mapped === "competition" ? mapped : null;
+            setLockedQuestionType(lock);
 
-                // ✅ Lock original type ONLY if it is practice/competition
-                const lock = mapped === "practice" || mapped === "competition" ? mapped : null;
-                setLockedQuestionType(lock);
+            // existing draft -> can open solution tab
+            setQuestionSaved(true);
+        } catch (e: any) {
+            console.error(e);
+            if (!alive.current) return;
+            setInitialError(
+                e?.response?.status === 404
+                    ? "Draft question not found."
+                    : "Failed to load draft question. Please try again."
+            );
+        } finally {
+            if (!alive.current) return;
+            setInitialLoading(false);
+        }
+    }, [user, challengeId]);
 
-                // editing existing draft -> allow solution tab
-                setQuestionSaved(true);
-            } catch (e: any) {
-                console.error(e);
-                if (!mounted) return;
-                setInitialError(
-                    e?.response?.status === 404
-                        ? "Draft question not found."
-                        : "Failed to load draft question. Please try again."
-                );
-            } finally {
-                if (!mounted) return;
-                setInitialLoading(false);
-            }
-        };
-
+    useEffect(() => {
         loadInitial();
+    }, [loadInitial]);
 
-        return () => {
-            mounted = false;
-        };
-    }, [user, challengeId, navigate]);
+    // ---------------- VALIDATION ----------------
+    const validateQuestion = useCallback((): string | null => {
+        if (!title.trim() || !description.trim()) return "Title and Description are required.";
+        if (!category || !difficulty || !solutionType) return "Category, Difficulty, and Solution Type are required.";
 
-    const handleSaveQuestionDraft = () => {
+        // extra guard: never swap practice <-> competition if locked
+        if (lockedQuestionType && questionType !== "N/A" && questionType !== lockedQuestionType) {
+            return "You can only change Question Type to N/A. Switching between Practice and Competition is not allowed.";
+        }
+        return null;
+    }, [title, description, category, difficulty, solutionType, lockedQuestionType, questionType]);
+
+    const handleSaveQuestionDraft = useCallback(() => {
         resetMessages();
-
-        if (!title.trim() || !description.trim()) {
-            setError("Title and Description are required.");
+        const err = validateQuestion();
+        if (err) {
+            setError(err);
             return;
         }
-        if (!category || !difficulty || !solutionType) {
-            setError("Category, Difficulty, and Solution Type are required.");
-            return;
-        }
-
         setQuestionSaved(true);
         setActiveTab("solution");
-        setMessage("Draft validated. You can now review solution notes.");
-    };
+        flashMessage("Draft validated. You can now review solution notes.");
+    }, [resetMessages, validateQuestion, flashMessage]);
 
-    const handleFilesChange = (files: FileList | null) => {
+    // ---------------- FILES ----------------
+    const handleFilesChange = useCallback((files: FileList | null) => {
         if (!files) return;
         resetMessages();
 
@@ -188,7 +223,7 @@ const AdminDraftEdit: React.FC = () => {
             "application/zip",
             "application/x-zip-compressed",
         ];
-        const maxSizeBytes = 20 * 1024 * 1024; // 20MB
+        const maxSizeBytes = 20 * 1024 * 1024;
 
         const nextFiles: File[] = [];
         const rejected: string[] = [];
@@ -205,104 +240,129 @@ const AdminDraftEdit: React.FC = () => {
             nextFiles.push(file);
         });
 
-        setUploadFiles((prev) => [...prev, ...nextFiles]);
+        // de-dupe same file name+size to avoid accidental multi-add
+        setUploadFiles((prev) => {
+            const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+            const merged = [...prev];
+            nextFiles.forEach((f) => {
+                const key = `${f.name}-${f.size}`;
+                if (!seen.has(key)) {
+                    merged.push(f);
+                    seen.add(key);
+                }
+            });
+            return merged;
+        });
 
         if (rejected.length > 0) {
             setError(`Some files were rejected:\n${rejected.map((r) => `• ${r}`).join("\n")}`);
         }
-    };
+    }, [resetMessages]);
 
-    const handleRemoveFile = (index: number) => {
+    const handleRemoveFile = useCallback((index: number) => {
         resetMessages();
         setUploadFiles((prev) => prev.filter((_, i) => i !== index));
-    };
+    }, [resetMessages]);
 
-    const allowedQuestionTypeOptions = useMemo(() => {
-        // If original type is locked to practice/competition -> allow only {locked, N/A}
-        if (lockedQuestionType) return ["N/A", lockedQuestionType] as QuestionType[];
+    // ---------------- SUBMIT ----------------
+    const handleSubmit = useCallback(
+        async (e: FormEvent) => {
+            e.preventDefault();
+            resetMessages();
 
-        // If original is N/A (not locked) -> allow all
-        return ["practice", "competition", "N/A"] as QuestionType[];
-    }, [lockedQuestionType]);
+            if (!user || user.role !== "admin") {
+                setError("Unauthorized – admin only.");
+                return;
+            }
+            if (!challengeId || Number.isNaN(challengeId)) {
+                setError("Invalid challenge id.");
+                return;
+            }
+            if (!questionSaved) {
+                setError("Please validate and save the draft before updating.");
+                setActiveTab("question");
+                return;
+            }
 
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        resetMessages();
+            const err = validateQuestion();
+            if (err) {
+                setError(err);
+                setActiveTab("question");
+                return;
+            }
 
-        if (!questionSaved) {
-            setError("Please validate and save the draft before updating.");
-            setActiveTab("question");
-            return;
-        }
+            if (busyRef.current) return;
+            busyRef.current = true;
 
-        if (!category || !difficulty || !solutionType) {
-            setError("Category, Difficulty, and Solution Type are required.");
-            setActiveTab("question");
-            return;
-        }
+            setSubmitting(true);
+            try {
+                const formData = new FormData();
 
-        if (!challengeId || Number.isNaN(challengeId)) {
-            setError("Invalid challenge id.");
-            return;
-        }
+                formData.append("title", title);
+                formData.append("description", description);
+                formData.append("constraints", constraints || "");
+                formData.append("input_format", inputFormat || "");
+                formData.append("output_format", outputFormat || "");
+                formData.append("sample_input", sampleInput || "");
+                formData.append("sample_output", sampleOutput || "");
+                formData.append("question_type", questionType); // ✅ always send exact value
 
-        // ✅ extra guard: never allow swapping practice <-> competition if locked
-        if (lockedQuestionType && questionType !== "N/A" && questionType !== lockedQuestionType) {
-            setError("You can only change Question Type to N/A. Switching between Practice and Competition is not allowed.");
-            setActiveTab("question");
-            return;
-        }
+                if (category) formData.append("category", String(category));
+                if (difficulty) formData.append("difficulty", String(difficulty));
+                if (solutionType) formData.append("solution_type", String(solutionType));
 
-        setSubmitting(true);
-        try {
-            const formData = new FormData();
+                uploadFiles.forEach((file) => {
+                    formData.append("uploaded_files", file);
+                });
 
-            // challenge fields
-            formData.append("title", title);
-            formData.append("description", description);
-            formData.append("constraints", constraints || "");
-            formData.append("input_format", inputFormat || "");
-            formData.append("output_format", outputFormat || "");
-            formData.append("sample_input", sampleInput || "");
-            formData.append("sample_output", sampleOutput || "");
+                await updateChallenge(challengeId, formData);
 
-            // ✅ always send the selected value (practice/competition/N/A)
-            formData.append("question_type", questionType);
+                if (!alive.current) return;
 
-            if (category) formData.append("category", String(category));
-            if (difficulty) formData.append("difficulty", String(difficulty));
-            if (solutionType) formData.append("solution_type", String(solutionType));
+                flashMessage("Draft updated successfully.");
+                navigate("/admin/drafts");
+            } catch (err: any) {
+                console.error(err);
+                if (!alive.current) return;
+                setError(err?.response?.data?.detail || "Failed to update draft. Please review your input and try again.");
+            } finally {
+                busyRef.current = false;
+                if (!alive.current) return;
+                setSubmitting(false);
+            }
+        },
+        [
+            resetMessages,
+            user,
+            challengeId,
+            questionSaved,
+            validateQuestion,
+            title,
+            description,
+            constraints,
+            inputFormat,
+            outputFormat,
+            sampleInput,
+            sampleOutput,
+            questionType,
+            category,
+            difficulty,
+            solutionType,
+            uploadFiles,
+            flashMessage,
+            navigate,
+        ]
+    );
 
-            // newly uploaded files
-            uploadFiles.forEach((file) => {
-                formData.append("uploaded_files", file);
-            });
-
-            await updateChallenge(challengeId, formData);
-
-            setMessage("Draft updated successfully.");
-            navigate("/admin/drafts");
-        } catch (err: any) {
-            console.error(err);
-            setError(
-                err?.response?.data?.detail ||
-                "Failed to update draft. Please review your input and try again."
-            );
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Read-only contest info (ONLY show when competition)
-    const contest = (loadedChallenge as any)?.active_contest || null;
-
-    // --- responsive full-screen shell for all guard states ---
+    // ---------------- FULL SCREEN GUARDS ----------------
     if (!user) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Checking permissions…</div>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
+                        Checking permissions…
+                    </div>
                 </main>
             </div>
         );
@@ -310,12 +370,12 @@ const AdminDraftEdit: React.FC = () => {
 
     if (user.role !== "admin") {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                         Unauthorized – admin access required.
-                    </p>
+                    </div>
                 </main>
             </div>
         );
@@ -323,10 +383,12 @@ const AdminDraftEdit: React.FC = () => {
 
     if (initialLoading) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <div className="w-full text-sm text-slate-500">Loading draft…</div>
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
+                        Loading draft…
+                    </div>
                 </main>
             </div>
         );
@@ -334,44 +396,39 @@ const AdminDraftEdit: React.FC = () => {
 
     if (initialError || !loadedChallenge) {
         return (
-            <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                    <p className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+                <Navbar />
+                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                         {initialError || "Unable to load draft."}
-                    </p>
+                    </div>
                 </main>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-            <Navbar/>
+        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
+            <Navbar />
 
-            <main className="flex-1 w-full px-3 sm:px-4 md:px-6 py-6 md:py-8">
-                <div className="mx-auto w-full max-w-6xl rounded-xl border border-slate-200 bg-white shadow-sm">
+            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <div className="w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden">
                     {/* Header */}
-                    <div
-                        className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="flex flex-col gap-3 border-b border-slate-200/70 bg-white/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                         <div className="min-w-0">
-                            <h1 className="truncate text-xl font-semibold text-slate-900 md:text-2xl">
+                            <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
                                 Edit Draft Question
                             </h1>
-                            <p className="mt-1 text-xs text-slate-500 md:text-sm">
-                                Update the draft problem, metadata, and reference files. Contest is read-only
-                                (competition only).
+                            <p className="mt-1 text-sm sm:text-base text-slate-500">
+                                Update the draft problem, metadata, and attachments. Contest info is read-only (competition only).
                             </p>
                         </div>
-                        <div
-                            className="flex flex-row flex-wrap items-center justify-start gap-2 text-[11px] text-slate-500 sm:flex-col sm:items-end sm:gap-1">
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">
-                Admin Panel
-              </span>
-                            <span
-                                className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
-                Draft #{loadedChallenge.id}
-              </span>
+
+                        <div className="flex flex-row flex-wrap items-center gap-2 text-[11px] text-slate-500 sm:flex-col sm:items-end sm:gap-1">
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5">Admin Panel</span>
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-700">
+                                Draft #{loadedChallenge.id}
+                            </span>
                         </div>
                     </div>
 
@@ -379,14 +436,12 @@ const AdminDraftEdit: React.FC = () => {
                         {(error || message) && (
                             <div className="px-4 pt-4 sm:px-6">
                                 {error && (
-                                    <div
-                                        className="mb-3 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                    <div className="mb-3 whitespace-pre-line rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm text-rose-800">
                                         {error}
                                     </div>
                                 )}
                                 {message && (
-                                    <div
-                                        className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                    <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800">
                                         {message}
                                     </div>
                                 )}
@@ -394,21 +449,20 @@ const AdminDraftEdit: React.FC = () => {
                         )}
 
                         {/* Tabs */}
-                        <div className="border-b border-slate-200 px-4 pt-2 sm:px-6">
+                        <div className="border-b border-slate-200/70 px-4 pt-2 sm:px-6">
                             <div className="flex gap-4">
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("question")}
-                                    className={`relative pb-2 text-sm font-medium ${
-                                        activeTab === "question"
-                                            ? "text-slate-900"
-                                            : "text-slate-500 hover:text-slate-700"
-                                    }`}
+                                    className={cx(
+                                        "relative pb-2 text-sm font-medium",
+                                        activeTab === "question" ? "text-slate-900" : "text-slate-500 hover:text-slate-700",
+                                        focusRing
+                                    )}
                                 >
                                     Question
                                     {activeTab === "question" && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
+                                        <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-sky-300" />
                                     )}
                                 </button>
 
@@ -416,18 +470,19 @@ const AdminDraftEdit: React.FC = () => {
                                     type="button"
                                     disabled={!questionSaved}
                                     onClick={() => questionSaved && setActiveTab("solution")}
-                                    className={`relative pb-2 text-sm font-medium ${
+                                    className={cx(
+                                        "relative pb-2 text-sm font-medium",
                                         !questionSaved
                                             ? "cursor-not-allowed text-slate-300"
                                             : activeTab === "solution"
                                                 ? "text-slate-900"
-                                                : "text-slate-500 hover:text-slate-700"
-                                    }`}
+                                                : "text-slate-500 hover:text-slate-700",
+                                        focusRing
+                                    )}
                                 >
                                     Solution Notes
                                     {activeTab === "solution" && questionSaved && (
-                                        <span
-                                            className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600"/>
+                                        <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-sky-300" />
                                     )}
                                 </button>
                             </div>
@@ -439,28 +494,38 @@ const AdminDraftEdit: React.FC = () => {
                                 <div className="grid gap-6 lg:grid-cols-3">
                                     <div className="lg:col-span-2">
                                         <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Title <span className="text-red-500">*</span>
+                                            Title <span className="text-rose-500">*</span>
                                         </label>
                                         <input
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
+                                            onChange={(e) => {
+                                                setTitle(e.target.value);
+                                                setQuestionSaved(false);
+                                            }}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Question Type <span className="text-red-500">*</span>
+                                            Question Type <span className="text-rose-500">*</span>
                                         </label>
 
-                                        {/* ✅ Responsive + locked options behavior */}
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={questionType}
                                             onChange={(e) => {
                                                 const next = e.target.value as QuestionType;
 
-                                                // ✅ hard block swapping when locked
+                                                // hard block swap when locked
                                                 if (lockedQuestionType && next !== "N/A" && next !== lockedQuestionType) return;
 
                                                 setQuestionType(next);
@@ -476,80 +541,59 @@ const AdminDraftEdit: React.FC = () => {
                                         </select>
 
                                         <p className="mt-1 text-xs text-slate-400">
-                                            If this draft is Practice/Competition, you can only change it to N/A (not
-                                            switch types).
+                                            If original type is Practice/Competition, you can only change it to N/A (not switch types).
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Read-only contest info (competition only) */}
+                                {/* Read-only contest info */}
                                 {questionType === "competition" && (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                        <div
-                                            className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                                    <div className="rounded-2xl bg-white/60 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <div className="text-sm font-semibold text-slate-800">Contest
-                                                    (read-only)
-                                                </div>
-                                                <div className="text-xs text-slate-500">
-                                                    Contest is managed in the Contests section. You can’t edit it here.
-                                                </div>
+                                                <div className="text-sm font-semibold text-slate-800">Contest (read-only)</div>
+                                                <div className="text-xs text-slate-500">Managed in Contests. Not editable here.</div>
                                             </div>
-                                            <span
-                                                className="w-fit rounded-full bg-white px-2.5 py-0.5 text-xs text-slate-600 border border-slate-200">
-                        {contest?.id ? `Contest #${contest.id}` : "No contest attached"}
-                      </span>
+                                            <span className="w-fit rounded-full bg-white px-2.5 py-0.5 text-xs text-slate-600 ring-1 ring-slate-200/60">
+                                                {contest?.id ? `Contest #${contest.id}` : "No contest attached"}
+                                            </span>
                                         </div>
 
                                         {contest ? (
                                             <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                    <div
-                                                        className="text-[11px] uppercase tracking-wide text-slate-500">Name
-                                                    </div>
-                                                    <div
-                                                        className="mt-1 text-sm text-slate-900">{contest.name || "—"}</div>
+                                                <div className="rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2">
+                                                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Name</div>
+                                                    <div className="mt-1 text-sm text-slate-800">{contest.name || "—"}</div>
                                                 </div>
 
-                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                    <div
-                                                        className="text-[11px] uppercase tracking-wide text-slate-500">Slug
-                                                    </div>
-                                                    <div
-                                                        className="mt-1 text-sm text-slate-900">{contest.slug || "—"}</div>
+                                                <div className="rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2">
+                                                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Slug</div>
+                                                    <div className="mt-1 text-sm text-slate-800">{contest.slug || "—"}</div>
                                                 </div>
 
-                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                    <div
-                                                        className="text-[11px] uppercase tracking-wide text-slate-500">Type
-                                                    </div>
-                                                    <div
-                                                        className="mt-1 text-sm text-slate-900">{contest.contest_type || "—"}</div>
+                                                <div className="rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2">
+                                                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Type</div>
+                                                    <div className="mt-1 text-sm text-slate-800">{contest.contest_type || "—"}</div>
                                                 </div>
 
-                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                                                    <div
-                                                        className="text-[11px] uppercase tracking-wide text-slate-500">Schedule
-                                                    </div>
-                                                    <div className="mt-1 text-sm text-slate-900">
+                                                <div className="rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2">
+                                                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Schedule</div>
+                                                    <div className="mt-1 text-sm text-slate-800">
                                                         {contest.start_time ? toLocalInput(contest.start_time) : "—"} →{" "}
                                                         {contest.end_time ? toLocalInput(contest.end_time) : "—"}
                                                     </div>
                                                 </div>
 
-                                                <div
-                                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 md:col-span-2">
-                                                    <div
-                                                        className="text-[11px] uppercase tracking-wide text-slate-500">Description
-                                                    </div>
-                                                    <div className="mt-1 text-sm text-slate-900 whitespace-pre-line">
+                                                <div className="rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2 md:col-span-2">
+                                                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Description</div>
+                                                    <div className="mt-1 text-sm text-slate-800 whitespace-pre-line">
                                                         {contest.description || "—"}
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
                                             <div className="mt-3 text-sm text-slate-600">
-                                                This draft is marked as <b>Competition</b> but has no contest attached.
+                                                This draft is marked <b>Competition</b> but has no contest attached.
                                             </div>
                                         )}
                                     </div>
@@ -557,24 +601,38 @@ const AdminDraftEdit: React.FC = () => {
 
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        Problem Description <span className="text-red-500">*</span>
+                                        Problem Description <span className="text-rose-500">*</span>
                                     </label>
                                     <textarea
-                                        className="block h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className={cx(
+                                            "block h-40 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                            "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                            focusRing
+                                        )}
                                         value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        onChange={(e) => {
+                                            setDescription(e.target.value);
+                                            setQuestionSaved(false);
+                                        }}
                                     />
                                 </div>
 
                                 <div className="grid gap-6 md:grid-cols-3">
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Category <span className="text-red-500">*</span>
+                                            Category <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={category}
-                                            onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : "")}
+                                            onChange={(e) => {
+                                                setCategory(e.target.value ? Number(e.target.value) : "");
+                                                setQuestionSaved(false);
+                                            }}
                                         >
                                             <option value="">Select Category</option>
                                             {categories.map((c) => (
@@ -587,12 +645,19 @@ const AdminDraftEdit: React.FC = () => {
 
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Difficulty <span className="text-red-500">*</span>
+                                            Difficulty <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={difficulty}
-                                            onChange={(e) => setDifficulty(e.target.value ? Number(e.target.value) : "")}
+                                            onChange={(e) => {
+                                                setDifficulty(e.target.value ? Number(e.target.value) : "");
+                                                setQuestionSaved(false);
+                                            }}
                                         >
                                             <option value="">Select Difficulty</option>
                                             {difficulties.map((d) => (
@@ -605,12 +670,19 @@ const AdminDraftEdit: React.FC = () => {
 
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Solution Type <span className="text-red-500">*</span>
+                                            Solution Type <span className="text-rose-500">*</span>
                                         </label>
                                         <select
-                                            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={solutionType}
-                                            onChange={(e) => setSolutionType(e.target.value ? Number(e.target.value) : "")}
+                                            onChange={(e) => {
+                                                setSolutionType(e.target.value ? Number(e.target.value) : "");
+                                                setQuestionSaved(false);
+                                            }}
                                         >
                                             <option value="">Select Solution Type</option>
                                             {solutionTypes.map((s) => (
@@ -624,10 +696,13 @@ const AdminDraftEdit: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label
-                                            className="mb-1 block text-sm font-medium text-slate-700">Constraints</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Constraints</label>
                                         <textarea
-                                            className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block h-24 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={constraints}
                                             onChange={(e) => setConstraints(e.target.value)}
                                         />
@@ -635,19 +710,26 @@ const AdminDraftEdit: React.FC = () => {
 
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">Input
-                                                Format</label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Input Format</label>
                                             <textarea
-                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                className={cx(
+                                                    "block h-24 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                    "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                    focusRing
+                                                )}
                                                 value={inputFormat}
                                                 onChange={(e) => setInputFormat(e.target.value)}
                                             />
                                         </div>
+
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">Output
-                                                Format</label>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">Output Format</label>
                                             <textarea
-                                                className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                className={cx(
+                                                    "block h-24 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                    "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                    focusRing
+                                                )}
                                                 value={outputFormat}
                                                 onChange={(e) => setOutputFormat(e.target.value)}
                                             />
@@ -657,40 +739,49 @@ const AdminDraftEdit: React.FC = () => {
 
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample
-                                            Input</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample Input</label>
                                         <textarea
-                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block h-28 w-full rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-800 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={sampleInput}
                                             onChange={(e) => setSampleInput(e.target.value)}
                                         />
                                     </div>
+
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample
-                                            Output</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Sample Output</label>
                                         <textarea
-                                            className="block h-28 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block h-28 w-full rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-800 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={sampleOutput}
                                             onChange={(e) => setSampleOutput(e.target.value)}
                                         />
                                     </div>
                                 </div>
 
-                                {/* Attachments */}
-                                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
-                                    <div
-                                        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                {/* Uploads */}
+                                <div className="rounded-2xl bg-white/60 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
-                                            <p className="text-sm font-medium text-slate-700">Attach Additional
-                                                Reference Files</p>
+                                            <p className="text-sm font-medium text-slate-700">Attach Reference Files</p>
                                             <p className="mt-1 text-xs text-slate-500">
-                                                New uploads will be added to existing attachments for this challenge.
-                                                Max 20MB per file.
-                                                Allowed types: images, ZIP.
+                                                Added to existing attachments. Max 20MB/file. Allowed: images, ZIP.
                                             </p>
                                         </div>
+
                                         <label
-                                            className="inline-flex w-fit cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                            className={cx(
+                                                "inline-flex w-fit cursor-pointer items-center rounded-xl bg-white/70 px-3 py-2 text-xs font-medium",
+                                                "ring-1 ring-slate-200/60 text-slate-700 hover:bg-white/90",
+                                                focusRing
+                                            )}
+                                        >
                                             <span>Upload files</span>
                                             <input
                                                 type="file"
@@ -703,19 +794,25 @@ const AdminDraftEdit: React.FC = () => {
                                     </div>
 
                                     {uploadFiles.length > 0 && (
-                                        <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                                        <ul className="mt-3 space-y-2 text-xs text-slate-600">
                                             {uploadFiles.map((file, idx) => (
                                                 <li
                                                     key={`${file.name}-${idx}`}
-                                                    className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-3 py-1.5"
+                                                    className="flex items-center justify-between gap-3 rounded-xl bg-white ring-1 ring-slate-200/60 px-3 py-2"
                                                 >
-                          <span className="min-w-0 flex-1 truncate">
-                            {file.name} <span className="text-slate-400">({Math.round(file.size / 1024)} KB)</span>
-                          </span>
+                                                    <span className="min-w-0 flex-1 truncate">
+                                                        {file.name}{" "}
+                                                        <span className="text-slate-400">
+                                                            ({Math.round(file.size / 1024)} KB)
+                                                        </span>
+                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveFile(idx)}
-                                                        className="shrink-0 text-xs text-red-500 hover:text-red-600"
+                                                        className={cx(
+                                                            "shrink-0 rounded-xl px-3 py-1 text-xs text-rose-600 hover:bg-rose-50",
+                                                            focusRing
+                                                        )}
                                                     >
                                                         Remove
                                                     </button>
@@ -725,12 +822,12 @@ const AdminDraftEdit: React.FC = () => {
                                     )}
                                 </div>
 
-                                <div
-                                    className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                {/* Footer */}
+                                <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                     <button
                                         type="button"
                                         onClick={() => navigate("/admin/drafts")}
-                                        className="text-xs text-slate-500 hover:text-slate-700 md:text-sm"
+                                        className={cx("text-sm text-slate-500 hover:text-slate-700", focusRing)}
                                     >
                                         ← Back to drafts list
                                     </button>
@@ -738,7 +835,11 @@ const AdminDraftEdit: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={handleSaveQuestionDraft}
-                                        className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                        className={cx(
+                                            "inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm",
+                                            "hover:bg-sky-700 disabled:opacity-60",
+                                            focusRing
+                                        )}
                                     >
                                         Validate Question Draft
                                     </button>
@@ -749,18 +850,19 @@ const AdminDraftEdit: React.FC = () => {
                         {/* SOLUTION TAB */}
                         {activeTab === "solution" && questionSaved && (
                             <div className="space-y-6 px-4 py-6 sm:px-6">
-                                <div
-                                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                                    These fields are for internal solution notes and official answers. They should not
-                                    be exposed to participants.
+                                <div className="rounded-2xl bg-white/60 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm px-4 py-3 text-xs text-slate-600">
+                                    Internal notes only (not exposed to participants).
                                 </div>
 
                                 {(solutionType === 1 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Flag
-                                            Solution</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Flag Solution</label>
                                         <textarea
-                                            className="block h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block h-24 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm font-mono text-slate-800 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={flagSolution}
                                             onChange={(e) => setFlagSolution(e.target.value)}
                                         />
@@ -769,22 +871,24 @@ const AdminDraftEdit: React.FC = () => {
 
                                 {(solutionType === 2 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Procedure /
-                                            Writeup</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">Procedure / Writeup</label>
                                         <textarea
-                                            className="block h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className={cx(
+                                                "block h-40 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
+                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
+                                                focusRing
+                                            )}
                                             value={procedureSolution}
                                             onChange={(e) => setProcedureSolution(e.target.value)}
                                         />
                                     </div>
                                 )}
 
-                                <div
-                                    className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("question")}
-                                        className="text-sm text-slate-500 hover:text-slate-700"
+                                        className={cx("text-sm text-slate-500 hover:text-slate-700", focusRing)}
                                     >
                                         ← Back to Question
                                     </button>
@@ -792,7 +896,11 @@ const AdminDraftEdit: React.FC = () => {
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 disabled:opacity-60"
+                                        className={cx(
+                                            "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm",
+                                            "hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed",
+                                            focusRing
+                                        )}
                                     >
                                         {submitting ? "Updating..." : "Update Draft"}
                                     </button>
