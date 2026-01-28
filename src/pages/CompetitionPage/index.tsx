@@ -60,10 +60,8 @@ const CompetitionPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Left pane tabs (LeetCode-ish)
     const [leftTab, setLeftTab] = useState<"description" | "submissions">("description");
 
-    // refs for safe async + drag
     const alive = useRef(true);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const dragRef = useRef<{dragging: boolean; startX: number; startRatio: number}>({
@@ -84,7 +82,6 @@ const CompetitionPage: React.FC = () => {
         return Number.isFinite(n) ? n : NaN;
     }, [id]);
 
-    // Fetch challenge (secured: validate id + guard unmount)
     const fetchChallenge = useCallback(async () => {
         if (!challengeId || Number.isNaN(challengeId)) {
             setError("Invalid challenge id.");
@@ -170,17 +167,22 @@ const CompetitionPage: React.FC = () => {
 
     const navHeightPx = 64;
 
-    // Minimal leetcode-like shells (similar family as your other pages, but not flashy)
-    const pageShell = "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col";
-    const panel = "min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm";
+    const pageShell =
+        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col";
+
+    const panel =
+        "min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm";
+
     const panelHeader = "shrink-0 px-4 sm:px-5 py-3 border-b border-slate-200/70 bg-white/40";
     const panelBodyDesktop = "min-h-0 flex-1 overflow-y-auto";
     const panelBodyMobile = "flex-1";
     const tabsWrap = "flex flex-wrap items-center gap-2";
     const tabBtn = (active: boolean) =>
         cx(
-            "rounded-full px-3 py-1 text-xs sm:text-sm ring-1",
-            active ? "ring-slate-900/80 bg-slate-900 text-white" : "ring-slate-200/60 bg-white/70 text-slate-700 hover:bg-white/90"
+            "rounded-full px-3 py-1 text-xs sm:text-sm ring-1 transition-colors cursor-pointer",
+            active
+                ? "bg-slate-100 text-slate-800 ring-slate-300"
+                : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-slate-50"
         );
 
     if (loading) {
@@ -189,9 +191,7 @@ const CompetitionPage: React.FC = () => {
                 <Navbar />
                 <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                     <div className={panel}>
-                        <div className={panelHeader}>
-                            <div className="text-sm font-normal text-slate-700">Loading…</div>
-                        </div>
+                        <div className={panelHeader}>Loading…</div>
                         <div className="p-4 text-sm text-slate-600">Loading challenge…</div>
                     </div>
                 </main>
@@ -225,44 +225,36 @@ const CompetitionPage: React.FC = () => {
         <div className={pageShell}>
             <Navbar />
 
-            {/* LeetCode layout:
-                - Mobile: stacked (Description/Submissions tab on top, Submit panel below)
-                - Desktop: 2 columns with resizable splitter
-            */}
             <div
                 ref={containerRef}
                 className="w-full flex flex-col lg:flex-row gap-3 lg:gap-3 px-3 sm:px-4 py-4"
                 style={isDesktop ? {height: `calc(100vh - ${navHeightPx}px)`} : undefined}
             >
-                {/* LEFT: Description/Submissions */}
+                {/* LEFT */}
                 <section className={panel} style={isDesktop ? {width: leftPct} : undefined} aria-label="Problem panel">
                     <div className={panelHeader}>
-                        <div className="flex items-center justify-between gap-3">
-                            <div className={tabsWrap}>
-                                <button type="button" className={tabBtn(leftTab === "description")} onClick={() => setLeftTab("description")}>
-                                    Description
-                                </button>
-                                <button type="button" className={tabBtn(leftTab === "submissions")} onClick={() => setLeftTab("submissions")}>
-                                    Submissions
-                                </button>
-                            </div>
+                        <div className={tabsWrap}>
+                            <button type="button" className={tabBtn(leftTab === "description")} onClick={() => setLeftTab("description")}>
+                                Description
+                            </button>
+                            <button type="button" className={tabBtn(leftTab === "submissions")} onClick={() => setLeftTab("submissions")}>
+                                Submissions
+                            </button>
                         </div>
                     </div>
 
                     <div className={isDesktop ? panelBodyDesktop : panelBodyMobile}>
-                        {leftTab === "description" ? (
-                            <div className="p-4 sm:p-5">
+                        <div className="p-4 sm:p-5">
+                            {leftTab === "description" ? (
                                 <CompetitionDescription challenge={challenge} />
-                            </div>
-                        ) : (
-                            <div className="p-4 sm:p-5">
+                            ) : (
                                 <CompetitionPreviousSubmissions challengeId={challenge.id} />
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </section>
 
-                {/* SPLITTER (desktop only) */}
+                {/* SPLITTER */}
                 {isDesktop ? (
                     <div className="hidden lg:flex items-stretch">
                         <div
@@ -279,14 +271,11 @@ const CompetitionPage: React.FC = () => {
                     </div>
                 ) : null}
 
-                {/* RIGHT: Submit */}
+                {/* RIGHT (✅ now lets CompetitionAnswerSection fill full height) */}
                 <section className={panel} style={isDesktop ? {width: rightPct} : undefined} aria-label="Submit panel">
-                    <div className={panelHeader}>
-                        <div className="text-sm font-normal text-slate-800">Submit</div>
-                    </div>
-
-                    <div className={isDesktop ? panelBodyDesktop : panelBodyMobile}>
-                        <div className="p-4 sm:p-5">
+                    {/* IMPORTANT: no extra panelHeader + no extra padding wrapper */}
+                    <div className="min-h-0 flex-1 flex">
+                        <div className="min-h-0 flex-1">
                             <CompetitionAnswerSection challenge={challenge} />
                         </div>
                     </div>

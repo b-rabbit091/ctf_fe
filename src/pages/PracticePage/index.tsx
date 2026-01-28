@@ -86,7 +86,7 @@ const PracticePage: React.FC = () => {
         return Number.isFinite(n) ? n : NaN;
     }, [id]);
 
-    /* ---------- data fetch (secured + stable) ---------- */
+    /* ---------- data fetch ---------- */
     const fetchChallenge = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -119,12 +119,10 @@ const PracticePage: React.FC = () => {
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, String(clamp(rightRatio, 0.25, 0.6)));
-        } catch {
-            // ignore
-        }
+        } catch {}
     }, [rightRatio]);
 
-    /* ---------- drag logic (same behavior, optimized) ---------- */
+    /* ---------- drag logic ---------- */
     const startDrag = useCallback(
         (e: React.MouseEvent) => {
             if (!isDesktop) return;
@@ -170,7 +168,6 @@ const PracticePage: React.FC = () => {
 
     const navHeightPx = 64;
 
-    /** ---------- same panel styling as CompetitionPage (minimal + consistent) ---------- */
     const pageShell =
         "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-sm font-sans text-slate-700 flex flex-col";
 
@@ -183,31 +180,28 @@ const PracticePage: React.FC = () => {
 
     const tabBtn = (active: boolean) =>
         cx(
-            "rounded-full px-3 py-1 text-xs sm:text-sm ring-1 transition",
+            "rounded-full px-3 py-1 text-xs sm:text-sm ring-1 transition-colors cursor-pointer",
             active
-                ? "ring-slate-900/80 bg-slate-900 text-white"
-                : "ring-slate-200/60 bg-white/70 text-slate-700 hover:bg-white/90"
+                ? "bg-slate-100 text-slate-800 ring-slate-300"
+                : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-slate-50"
         );
 
     const mobileToggleBtn = (active: boolean) =>
         cx(
             "rounded-xl px-3 py-2 text-xs sm:text-sm ring-1 transition",
             active
-                ? "ring-slate-900/80 bg-slate-900 text-white"
-                : "ring-slate-200/60 bg-white/70 text-slate-700 hover:bg-white/90"
+                ? "bg-slate-100 text-slate-800 ring-slate-300"
+                : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-slate-50"
         );
 
-    /* ---------- states ---------- */
     if (loading) {
         return (
             <div className={pageShell}>
                 <Navbar />
                 <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                     <div className={panel}>
-                        <div className={panelHeader}>
-                            <div className="text-sm font-normal text-slate-800">Loading…</div>
-                        </div>
-                        <div className="p-4 text-sm text-slate-600">Loading challenge…</div>
+                        <div className={panelHeader}>Loading…</div>
+                        <div className="p-4 text-slate-600">Loading challenge…</div>
                     </div>
                 </main>
             </div>
@@ -220,13 +214,8 @@ const PracticePage: React.FC = () => {
                 <Navbar />
                 <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                     <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
-                        <div className="flex items-start gap-3">
-                            <FiAlertCircle className="mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                                <p className="font-normal tracking-tight">Couldn’t load challenge</p>
-                                <p className="mt-1 text-sm break-words text-rose-700/90">{error || "Unknown error."}</p>
-                            </div>
-                        </div>
+                        <FiAlertCircle className="inline mr-2" />
+                        {error || "Unknown error."}
                     </div>
                 </main>
             </div>
@@ -240,9 +229,9 @@ const PracticePage: React.FC = () => {
         <div className={pageShell}>
             <Navbar />
 
-            {/* mobile toggle (kept; same functionality) */}
-            {!isDesktop ? (
-                <div className="mx-auto w-full max-w-6xl px-3 sm:px-4 pt-4">
+            {/* mobile toggle (kept exactly) */}
+            {!isDesktop && (
+                <div className="px-3 sm:px-4 pt-4">
                     <div className="grid grid-cols-2 gap-2">
                         <button type="button" onClick={() => setMobilePane("problem")} className={mobileToggleBtn(mobilePane === "problem")}>
                             Problem
@@ -256,15 +245,12 @@ const PracticePage: React.FC = () => {
                         Switch between problem and submit on smaller screens.
                     </div>
                 </div>
-            ) : null}
+            )}
 
+            {/* ✅ FULL SCREEN CONTAINER (exactly like CompetitionPage) */}
             <div
                 ref={containerRef}
-                className={cx(
-                    "w-full flex flex-col lg:flex-row gap-3 lg:gap-3",
-                    "mx-auto max-w-6xl",
-                    "px-3 sm:px-4 py-4"
-                )}
+                className={cx("w-full flex flex-col lg:flex-row gap-3 lg:gap-3 px-3 sm:px-4 py-4", !isDesktop ? "" : "")}
                 style={isDesktop ? {height: `calc(100vh - ${navHeightPx}px)`} : undefined}
             >
                 {/* LEFT PANEL */}
@@ -274,7 +260,7 @@ const PracticePage: React.FC = () => {
                     aria-label="Problem panel"
                 >
                     <div className={panelHeader}>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex gap-2">
                             <button className={tabBtn(activeTab === "description")} onClick={() => setActiveTab("description")}>
                                 Description
                             </button>
@@ -296,7 +282,7 @@ const PracticePage: React.FC = () => {
                 </section>
 
                 {/* SPLITTER (desktop only) */}
-                {isDesktop ? (
+                {isDesktop && (
                     <div className="hidden lg:flex items-stretch">
                         <div
                             onMouseDown={startDrag}
@@ -310,20 +296,17 @@ const PracticePage: React.FC = () => {
                             <div className="absolute inset-0" />
                         </div>
                     </div>
-                ) : null}
+                )}
 
-                {/* RIGHT PANEL (chat + answer slot) */}
+                {/* RIGHT PANEL */}
                 <section
                     className={cx(panel, !isDesktop && mobilePane !== "side" ? "hidden" : "")}
                     style={isDesktop ? {width: rightPct} : undefined}
                     aria-label="Assistant panel"
                 >
-                    <div className={panelHeader}>
-                        <div className="text-sm font-normal text-slate-800">Assistant</div>
-                    </div>
+                    <div className={panelHeader}>Assistant</div>
 
                     <div className={isDesktop ? panelBodyDesktop : panelBodyMobile}>
-                        {/* DO NOT remove functions/components; keep the same props and behavior */}
                         <div className="p-4 sm:p-5">
                             <PracticeAssistPanel
                                 challenge={challenge}
