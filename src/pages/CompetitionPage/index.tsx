@@ -7,7 +7,7 @@ import {Challenge} from "./types";
 import CompetitionDescription from "./CompetitionDescription";
 import CompetitionAnswerSection from "./CompetitionAnswerSection";
 import CompetitionPreviousSubmissions from "./CompetitionPreviousSubmissions";
-import {FiAlertCircle} from "react-icons/fi";
+import {FiAlertCircle, FiInfo} from "react-icons/fi";
 
 const LG_BREAKPOINT = 1024; // Tailwind lg
 const STORAGE_KEY = "competition_split_right_ratio_v2";
@@ -38,13 +38,15 @@ function useIsDesktop() {
     return isDesktop;
 }
 
-const readStoredRatio = (): number => {
+const readStoredRatio = (): number | null => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
         const n = Number(raw);
-        return Number.isFinite(n) ? clamp(n, 0.28, 0.6) : 0.45;
+        if (!Number.isFinite(n)) return null;
+        return clamp(n, 0.28, 0.6);
     } catch {
-        return 0.45;
+        return null;
     }
 };
 
@@ -54,13 +56,14 @@ const CompetitionPage: React.FC = () => {
     const {id} = useParams<{id: string}>();
 
     const isDesktop = useIsDesktop();
-    const [rightRatio, setRightRatio] = useState<number>(() => readStoredRatio());
+    const [rightRatio, setRightRatio] = useState<number>(() => readStoredRatio() ?? 0.45);
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const [leftTab, setLeftTab] = useState<"description" | "submissions">("description");
+    const [mobilePane, setMobilePane] = useState<"problem" | "side">("problem");
 
     const alive = useRef(true);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -83,14 +86,14 @@ const CompetitionPage: React.FC = () => {
     }, [id]);
 
     const fetchChallenge = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
         if (!challengeId || Number.isNaN(challengeId)) {
             setError("Invalid challenge id.");
             setLoading(false);
             return;
         }
-
-        setLoading(true);
-        setError(null);
 
         try {
             const data = await getChallengeById(challengeId);
@@ -114,9 +117,7 @@ const CompetitionPage: React.FC = () => {
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, String(clamp(rightRatio, 0.28, 0.6)));
-        } catch {
-            // ignore
-        }
+        } catch {}
     }, [rightRatio]);
 
     // Drag handlers (desktop only)
@@ -145,9 +146,7 @@ const CompetitionPage: React.FC = () => {
             const dx = e.clientX - dragRef.current.startX;
             const delta = dx / total;
 
-            // rightRatio moves inverse of dx (drag bar right => right pane shrinks)
-            const next = clamp(dragRef.current.startRatio - delta, 0.28, 0.6);
-            setRightRatio(next);
+            setRightRatio(clamp(dragRef.current.startRatio - delta, 0.28, 0.6));
         };
 
         const onUp = () => {
@@ -168,7 +167,7 @@ const CompetitionPage: React.FC = () => {
     const navHeightPx = 64;
 
     const pageShell =
-        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col";
+        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-sm font-sans text-slate-700 flex flex-col";
 
     const panel =
         "min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm";
@@ -176,10 +175,18 @@ const CompetitionPage: React.FC = () => {
     const panelHeader = "shrink-0 px-4 sm:px-5 py-3 border-b border-slate-200/70 bg-white/40";
     const panelBodyDesktop = "min-h-0 flex-1 overflow-y-auto";
     const panelBodyMobile = "flex-1";
-    const tabsWrap = "flex flex-wrap items-center gap-2";
+
     const tabBtn = (active: boolean) =>
         cx(
             "rounded-full px-3 py-1 text-xs sm:text-sm ring-1 transition-colors cursor-pointer",
+            active
+                ? "bg-slate-100 text-slate-800 ring-slate-300"
+                : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-slate-50"
+        );
+
+    const mobileToggleBtn = (active: boolean) =>
+        cx(
+            "rounded-xl px-3 py-2 text-xs sm:text-sm ring-1 transition",
             active
                 ? "bg-slate-100 text-slate-800 ring-slate-300"
                 : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-slate-50"
@@ -192,7 +199,7 @@ const CompetitionPage: React.FC = () => {
                 <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                     <div className={panel}>
                         <div className={panelHeader}>Loading…</div>
-                        <div className="p-4 text-sm text-slate-600">Loading challenge…</div>
+                        <div className="p-4 text-slate-600">Loading challenge…</div>
                     </div>
                 </main>
             </div>
@@ -205,13 +212,8 @@ const CompetitionPage: React.FC = () => {
                 <Navbar />
                 <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                     <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
-                        <div className="flex items-start gap-3">
-                            <FiAlertCircle className="mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                                <p className="font-normal tracking-tight">Couldn’t load challenge</p>
-                                <p className="mt-1 text-sm break-words text-rose-700/90">{error || "Unknown error."}</p>
-                            </div>
-                        </div>
+                        <FiAlertCircle className="inline mr-2" />
+                        {error || "Unknown error."}
                     </div>
                 </main>
             </div>
@@ -225,20 +227,51 @@ const CompetitionPage: React.FC = () => {
         <div className={pageShell}>
             <Navbar />
 
+            {/* mobile toggle (same as PracticePage pattern) */}
+            {!isDesktop && (
+                <div className="px-3 sm:px-4 pt-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setMobilePane("problem")}
+                            className={mobileToggleBtn(mobilePane === "problem")}
+                        >
+                            Problem
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMobilePane("side")}
+                            className={mobileToggleBtn(mobilePane === "side")}
+                        >
+                            Submit
+                        </button>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">
+                        <FiInfo className="inline -mt-0.5 mr-1" />
+                        Switch between problem and submit on smaller screens.
+                    </div>
+                </div>
+            )}
+
+            {/* FULL SCREEN CONTAINER (same as PracticePage) */}
             <div
                 ref={containerRef}
-                className="w-full flex flex-col lg:flex-row gap-3 lg:gap-3 px-3 sm:px-4 py-4"
+                className={cx("w-full flex flex-col lg:flex-row gap-3 lg:gap-3 px-3 sm:px-4 py-4", !isDesktop ? "" : "")}
                 style={isDesktop ? {height: `calc(100vh - ${navHeightPx}px)`} : undefined}
             >
-                {/* LEFT */}
-                <section className={panel} style={isDesktop ? {width: leftPct} : undefined} aria-label="Problem panel">
+                {/* LEFT PANEL */}
+                <section
+                    className={cx(panel, !isDesktop && mobilePane !== "problem" ? "hidden" : "")}
+                    style={isDesktop ? {width: leftPct} : undefined}
+                    aria-label="Problem panel"
+                >
                     <div className={panelHeader}>
-                        <div className={tabsWrap}>
-                            <button type="button" className={tabBtn(leftTab === "description")} onClick={() => setLeftTab("description")}>
+                        <div className="flex gap-2">
+                            <button className={tabBtn(leftTab === "description")} onClick={() => setLeftTab("description")}>
                                 Description
                             </button>
-                            <button type="button" className={tabBtn(leftTab === "submissions")} onClick={() => setLeftTab("submissions")}>
-                                Submissions
+                            <button className={tabBtn(leftTab === "submissions")} onClick={() => setLeftTab("submissions")}>
+                                Previous Submissions
                             </button>
                         </div>
                     </div>
@@ -254,8 +287,8 @@ const CompetitionPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SPLITTER */}
-                {isDesktop ? (
+                {/* SPLITTER (desktop only) */}
+                {isDesktop && (
                     <div className="hidden lg:flex items-stretch">
                         <div
                             onMouseDown={startDrag}
@@ -269,13 +302,18 @@ const CompetitionPage: React.FC = () => {
                             <div className="absolute inset-0" />
                         </div>
                     </div>
-                ) : null}
+                )}
 
-                {/* RIGHT (✅ now lets CompetitionAnswerSection fill full height) */}
-                <section className={panel} style={isDesktop ? {width: rightPct} : undefined} aria-label="Submit panel">
-                    {/* IMPORTANT: no extra panelHeader + no extra padding wrapper */}
-                    <div className="min-h-0 flex-1 flex">
-                        <div className="min-h-0 flex-1">
+                {/* RIGHT PANEL (exact shell + scroll + padding so submit button is visible) */}
+                <section
+                    className={cx(panel, !isDesktop && mobilePane !== "side" ? "hidden" : "")}
+                    style={isDesktop ? {width: rightPct} : undefined}
+                    aria-label="Submit panel"
+                >
+                    <div className={panelHeader}>Submit</div>
+
+                    <div className={isDesktop ? panelBodyDesktop : panelBodyMobile}>
+                        <div className="p-4 sm:p-5">
                             <CompetitionAnswerSection challenge={challenge} />
                         </div>
                     </div>
