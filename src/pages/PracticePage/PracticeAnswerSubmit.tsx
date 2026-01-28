@@ -159,8 +159,8 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
     // Challenge input logic (UNCHANGED)
     // ----------------------------
     const solutionType = challenge.solution_type?.type || "";
-    const showFlag = solutionType === "Flag" || solutionType === "Flag and Procedure";
-    const showProcedure = solutionType === "Procedure" || solutionType === "Flag and Procedure";
+    const showFlag = solutionType === "flag" || solutionType === "flag and procedure";
+    const showProcedure = solutionType === "procedure" || solutionType === "flag and procedure";
 
     const hasInput = useMemo(() => {
         return (showFlag && flagText.trim().length > 0) || (showProcedure && procedureText.trim().length > 0);
@@ -240,9 +240,9 @@ const PracticeAnswerSubmit: React.FC<Props> = ({ challenge }) => {
     };
 
     const typeBadge = useMemo(() => {
-        if (solutionType === "Flag") return "Flag";
-        if (solutionType === "Procedure") return "Procedure";
-        if (solutionType === "Flag and Procedure") return "Flag + Procedure";
+        if (solutionType === "flag") return "flag";
+        if (solutionType === "procedure") return "procedure";
+        if (solutionType === "flag and procedure") return "flag + procedure";
         return "Practice";
     }, [solutionType]);
 
