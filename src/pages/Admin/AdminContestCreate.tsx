@@ -15,7 +15,7 @@ type ContestDTO = {
     contest_type: ContestType;
     start_time: string;
     end_time: string;
-    is_active: boolean;
+    group_only: boolean;
     publish_result: boolean;
 };
 
@@ -45,7 +45,7 @@ const AdminContestCreate: React.FC = () => {
     const [contestType, setContestType] = useState<ContestType>("custom");
     const [startTime, setStartTime] = useState(""); // datetime-local
     const [endTime, setEndTime] = useState(""); // datetime-local
-    const [isActive, setIsActive] = useState(true);
+    const [isActive, setIsActive] = useState(false);
     const [publishResult, setPublishResult] = useState(false);
 
     const alive = useRef(true);
@@ -129,7 +129,7 @@ const AdminContestCreate: React.FC = () => {
                     contest_type: contestType,
                     start_time: new Date(startTime).toISOString(),
                     end_time: new Date(endTime).toISOString(),
-                    is_active: isActive,
+                    group_only: isActive,
                     publish_result: publishResult,
                 };
 
@@ -349,7 +349,7 @@ const AdminContestCreate: React.FC = () => {
                                             onChange={(e) => setIsActive(e.target.checked)}
                                             className="h-4 w-4 rounded border-slate-300"
                                         />
-                                        Active
+                                        Group Only
                                     </label>
 
                                     <label className="flex items-center gap-2 text-sm text-slate-600">

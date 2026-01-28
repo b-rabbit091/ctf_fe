@@ -331,8 +331,12 @@ const CompetitionList: React.FC = () => {
 
             if (statusFilter !== "ALL" && meta.status !== statusFilter) return false;
 
-            if (groupFilter === "GROUP_ONLY" && !c.group_only) return false;
-            if (groupFilter === "SOLO_ONLY" && c.group_only) return false;
+            const activeContest = (c as any).active_contest ?? null;
+            const isGroupOnly = !!activeContest?.group_only;
+
+            if (groupFilter === "GROUP_ONLY" && !isGroupOnly) return false;
+            if (groupFilter === "SOLO_ONLY" && isGroupOnly) return false;
+
 
             if (contestNameFilter !== "ALL") {
                 const activeName = meta.contestName || "NO CONTEST";
@@ -423,7 +427,10 @@ const CompetitionList: React.FC = () => {
             const difficulty = cc.difficulty?.level || "N/A";
             const category = cc.category?.name || "N/A";
 
-            const isGroupOnly = !!cc.group_only;
+            const activeContest = cc.active_contest ?? null;
+            const isGroupOnly = !!activeContest?.group_only;
+
+
             const canParticipate = cc.can_participate !== undefined ? !!cc.can_participate : true;
 
             const difficultyLower = String(difficulty || "").toLowerCase();
