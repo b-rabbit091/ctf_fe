@@ -187,8 +187,8 @@ const AdminQuestionCreate: React.FC = () => {
                 form.append("category", String(category));
                 form.append("difficulty", String(difficulty));
                 form.append("solution_type", String(solutionType));
-                form.append("flag_score", flagScore !== null ? String(flagScore) : "");
-                form.append("procedure_score", procedureScore !== null ? String(procedureScore) : "");
+                form.append("flag_score", String(flagScore ?? 0));
+                form.append("procedure_score", String(procedureScore ?? 0));
 
                 form.append("flagSolution", String(flagSolution ?? ""));
                 form.append("procedureSolution", String(procedureSolution ?? ""));
