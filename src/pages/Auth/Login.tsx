@@ -3,6 +3,7 @@ import {Link, useNavigate} from "react-router-dom";
 import {toast} from "react-toastify";
 import {ImSpinner8} from "react-icons/im";
 import {useAuth} from "../../contexts/AuthContext";
+import coverImg from "@/static/images/cover.png";
 
 interface LoginForm {
     username: string;
@@ -39,23 +40,31 @@ const Login: React.FC = () => {
     }, [user, navigate]);
 
     return (
-        // No scroll, ever. Image + form "touch" seamlessly.
-        <div className="w-[100dvw] h-[100dvh] overflow-hidden">
+        <div className="w-[100dvw] h-[100dvh] overflow-hidden bg-white">
             <div className="h-full w-full flex flex-col lg:flex-row overflow-hidden">
-                {/* LEFT: image (no padding, no bg, no border, no rounding) */}
+                {/* LEFT: image */}
                 <div className="flex-1 min-w-0 h-[55dvh] lg:h-full overflow-hidden">
-                    <img
-                        src="src/static/images/cover.png"
-                        alt="Cover"
-                        className="w-full h-full object-contain"
-                        draggable={false}
-                    />
+                    {/* LEFT: Responsive Image */}
+                    <div className="flex-1 h-[45vh] lg:h-full bg-gray-50">
+                        <img
+                            src={coverImg}
+                            alt="Cover"
+                            draggable={false}
+                            className="
+      w-full h-full
+      object-cover
+      select-none
+      [image-rendering:auto]
+      [transform:translateZ(0)]
+      [backface-visibility:hidden]
+    "
+                        />
+                    </div>
+
                 </div>
 
-                {/* RIGHT: form (flush with image, no bg/border/shadow) */}
-                <div
-                    className="w-full lg:w-[420px] xl:w-[440px] h-[45dvh] lg:h-full overflow-hidden flex items-center justify-center">
-                    {/* Scale down instead of scrolling on short screens */}
+                {/* RIGHT: form */}
+                <div className="w-full lg:w-[420px] xl:w-[440px] h-[45dvh] lg:h-full overflow-hidden flex items-center justify-center">
                     <div
                         className="
               w-full max-w-md px-5 sm:px-8
@@ -74,7 +83,13 @@ const Login: React.FC = () => {
                             <img
                                 src="https://sso.nwmissouri.edu/adfs/portal/logo/logo.png?id=98124957C0CDEFFDBE90AF9EF19DB4BDA8EE87632170955806EE170BF250E5B6"
                                 alt="Login"
-                                className="h-12 sm:h-14 w-auto object-contain"
+                                className="
+                  h-12 sm:h-14 w-auto object-contain
+                  select-none
+                  [image-rendering:auto]
+                  [transform:translateZ(0)]
+                  [backface-visibility:hidden]
+                "
                                 draggable={false}
                             />
                         </div>
@@ -92,7 +107,13 @@ const Login: React.FC = () => {
                                     onChange={onChange}
                                     required
                                     placeholder="Enter your username"
-                                    className="w-full px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-300 focus:outline-none focus:border-green-600"
+                                    className="
+                    w-full px-0 py-2 text-sm bg-transparent
+                    border-0 border-b border-gray-300
+                    focus:outline-none focus:border-green-600
+                    transition-colors duration-200
+                    placeholder:text-gray-400
+                  "
                                 />
                             </div>
 
@@ -108,18 +129,32 @@ const Login: React.FC = () => {
                                     onChange={onChange}
                                     required
                                     placeholder="Enter your password"
-                                    className="w-full px-0 py-2 text-sm bg-transparent border-0 border-b border-gray-300 focus:outline-none focus:border-green-600"
+                                    className="
+                    w-full px-0 py-2 text-sm bg-transparent
+                    border-0 border-b border-gray-300
+                    focus:outline-none focus:border-green-600
+                    transition-colors duration-200
+                    placeholder:text-gray-400
+                  "
                                 />
                             </div>
 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center"
+                                className="
+                  w-full py-2.5 text-sm font-semibold text-white
+                  bg-blue-600 hover:bg-blue-700
+                  transition-all duration-200
+                  disabled:opacity-60 disabled:hover:bg-blue-600
+                  flex items-center justify-center
+                  active:scale-[0.99]
+                  [transform:translateZ(0)]
+                "
                             >
                                 {loading ? (
                                     <>
-                                        <ImSpinner8 className="animate-spin mr-2"/>
+                                        <ImSpinner8 className="animate-spin mr-2" />
                                         Signing in...
                                     </>
                                 ) : (
