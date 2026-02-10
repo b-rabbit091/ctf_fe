@@ -43,24 +43,22 @@ const Login: React.FC = () => {
         <div className="w-[100dvw] h-[100dvh] overflow-hidden bg-white">
             <div className="h-full w-full flex flex-col lg:flex-row overflow-hidden">
                 {/* LEFT: image */}
-                <div className="flex-1 min-w-0 h-[55dvh] lg:h-full overflow-hidden">
-                    {/* LEFT: Responsive Image */}
-                    <div className="flex-1 h-[45vh] lg:h-full bg-gray-50">
+                <div className="flex-1 min-w-0 h-[55dvh] lg:h-full overflow-hidden bg-gray-50">
+                    <div className="w-full h-full flex items-center justify-center">
                         <img
                             src={coverImg}
                             alt="Cover"
                             draggable={false}
                             className="
-      w-full h-full
-      object-cover
-      select-none
-      [image-rendering:auto]
-      [transform:translateZ(0)]
-      [backface-visibility:hidden]
-    "
+                w-full h-full
+                object-contain
+                select-none
+                [image-rendering:auto]
+                [transform:translateZ(0)]
+                [backface-visibility:hidden]
+              "
                         />
                     </div>
-
                 </div>
 
                 {/* RIGHT: form */}
