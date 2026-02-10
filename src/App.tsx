@@ -57,7 +57,7 @@ const App: React.FC = () => {
     return (
         <ErrorBoundary>
             <AuthProvider>
-                <BrowserRouter>
+                <BrowserRouter basename="/ctf">
                     <Routes>
                         {/* ---------------- Public ---------------- */}
                         <Route path="/login" element={<Login/>}/>
