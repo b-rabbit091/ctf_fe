@@ -15,7 +15,7 @@ import {PreviousSubmission, PreviousSubmissionsApiResponse, SubmissionApiItem} f
 export const getChallenges = async (filters?: {
     category?: string;
     difficulty?: string;
-    type?: string; // "practice" | "competition"
+    type?: string;
 }): Promise<Challenge[]> => {
     const params: Record<string, string> = {};
     if (filters?.category) params.category = filters.category;

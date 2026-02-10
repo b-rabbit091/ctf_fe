@@ -1,7 +1,7 @@
-import React, {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../../components/Navbar";
-import {useNavigate} from "react-router-dom";
-import {getCategories, getDifficulties, getSolutionTypes, createChallenge} from "../../api/practice";
+import { useNavigate } from "react-router-dom";
+import { getCategories, getDifficulties, getSolutionTypes, createChallenge } from "../../api/practice";
 
 type TabKey = "question" | "solution";
 
@@ -38,11 +38,9 @@ const AdminQuestionCreate: React.FC = () => {
     // Solutions (kept exactly as-is behavior-wise; internal notes only)
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
-    const [flagScore, setFlagScore] = useState<number>(0);
-    const [procedureScore, setProcedureScore] = useState<number>(0);
+    const [flagScore, setFlagScore] = useState<number | null>(null);
+    const [procedureScore, setProcedureScore] = useState<number | null>(null);
 
-    void flagSolution;
-    void procedureSolution;
 
     // Files
     const [uploadFiles, setUploadFiles] = useState<File[]>([]);
@@ -189,9 +187,11 @@ const AdminQuestionCreate: React.FC = () => {
                 form.append("category", String(category));
                 form.append("difficulty", String(difficulty));
                 form.append("solution_type", String(solutionType));
-                form.append("flag_score", String(flagScore ?? 0));
-                form.append("procedure_score", String(procedureScore ?? 0));
+                form.append("flag_score", flagScore !== null ? String(flagScore) : "");
+                form.append("procedure_score", procedureScore !== null ? String(procedureScore) : "");
 
+                form.append("flagSolution", String(flagSolution ?? ""));
+                form.append("procedureSolution", String(procedureSolution ?? ""));
 
                 uploadFiles.forEach((f) => form.append("uploaded_files", f));
 
@@ -218,6 +218,11 @@ const AdminQuestionCreate: React.FC = () => {
             solutionType,
             uploadFiles,
             navigate,
+            flagSolution,
+            procedureSolution,
+            flagScore,
+            procedureScore
+
         ]
     );
 
@@ -238,7 +243,7 @@ const AdminQuestionCreate: React.FC = () => {
 
     return (
         <div className={shell}>
-            <Navbar/>
+            <Navbar />
 
             <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
                 <div className={glassCard}>
@@ -260,7 +265,7 @@ const AdminQuestionCreate: React.FC = () => {
                         ) : null}
                     </div>
 
-                    <div className="h-px bg-slate-200/70"/>
+                    <div className="h-px bg-slate-200/70" />
 
                     {/* FORM */}
                     <form onSubmit={handleSubmitChallenge}>
@@ -652,10 +657,13 @@ const AdminQuestionCreate: React.FC = () => {
                                                         min={0}
                                                         step={1}
                                                         className={inputBase}
-                                                        value={Number.isFinite(flagScore) ? flagScore : 0}
-                                                        onChange={(e) => setFlagScore(Math.max(0, Number(e.target.value || 0)))}
+                                                        value={flagScore ?? ""}
+                                                        onChange={(e) =>
+                                                            setFlagScore(e.target.value === "" ? null : Math.max(0, Number(e.target.value)))
+                                                        }
                                                         placeholder="e.g. 50"
                                                     />
+
                                                 </div>
                                             ) : null}
 
@@ -669,10 +677,13 @@ const AdminQuestionCreate: React.FC = () => {
                                                         min={0}
                                                         step={1}
                                                         className={inputBase}
-                                                        value={Number.isFinite(procedureScore) ? procedureScore : 0}
-                                                        onChange={(e) => setProcedureScore(Math.max(0, Number(e.target.value || 0)))}
+                                                        value={procedureScore ?? ""}
+                                                        onChange={(e) =>
+                                                            setProcedureScore(e.target.value === "" ? null : Math.max(0, Number(e.target.value)))
+                                                        }
                                                         placeholder="e.g. 50"
                                                     />
+
                                                 </div>
                                             ) : null}
                                         </div>
