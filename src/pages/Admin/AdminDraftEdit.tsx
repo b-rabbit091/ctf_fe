@@ -329,7 +329,7 @@ const AdminDraftEdit: React.FC = () => {
                 if (difficulty) formData.append("difficulty", String(difficulty));
                 if (solutionType) formData.append("solution_type", String(solutionType));
 
-                // ✅ include scores in update
+                // include scores in update
                 formData.append("flag_score", String(Number.isFinite(flagScore) ? Math.max(0, Math.floor(flagScore)) : 0));
                 formData.append(
                     "procedure_score",
@@ -345,7 +345,7 @@ const AdminDraftEdit: React.FC = () => {
                 if (!alive.current) return;
 
                 flashMessage("Draft updated successfully.");
-                navigate("/admin/drafts");
+                navigate("/admin/questions/create");
             } catch (err: any) {
                 console.error(err);
                 if (!alive.current) return;
