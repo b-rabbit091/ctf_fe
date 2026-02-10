@@ -1,9 +1,10 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../../components/Navbar";
-import {FiSearch, FiFileText, FiEye, FiX, FiAlertCircle, FiInfo} from "react-icons/fi";
-import {useNavigate} from "react-router-dom";
-import {useAuth} from "../../contexts/AuthContext";
-import {generateReportByChallengeId, ReportAttempt, ReportResponse} from "../../api/practice";
+import { FiSearch, FiFileText, FiCheckSquare, FiEye, FiX, FiAlertCircle, FiSquare, FiInfo } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { generateReportByChallengeId, ReportAttempt, ReportResponse, getChallenges, getDifficulties } from "../../api/practice";
+
 
 /** -------------------- utils / styles -------------------- **/
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
@@ -24,7 +25,11 @@ const statusTone = (st?: string | null) => {
     return "slate" as const;
 };
 
-const Badge: React.FC<{text: string; tone?: "slate" | "green" | "red" | "amber"}> = ({text, tone = "slate"}) => {
+function safeArray<T>(v: any): T[] {
+    return Array.isArray(v) ? (v as T[]) : [];
+}
+
+const Badge: React.FC<{ text: string; tone?: "slate" | "green" | "red" | "amber" }> = ({ text, tone = "slate" }) => {
     const map: Record<string, string> = {
         slate: "ring-slate-200/60 bg-slate-100/70 text-slate-700",
         green: "ring-emerald-200/60 bg-emerald-50/70 text-emerald-700",
@@ -79,13 +84,16 @@ const renderAttemptLine = (a: ReportAttempt) => {
 /** -------------------- component -------------------- **/
 const AdminGenerateReport: React.FC = () => {
     const navigate = useNavigate();
-    const {user} = useAuth();
+    const { user } = useAuth();
 
     // SECURITY
     useEffect(() => {
         if (!user) return;
         if (user.role !== "admin") navigate("/dashboard");
     }, [user, navigate]);
+
+    const [challenges, setChallenges] = useState<any[]>([]);
+    const [difficulties, setDifficulties] = useState<any[]>([]);
 
     // Inputs
     const [challengeId, setChallengeId] = useState<string>("");
@@ -99,6 +107,9 @@ const AdminGenerateReport: React.FC = () => {
         "ALL"
     );
     const [search, setSearch] = useState<string>("");
+    const [difficultyFilter, setDifficultyFilter] = useState<number | "">("");
+    const [challengeSearchFilter, setChallengeSearchFilter] = useState<string>("");
+
 
     // Data
     const [report, setReport] = useState<ReportResponse | null>(null);
@@ -108,6 +119,8 @@ const AdminGenerateReport: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [loadingChallenges, setLoadingChallenges] = useState(false);
+
 
     // Modal
     const [viewRowId, setViewRowId] = useState<string | null>(null);
@@ -123,6 +136,40 @@ const AdminGenerateReport: React.FC = () => {
 
     const msgTimer = useRef<number | null>(null);
     const busyRef = useRef(false);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoadingChallenges(true);
+
+        (async () => {
+            try {
+                const [challengesData, difficultiesData] = await Promise.all([
+                    getChallenges(),
+                    getDifficulties()
+                ]);
+
+                if (!mounted || !alive.current) return;
+
+                setChallenges(safeArray(challengesData));
+                setDifficulties(safeArray(difficultiesData));
+            } catch (err: any) {
+                if (mounted && alive.current) {
+                    setError(err?.message || "Failed to load challenges.");
+                }
+            } finally {
+                if (mounted && alive.current) setLoadingChallenges(false);
+            }
+        })();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    const toggleOne = useCallback((id: number) => {
+        setChallengeId((prev) => (prev === String(id) ? "" : String(id)));
+    }, []);
+
 
     const resetMessages = useCallback(() => {
         setError(null);
@@ -172,6 +219,22 @@ const AdminGenerateReport: React.FC = () => {
         });
     }, [rows, who, statusFilter, solutionTypeFilter, search]);
 
+    const filteredChallenges = useMemo(() => {
+        const q = challengeSearchFilter.trim().toLowerCase();
+
+        return challenges.filter((challenge) => {
+            // Filter by difficulty
+            if (difficultyFilter !== "" && challenge.difficulty?.id !== difficultyFilter) {
+                return false;
+            }
+
+            // Filter by search query (title)
+            if (!q) return true;
+            const title = challenge.title?.toLowerCase() || "";
+            return title.includes(q);
+        });
+    }, [challenges, challengeSearchFilter, difficultyFilter]);
+
     const summary = useMemo(() => {
         const total = filteredRows.length;
 
@@ -187,7 +250,7 @@ const AdminGenerateReport: React.FC = () => {
             ? Math.round(filteredRows.reduce((acc, r) => acc + (r.summary?.procedure?.best_score ?? 0), 0) / total)
             : 0;
 
-        return {total, avgTotal, flagAvg, procAvg};
+        return { total, avgTotal, flagAvg, procAvg };
     }, [filteredRows]);
 
     const selectedRow = useMemo(() => {
@@ -198,42 +261,45 @@ const AdminGenerateReport: React.FC = () => {
     const solutionLabel = report?.challenge?.solution_type ?? null;
 
     const handleGenerate = useCallback(async () => {
-        resetMessages();
+    resetMessages();
 
-        if (!user || user.role !== "admin") {
-            setError("Unauthorized – admin only.");
-            return;
-        }
+    // Admin-only check
+    if (!user || user.role !== "admin") {
+        setError("Unauthorized – admin only.");
+        return;
+    }
 
-        const idNum = Number(challengeId);
-        if (!Number.isFinite(idNum) || idNum <= 0) {
-            setError("Please enter a valid Challenge ID (number).");
-            return;
-        }
+    const idNum = Number(challengeId);
 
-        if (busyRef.current) return;
-        busyRef.current = true;
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+        setError("Please select a valid challenge before generating the report.");
+        return;
+    }
 
-        setLoading(true);
-        flashMessage("Generating report…", 2000);
+    if (busyRef.current) return;
+    busyRef.current = true;
+
+    setLoading(true);
+    flashMessage("Generating report…", 2000);
 
         try {
             const res = await generateReportByChallengeId(idNum, toISOStart(from), toISOEnd(to));
             if (!alive.current) return;
 
-            setReport(res);
-            setGeneratedAt(new Date().toLocaleString());
-            flashMessage("Report generated.");
-        } catch (e: any) {
-            if (!alive.current) return;
-            setError(e?.message || "Failed to generate report.");
-            setMessage(null);
-        } finally {
-            busyRef.current = false;
-            if (!alive.current) return;
-            setLoading(false);
-        }
-    }, [resetMessages, user, challengeId, from, to, flashMessage]);
+        setReport(res);
+        setGeneratedAt(new Date().toLocaleString());
+        flashMessage("Report generated.");
+    } catch (e: any) {
+        if (!alive.current) return;
+        setError(e?.message || "Failed to generate report.");
+        setMessage(null);
+    } finally {
+        busyRef.current = false;
+        if (!alive.current) return;
+        setLoading(false);
+    }
+}, [resetMessages, user, challengeId, from, to, flashMessage]);
+
 
     const closeModal = useCallback(() => setViewRowId(null), []);
 
@@ -312,26 +378,45 @@ const AdminGenerateReport: React.FC = () => {
 
                     {/* Builder */}
                     <section className="px-4 sm:px-5 py-5 border-b border-slate-200/70">
-                        <div className="grid gap-4 lg:grid-cols-12 lg:items-end">
-                            <div className="lg:col-span-4">
-                                <label className="mb-1 block text-sm font-normal text-slate-600">
-                                    Challenge ID <span className="text-rose-500">*</span>
-                                </label>
+                        {/* Search and Difficulty Filter */}
+                        <div className="grid gap-4 lg:grid-cols-12 mb-4">
+                            <div className="lg:col-span-9">
+                                <label className="mb-1 block text-sm font-normal text-slate-600">Search challenges</label>
                                 <div className="relative">
                                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
-                                        value={challengeId}
-                                        onChange={(e) => setChallengeId(e.target.value)}
-                                        placeholder="e.g. 12"
-                                        inputMode="numeric"
+                                        value={challengeSearchFilter}
+                                        onChange={(e) => setChallengeSearchFilter(e.target.value)}
+                                        placeholder="Type challenge title…"
                                         className={cx(
-                                            "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-10 text-sm sm:text-base text-slate-700 shadow-sm",
+                                            "h-10 w-full rounded-xl border border-slate-200/70 bg-white pl-10 pr-4 text-sm sm:text-base text-slate-700 shadow-sm",
                                             "placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30"
                                         )}
                                     />
                                 </div>
                             </div>
 
+                            <div className="lg:col-span-3">
+                                <label className="mb-1 block text-sm font-normal text-slate-600">Difficulty</label>
+                                <select
+                                    value={difficultyFilter}
+                                    onChange={(e) => setDifficultyFilter(e.target.value === "" ? "" : Number(e.target.value))}
+                                    className={cx(
+                                        "h-10 w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-9 text-sm sm:text-base text-slate-700 shadow-sm",
+                                        "hover:bg-slate-50/70 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30"
+                                    )}
+                                >
+                                    <option value="">All</option>
+                                    {difficulties.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.level}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 lg:grid-cols-9 lg:items-end">
                             <div className="lg:col-span-3">
                                 <label className="mb-1 block text-sm font-normal text-slate-600">From</label>
                                 <input
@@ -358,7 +443,7 @@ const AdminGenerateReport: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="lg:col-span-2 flex flex-col items-stretch gap-2">
+                            <div className="lg:col-span-3 flex flex-col items-stretch gap-2">
                                 {generatedAt ? (
                                     <div className="hidden lg:block text-xs text-slate-500">
                                         Last generated: <span className="font-medium text-slate-700">{generatedAt}</span>
@@ -386,6 +471,91 @@ const AdminGenerateReport: React.FC = () => {
                             </div>
                         </div>
                     </section>
+
+                    {/* Challenges Table */}
+                    {!loadingChallenges && challenges.length > 0 ? (
+                        <section className="px-4 sm:px-5 py-5 border-b border-slate-200/70">
+                            <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-x-auto">
+                                <table className="min-w-full text-sm sm:text-base">
+                                    <thead className="bg-white/40">
+                                        <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                            <th className="w-12 px-4 py-3 font-normal">Select</th>
+                                            <th className="px-4 py-3 font-normal">Title</th>
+                                            <th className="px-4 py-3 font-normal">Description</th>
+                                            <th className="px-4 py-3 font-normal">Category</th>
+                                            <th className="px-4 py-3 font-normal">Difficulty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-transparent">
+                                        {filteredChallenges.map((challenge) => {
+                                            const id = challenge.id;
+                                            const isSelected = challengeId === String(id);
+
+                                            return (
+                                                <tr
+                                                    key={id}
+                                                    className={cx(
+                                                        "border-b border-slate-100/70 last:border-0 transition cursor-pointer",
+                                                        isSelected
+                                                            ? "bg-sky-50/70 hover:bg-sky-50/90"
+                                                            : "hover:bg-white/60"
+                                                    )}
+                                                    onClick={() => toggleOne(id)}
+                                                >
+                                                    <td className="px-4 py-3 align-top">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleOne(id);
+                                                            }}
+                                                            className={cx(
+                                                                "inline-flex items-center justify-center rounded-xl bg-white/70 p-2",
+                                                                "ring-1 ring-slate-200/60 hover:bg-white/90",
+                                                                isSelected && "ring-sky-300 bg-sky-50",
+                                                                focusRing
+                                                            )}
+                                                            aria-label={isSelected ? "Unselect challenge" : "Select challenge"}
+                                                        >
+                                                            {isSelected ? (
+                                                                <FiCheckSquare size={18} className="text-sky-600" />
+                                                            ) : (
+                                                                <FiSquare size={18} className="text-slate-500" />
+                                                            )}
+                                                        </button>
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top">
+                                                        <div className="font-normal tracking-tight text-slate-700">
+                                                            {challenge.title || "—"}
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top max-w-md">
+                                                        <div className="text-xs sm:text-sm text-slate-600">
+                                                            {challenge.description
+                                                                ? challenge.description.length > 100
+                                                                    ? `${challenge.description.slice(0, 100)}…`
+                                                                    : challenge.description
+                                                                : "No description available"}
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top text-slate-600">
+                                                        {challenge.category?.name || "—"}
+                                                    </td>
+
+                                                    <td className="px-4 py-3 align-top">
+                                                        <Badge text={challenge.difficulty?.level || "—"} tone="slate" />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    ) : null}
 
                     {/* Alerts */}
                     {(error || message) ? (
@@ -515,105 +685,105 @@ const AdminGenerateReport: React.FC = () => {
                             <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-x-auto">
                                 <table className="min-w-full text-sm sm:text-base">
                                     <thead className="bg-white/40 sticky top-0">
-                                    <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
-                                        <th className="px-4 py-3 font-normal">User / Group</th>
-                                        <th className="px-4 py-3 font-normal">Solution</th>
-                                        <th className="px-4 py-3 font-normal">Status</th>
-                                        <th className="px-4 py-3 font-normal">Date</th>
-                                        <th className="px-4 py-3 font-normal">Flag</th>
-                                        <th className="px-4 py-3 font-normal">Procedure</th>
-                                        <th className="px-4 py-3 font-normal">Total</th>
-                                        <th className="px-4 py-3 text-right font-normal">Actions</th>
-                                    </tr>
+                                        <tr className="border-b border-slate-200/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                                            <th className="px-4 py-3 font-normal">User / Group</th>
+                                            <th className="px-4 py-3 font-normal">Solution</th>
+                                            <th className="px-4 py-3 font-normal">Status</th>
+                                            <th className="px-4 py-3 font-normal">Date</th>
+                                            <th className="px-4 py-3 font-normal">Flag</th>
+                                            <th className="px-4 py-3 font-normal">Procedure</th>
+                                            <th className="px-4 py-3 font-normal">Total</th>
+                                            <th className="px-4 py-3 text-right font-normal">Actions</th>
+                                        </tr>
                                     </thead>
 
                                     <tbody className="bg-transparent">
-                                    {filteredRows.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                                                No rows match your filters.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredRows.map((r) => {
-                                            const entityName =
-                                                r.entity_type === "user" ? (r.entity as any).username : (r.entity as any).name;
+                                        {filteredRows.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
+                                                    No rows match your filters.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredRows.map((r) => {
+                                                const entityName =
+                                                    r.entity_type === "user" ? (r.entity as any).username : (r.entity as any).name;
 
-                                            const flagBest = r.summary?.flag?.best_score ?? 0;
-                                            const procBest = r.summary?.procedure?.best_score ?? 0;
-                                            const total = r.summary?.total_score ?? 0;
-                                            const date = r.summary?.date ?? null;
+                                                const flagBest = r.summary?.flag?.best_score ?? 0;
+                                                const procBest = r.summary?.procedure?.best_score ?? 0;
+                                                const total = r.summary?.total_score ?? 0;
+                                                const date = r.summary?.date ?? null;
 
-                                            const stFlag = r.summary?.flag?.latest_status;
-                                            const stProc = r.summary?.procedure?.latest_status;
+                                                const stFlag = r.summary?.flag?.latest_status;
+                                                const stProc = r.summary?.procedure?.latest_status;
 
-                                            return (
-                                                <tr key={r.row_id} className="border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition">
-                                                    <td className="px-4 py-3 align-top">
-                                                        <div className="font-normal tracking-tight text-slate-700">{entityName}</div>
-                                                        <div className="mt-0.5 text-xs sm:text-sm text-slate-500 capitalize">
-                                                            {r.entity_type}
-                                                        </div>
-                                                    </td>
+                                                return (
+                                                    <tr key={r.row_id} className="border-b border-slate-100/70 last:border-0 hover:bg-white/60 transition">
+                                                        <td className="px-4 py-3 align-top">
+                                                            <div className="font-normal tracking-tight text-slate-700">{entityName}</div>
+                                                            <div className="mt-0.5 text-xs sm:text-sm text-slate-500 capitalize">
+                                                                {r.entity_type}
+                                                            </div>
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top">
-                                                        <Badge text={r.solution_type} tone="slate" />
-                                                    </td>
+                                                        <td className="px-4 py-3 align-top">
+                                                            <Badge text={r.solution_type} tone="slate" />
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {stFlag ? (
-                                                                <Badge text={`Flag: ${stFlag}`} tone={statusTone(stFlag)} />
-                                                            ) : (
-                                                                <Badge text="Flag: —" tone="slate" />
-                                                            )}
-                                                            {stProc ? (
-                                                                <Badge text={`Proc: ${stProc}`} tone={statusTone(stProc)} />
-                                                            ) : (
-                                                                <Badge text="Proc: —" tone="slate" />
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                                        <td className="px-4 py-3 align-top">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {stFlag ? (
+                                                                    <Badge text={`Flag: ${stFlag}`} tone={statusTone(stFlag)} />
+                                                                ) : (
+                                                                    <Badge text="Flag: —" tone="slate" />
+                                                                )}
+                                                                {stProc ? (
+                                                                    <Badge text={`Proc: ${stProc}`} tone={statusTone(stProc)} />
+                                                                ) : (
+                                                                    <Badge text="Proc: —" tone="slate" />
+                                                                )}
+                                                            </div>
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top text-slate-500">{isoToLocal(date)}</td>
+                                                        <td className="px-4 py-3 align-top text-slate-500">{isoToLocal(date)}</td>
 
-                                                    <td className="px-4 py-3 align-top">
+                                                        <td className="px-4 py-3 align-top">
                                                             <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-white/70 px-3 py-1 text-xs sm:text-sm font-semibold text-slate-900">
                                                                 {flagBest}
                                                             </span>
-                                                    </td>
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top">
+                                                        <td className="px-4 py-3 align-top">
                                                             <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-white/70 px-3 py-1 text-xs sm:text-sm font-semibold text-slate-900">
                                                                 {procBest}
                                                             </span>
-                                                    </td>
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top">
+                                                        <td className="px-4 py-3 align-top">
                                                             <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm font-semibold text-slate-900">
                                                                 {total}
                                                             </span>
-                                                    </td>
+                                                        </td>
 
-                                                    <td className="px-4 py-3 align-top">
-                                                        <div className="flex justify-end">
-                                                            <button
-                                                                onClick={() => setViewRowId(r.row_id)}
-                                                                className={cx(
-                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
-                                                                    "ring-1 ring-slate-200/60 text-slate-700 hover:bg-white/90",
-                                                                    focusRing
-                                                                )}
-                                                            >
-                                                                <FiEye size={16} />
-                                                                <span>See more</span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
+                                                        <td className="px-4 py-3 align-top">
+                                                            <div className="flex justify-end">
+                                                                <button
+                                                                    onClick={() => setViewRowId(r.row_id)}
+                                                                    className={cx(
+                                                                        "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
+                                                                        "ring-1 ring-slate-200/60 text-slate-700 hover:bg-white/90",
+                                                                        focusRing
+                                                                    )}
+                                                                >
+                                                                    <FiEye size={16} />
+                                                                    <span>See more</span>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
