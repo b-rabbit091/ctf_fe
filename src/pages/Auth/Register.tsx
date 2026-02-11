@@ -44,7 +44,7 @@ const Register: React.FC = () => {
             toast.success("Registration successful!");
             setForm({ username: "", email: "", first_name: "", last_name: "" });
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || "Registration failed");
+            toast.error(err.response?.data?.detail || "Email or username already taken");
         } finally {
             setLoading(false);
         }
@@ -52,7 +52,6 @@ const Register: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full overflow-hidden bg-white">
-            {/* Background glow + subtle grid */}
             <div className="absolute inset-0 -z-10">
                 <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-[#006747]/15 blur-3xl" />
                 <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-400/15 blur-3xl" />
@@ -261,7 +260,6 @@ const Register: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* tiny footer */}
                     <div className="mt-4 text-center text-xs text-gray-500">
                         By registering, you agree to participate in ethical, educational cybersecurity labs.
                     </div>

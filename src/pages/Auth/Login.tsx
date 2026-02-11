@@ -6,14 +6,14 @@ import {useAuth} from "../../contexts/AuthContext";
 import coverImg from "@/static/images/cover.png";
 
 interface LoginForm {
-    username: string;
+    identifier: string;
     password: string;
 }
 
 const Login: React.FC = () => {
     const {login, user} = useAuth();
     const navigate = useNavigate();
-    const [form, setForm] = useState<LoginForm>({username: "", password: ""});
+    const [form, setForm] = useState<LoginForm>({identifier: "", password: ""});
     const [loading, setLoading] = useState(false);
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -23,10 +23,10 @@ const Login: React.FC = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await login(form.username, form.password);
+            await login(form.identifier, form.password);
             toast.success("Welcome back!");
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || "Login failed");
+            toast.error(err.response?.data?.detail || "Wrong email or password.");
         } finally {
             setLoading(false);
         }
@@ -94,17 +94,17 @@ const Login: React.FC = () => {
 
                         <form onSubmit={submit} className="space-y-4">
                             <div className="space-y-1">
-                                <label htmlFor="username" className="block text-sm text-gray-700">
-                                    Username
+                                <label htmlFor="identifier" className="block text-sm text-gray-700">
+                                    Username / Email
                                 </label>
                                 <input
-                                    id="username"
-                                    name="username"
+                                    id="identifier"
+                                    name="identifier"
                                     type="text"
-                                    value={form.username}
+                                    value={form.identifier}
                                     onChange={onChange}
                                     required
-                                    placeholder="Enter your username"
+                                    placeholder="Enter your username or email"
                                     className="
                     w-full px-0 py-2 text-sm bg-transparent
                     border-0 border-b border-gray-300

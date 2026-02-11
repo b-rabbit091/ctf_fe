@@ -27,7 +27,7 @@ type User = {
 type AuthContextType = {
     user: User | null;
     accessToken: string | null;
-    login: (username: string, password: string) => Promise<void>;
+    login: (identifier: string, password: string) => Promise<void>;
     logout: () => void;
     register: (payload: { username: string; email: string; first_name: string, last_name: string }) => Promise<void>;
     inviteAdmin: (payload: { username: string; email: string }) => Promise<void>;
@@ -68,8 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         setReady(true);
     }, []);
 
-    const login = async (username: string, password: string) => {
-        const data = await loginUser({username, password});
+    const login = async (identifier: string, password: string) => {
+        const data = await loginUser({identifier, password});
         const {access, refresh} = data;
 
         setAccessToken(access);
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
             setUser({
                 id: uid,
                 user_id: uid,
-                username: d.username || d.user || d.email || username,
+                username: d.username || d.user || d.email,
                 email: d.email,
                 role: d.role,
             });

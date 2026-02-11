@@ -4,7 +4,7 @@ import api from "./axios";
 const API_URL = "/users/";
 
 export interface LoginPayload {
-    username: string;
+    identifier: string;
     password: string;
 }
 
