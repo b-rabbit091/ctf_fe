@@ -66,7 +66,6 @@ const AdminDraftEdit: React.FC = () => {
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
 
-    // ✅ SCORE fields (sent)
     const [flagScore, setFlagScore] = useState<number>(0);
     const [procedureScore, setProcedureScore] = useState<number>(0);
 
@@ -161,6 +160,8 @@ const AdminDraftEdit: React.FC = () => {
             setCategory(challenge.category?.id || "");
             setDifficulty(challenge.difficulty?.id || "");
             setSolutionType(challenge.solution_type?.id || "");
+            setFlagSolution(challenge.flag_solutions?.[0]?.value ?? "");
+            setProcedureSolution(challenge.text_solutions?.[0]?.content ?? "");
 
             const apiQtRaw = String((challenge as any).question_type || "").toLowerCase();
             const mapped: QuestionType =
@@ -170,7 +171,6 @@ const AdminDraftEdit: React.FC = () => {
             const lock = mapped === "practice" || mapped === "competition" ? mapped : null;
             setLockedQuestionType(lock);
 
-            // ✅ Prefill scores (support both flat + nested shapes)
             const anyCh = challenge as any;
             const flatFlag = anyCh?.flag_score;
             const flatProc = anyCh?.procedure_score;
