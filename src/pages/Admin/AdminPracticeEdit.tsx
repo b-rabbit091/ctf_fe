@@ -172,6 +172,8 @@ const AdminPracticeEdit: React.FC = () => {
             setCategory(challenge.category?.id || "");
             setDifficulty(challenge.difficulty?.id || "");
             setSolutionType(challenge.solution_type?.id || "");
+            setFlagSolution(challenge.flag_solutions?.[0]?.value || "");
+            setProcedureSolution(challenge.text_solutions?.[0]?.content || "");
 
             setQuestionSaved(true);
         } catch (e: any) {

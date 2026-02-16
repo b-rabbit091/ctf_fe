@@ -291,7 +291,7 @@ const DashboardUI: React.FC = () => {
                             {username ? `Welcome, ${username}` : "Welcome"}
                         </h1>
                         <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Practice, contests, and submissions — all in one view.
+                            Practice, contests, and submissions - all in one view.
                         </p>
                     </div>
                 </div>

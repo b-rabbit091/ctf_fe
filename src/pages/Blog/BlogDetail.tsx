@@ -215,18 +215,10 @@ const BlogDetail: React.FC = () => {
                                     ) : null}
                                     <span className="text-slate-300">•</span>
                                     <span>{meta?.mins ?? 1} min read</span>
-                                    {typeof meta?.words === "number" ? (
-                                        <>
-                                            <span className="text-slate-300">•</span>
-                                            <span className="text-slate-500">{meta.words.toLocaleString()} words</span>
-                                        </>
-                                    ) : null}
+
                                 </div>
 
-                                <p className="mt-2 text-xs text-slate-500">
-                                    <FiInfo className="inline -mt-0.5 mr-1" />
-                                    Content is rendered as rich text. External links open with safe rel attributes.
-                                </p>
+
                             </header>
 
                             {/* Article */}

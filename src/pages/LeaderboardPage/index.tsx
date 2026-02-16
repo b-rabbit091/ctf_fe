@@ -232,7 +232,7 @@ const LeaderboardPage: React.FC = () => {
                             Leaderboard
                         </h1>
                         <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Track performance across practice and published contests.
+                            Track performance across practice and contests.
                         </p>
 
                         {mode === "competition" && selectedContestName ? (

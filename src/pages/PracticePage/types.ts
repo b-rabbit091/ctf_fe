@@ -45,9 +45,10 @@ export interface Challenge {
     difficulty: DifficultyTypes;
     solution_type: SolutionTypes;
     active_contest?: ContestMeta | null;
-
-    // ✅ NEW: returned by backend (per user)
     user_submission_status?: UserSubmissionStatus;
+    flag_solutions?:any
+    text_solutions?:any
+
 }
 
 export type SubmissionApiItem = {

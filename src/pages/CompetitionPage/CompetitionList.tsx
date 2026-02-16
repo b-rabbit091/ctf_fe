@@ -617,7 +617,7 @@ const CompetitionList: React.FC = () => {
                             Competition Challenges
                         </h1>
                         <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Filter contests by status, type, and participation — then jump in.
+                            Filter contests by status, type, and participation - then jump in.
                         </p>
                     </div>
 
