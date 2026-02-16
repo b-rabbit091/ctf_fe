@@ -1,7 +1,7 @@
-import React, {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams} from "react-router-dom";
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import {useAuth} from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
     getCategories,
     getDifficulties,
@@ -9,7 +9,7 @@ import {
     getChallengeById,
     updateChallenge,
 } from "../../api/practice";
-import {Challenge} from "../CompetitionPage/types";
+import { Challenge } from "../CompetitionPage/types";
 
 type TabKey = "question" | "solution";
 type QuestionType = "practice" | "competition" | "N/A";
@@ -25,9 +25,9 @@ const toLocalInput = (iso: string) => {
 };
 
 const AdminDraftEdit: React.FC = () => {
-    const {id} = useParams<{ id: string }>();
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const {user} = useAuth();
+    const { user } = useAuth();
 
     const challengeId = id ? Number(id) : NaN;
 
@@ -161,6 +161,9 @@ const AdminDraftEdit: React.FC = () => {
             setCategory(challenge.category?.id || "");
             setDifficulty(challenge.difficulty?.id || "");
             setSolutionType(challenge.solution_type?.id || "");
+            setFlagSolution((challenge as any).flag_solution || "");
+            setProcedureSolution((challenge as any).procedure_solution || "");
+
 
             const apiQtRaw = String((challenge as any).question_type || "").toLowerCase();
             const mapped: QuestionType =
@@ -335,6 +338,8 @@ const AdminDraftEdit: React.FC = () => {
                     "procedure_score",
                     String(Number.isFinite(procedureScore) ? Math.max(0, Math.floor(procedureScore)) : 0)
                 );
+                formData.append("flagSolution", flagSolution || "");
+                formData.append("procedureSolution", procedureSolution || "");
 
                 uploadFiles.forEach((file) => {
                     formData.append("uploaded_files", file);
@@ -375,6 +380,8 @@ const AdminDraftEdit: React.FC = () => {
             solutionType,
             flagScore,
             procedureScore,
+            flagSolution,
+            procedureSolution,
             uploadFiles,
             flashMessage,
             navigate,
@@ -853,7 +860,7 @@ const AdminDraftEdit: React.FC = () => {
                                 <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                     <button
                                         type="button"
-                                        onClick={() => navigate("/admin/drafts")}
+                                        onClick={() => navigate("/admin/questions/create")}
                                         className={cx("text-sm text-slate-500 hover:text-slate-700", focusRing)}
                                     >
                                         ← Back to drafts list
@@ -909,9 +916,10 @@ const AdminDraftEdit: React.FC = () => {
                                             onChange={(e) => setProcedureSolution(e.target.value)}
                                         />
                                     </div>
+
                                 )}
 
-                                {/* ✅ Marks (Challenge Score) */}
+                                {/* Marks (Challenge Score) */}
                                 <div className="rounded-2xl bg-white/60 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 space-y-4">
                                     <div className="text-sm font-semibold text-slate-800">Marks (Challenge Score)</div>
                                     <p className="text-xs text-slate-500">
@@ -968,6 +976,7 @@ const AdminDraftEdit: React.FC = () => {
                                         ← Back to Question
                                     </button>
 
+
                                     <button
                                         type="submit"
                                         disabled={submitting}
@@ -975,6 +984,7 @@ const AdminDraftEdit: React.FC = () => {
                                             "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm",
                                             "hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed",
                                             focusRing
+
                                         )}
                                     >
                                         {submitting ? "Updating..." : "Update Draft"}
