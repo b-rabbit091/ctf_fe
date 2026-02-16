@@ -24,11 +24,15 @@ export interface DifficultyTypes {
     description: string;
 }
 
-/**
- * What backend returns for per-user submission status.
- * If it is anything other than "solved" or "partially_solved",
- * UI should treat it as "unsolved" (you'll do that mapping in UI).
- */
+export interface FlagSolutionTypes {
+    id: number;
+    value: string;
+}
+
+export interface TextSolutionTypes {
+    id: number;
+    content: string;
+}
 export type UserSubmissionStatus = "solved" | "partially_solved" | "attempted" | "not_attempted";
 
 export interface Challenge {
@@ -46,8 +50,8 @@ export interface Challenge {
     solution_type: SolutionTypes;
     active_contest?: ContestMeta | null;
     user_submission_status?: UserSubmissionStatus;
-    flag_solutions?:any
-    text_solutions?:any
+    flag_solutions?:FlagSolutionTypes[]
+    text_solutions?:TextSolutionTypes[]
 
 }
 
