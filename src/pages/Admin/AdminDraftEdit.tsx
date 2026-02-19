@@ -1,7 +1,7 @@
-import React, {FormEvent, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {useNavigate, useParams} from "react-router-dom";
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import {useAuth} from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
     getCategories,
     getDifficulties,
@@ -9,7 +9,7 @@ import {
     getChallengeById,
     updateChallenge,
 } from "../../api/practice";
-import {Challenge} from "../CompetitionPage/types";
+import { Challenge } from "../CompetitionPage/types";
 
 type TabKey = "question" | "solution";
 type QuestionType = "practice" | "competition" | "N/A";
@@ -25,9 +25,9 @@ const toLocalInput = (iso: string) => {
 };
 
 const AdminDraftEdit: React.FC = () => {
-    const {id} = useParams<{ id: string }>();
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const {user} = useAuth();
+    const { user } = useAuth();
 
     const challengeId = id ? Number(id) : NaN;
 
@@ -65,6 +65,8 @@ const AdminDraftEdit: React.FC = () => {
     // local solution notes (not sent)
     const [flagSolution, setFlagSolution] = useState("");
     const [procedureSolution, setProcedureSolution] = useState("");
+    const [flagSolutionId, setFlagSolutionId] = useState<number | null>(null);
+    const [procedureSolutionId, setProcedureSolutionId] = useState<number | null>(null);
 
     const [flagScore, setFlagScore] = useState<number>(0);
     const [procedureScore, setProcedureScore] = useState<number>(0);
@@ -160,8 +162,16 @@ const AdminDraftEdit: React.FC = () => {
             setCategory(challenge.category?.id || "");
             setDifficulty(challenge.difficulty?.id || "");
             setSolutionType(challenge.solution_type?.id || "");
-            setFlagSolution(challenge.flag_solutions?.[0]?.value ?? "");
-            setProcedureSolution(challenge.text_solutions?.[0]?.content ?? "");
+
+
+            const anyCh = challenge as any;
+            const flagSol = anyCh?.flag_solutions?.[0];
+            const textSol = anyCh?.text_solutions?.[0];
+
+            setFlagSolution(flagSol?.value ?? "");
+            setProcedureSolution(textSol?.content ?? "");
+            setFlagSolutionId(flagSol?.id ?? null);
+            setProcedureSolutionId(textSol?.id ?? null);
 
             const apiQtRaw = String((challenge as any).question_type || "").toLowerCase();
             const mapped: QuestionType =
@@ -171,7 +181,6 @@ const AdminDraftEdit: React.FC = () => {
             const lock = mapped === "practice" || mapped === "competition" ? mapped : null;
             setLockedQuestionType(lock);
 
-            const anyCh = challenge as any;
             const flatFlag = anyCh?.flag_score;
             const flatProc = anyCh?.procedure_score;
 
@@ -180,6 +189,7 @@ const AdminDraftEdit: React.FC = () => {
 
             const nextFlag = Number(flatFlag ?? nestedFlag ?? 0);
             const nextProc = Number(flatProc ?? nestedProc ?? 0);
+
 
             setFlagScore(Number.isFinite(nextFlag) && nextFlag >= 0 ? Math.floor(nextFlag) : 0);
             setProcedureScore(Number.isFinite(nextProc) && nextProc >= 0 ? Math.floor(nextProc) : 0);
@@ -336,6 +346,11 @@ const AdminDraftEdit: React.FC = () => {
                     String(Number.isFinite(procedureScore) ? Math.max(0, Math.floor(procedureScore)) : 0)
                 );
 
+                formData.append("flagSolution", flagSolution || "");
+                formData.append("procedureSolution", procedureSolution || "");
+                if (flagSolutionId) formData.append("flag_solution_id", String(flagSolutionId));
+                if (procedureSolutionId) formData.append("procedure_solution_id", String(procedureSolutionId));
+
                 uploadFiles.forEach((file) => {
                     formData.append("uploaded_files", file);
                 });
@@ -375,6 +390,11 @@ const AdminDraftEdit: React.FC = () => {
             solutionType,
             flagScore,
             procedureScore,
+            flagSolution,
+            procedureSolution,
+            flagSolutionId,
+            procedureSolutionId,
+
             uploadFiles,
             flashMessage,
             navigate,
