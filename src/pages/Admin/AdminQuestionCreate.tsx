@@ -196,7 +196,7 @@ const AdminQuestionCreate: React.FC = () => {
                 uploadFiles.forEach((f) => form.append("uploaded_files", f));
 
                 await createChallenge(form);
-                navigate("/admin/practice");
+                navigate("/admin/questions/create");
             } catch (err) {
                 setError("Failed to create  challenge.");
             } finally {
