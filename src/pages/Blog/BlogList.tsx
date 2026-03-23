@@ -83,22 +83,22 @@ const BlogList: React.FC = () => {
         loadBlogs();
     }, [loadBlogs]);
 
-    const onDelete = useCallback(
-        async (id: number) => {
-            if (!Number.isFinite(id)) return;
-            const ok = window.confirm("Are you sure you want to delete this blog? This cannot be undone.");
-            if (!ok) return;
+    // const onDelete = useCallback(
+    //     async (id: number) => {
+    //         if (!Number.isFinite(id)) return;
+    //         const ok = window.confirm("Are you sure you want to delete this blog? This cannot be undone.");
+    //         if (!ok) return;
 
-            try {
-                await deleteBlog(id);
-                await loadBlogs();
-            } catch (e) {
-                console.error(e);
-                alert("Failed to delete blog. Please try again.");
-            }
-        },
-        [loadBlogs]
-    );
+    //         try {
+    //             await deleteBlog(id);
+    //             await loadBlogs();
+    //         } catch (e) {
+    //             console.error(e);
+    //             alert("Failed to delete blog. Please try again.");
+    //         }
+    //     },
+    //     [loadBlogs]
+    // );
 
     const items = useMemo(() => {
         return blogs.map((b) => {
@@ -268,7 +268,7 @@ const BlogList: React.FC = () => {
                                                     <span>Read</span>
                                                 </Link>
 
-                                                {isAdmin ? (
+                                                {/* {isAdmin ? (
                                                     <div className="flex items-center gap-2">
                                                         <button
                                                             type="button"
@@ -298,7 +298,7 @@ const BlogList: React.FC = () => {
                                                             <FiTrash2 size={16}/>
                                                         </button>
                                                     </div>
-                                                ) : null}
+                                                ) : null} */}
                                             </div>
                                         </div>
                                     </article>
