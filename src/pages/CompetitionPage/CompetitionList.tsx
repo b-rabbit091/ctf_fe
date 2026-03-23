@@ -742,7 +742,7 @@ const CompetitionList: React.FC = () => {
                                 })}
                             </div>
 
-                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
+                            <span className="hidden sm:inline-block h-5 w-0.5 bg-slate-400 mx-1"/>
 
                             {/* Status */}
                             <div className="flex flex-wrap items-center gap-2">
@@ -770,8 +770,6 @@ const CompetitionList: React.FC = () => {
                                 })}
                             </div>
 
-                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
-
                             {/* Contest type */}
                             <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -798,7 +796,7 @@ const CompetitionList: React.FC = () => {
                                 })}
                             </div>
 
-                            <span className="hidden sm:inline-block h-5 w-px bg-slate-200/70 mx-1"/>
+                            <span className="hidden sm:inline-block h-5 w-0.5 bg-slate-400 mx-1"/>
 
                             {/* Participation */}
                             <div className="flex flex-wrap items-center gap-2">
