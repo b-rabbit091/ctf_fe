@@ -488,6 +488,7 @@ const PracticeList: React.FC = () => {
                                     );
                                 })}
                             </div>
+                            <span className="hidden sm:inline-block h-5 w-0.5 bg-slate-400 mx-1" />
 
                             {/* Progress chips */}
                             <div className="flex flex-wrap items-center gap-2">
