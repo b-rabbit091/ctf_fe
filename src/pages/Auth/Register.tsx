@@ -30,10 +30,10 @@ const Register: React.FC = () => {
     }, [form]);
 
     const rank = useMemo(() => {
-        if (progress <= 25) return { name: "Novice", icon: <FaBolt /> };
-        if (progress <= 50) return { name: "Apprentice", icon: <FaShieldAlt /> };
-        if (progress <= 75) return { name: "Analyst", icon: <FaTrophy /> };
-        return { name: "Ready", icon: <FaCheckCircle /> };
+        if (progress <= 25) return { name: "Getting Started", icon: <FaBolt /> };
+        if (progress <= 50) return { name: "In Progress", icon: <FaShieldAlt /> };
+        if (progress <= 75) return { name: "Almost Complete", icon: <FaTrophy /> };
+        return { name: "Ready to Go", icon: <FaCheckCircle /> };
     }, [progress]);
 
     const submit = async (e: React.FormEvent) => {
