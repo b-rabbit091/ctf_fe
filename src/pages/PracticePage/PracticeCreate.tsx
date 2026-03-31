@@ -2,6 +2,7 @@ import React, {useState, useEffect, FormEvent} from "react";
 import Navbar from "../../components/Navbar";
 import {useNavigate} from "react-router-dom";
 import {getCategories, getDifficulties, getSolutionTypes, createChallenge} from "./practice";
+import type {CategoryTypes, DifficultyTypes, SolutionTypes} from "./types";
 
 type TabKey = "question" | "solution";
 
@@ -33,9 +34,9 @@ const PracticeCreate: React.FC = () => {
     const [uploadFiles, setUploadFiles] = useState<File[]>([]);
 
     // Dropdowns
-    const [categories, setCategories] = useState<any[]>([]);
-    const [difficulties, setDifficulties] = useState<any[]>([]);
-    const [solutionTypes, setSolutionTypes] = useState<any[]>([]);
+    const [categories, setCategories] = useState<CategoryTypes[]>([]);
+    const [difficulties, setDifficulties] = useState<DifficultyTypes[]>([]);
+    const [solutionTypes, setSolutionTypes] = useState<SolutionTypes[]>([]);
 
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -154,7 +155,7 @@ const PracticeCreate: React.FC = () => {
 
             await createChallenge(form);
             navigate("/admin/practice");
-        } catch (err) {
+        } catch {
             setError("Failed to create practice challenge.");
         } finally {
             setSubmitting(false);

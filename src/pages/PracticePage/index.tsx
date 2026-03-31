@@ -106,8 +106,9 @@ const PracticePage: React.FC = () => {
             if (!alive.current) return;
             setError("Failed to load challenge.");
         } finally {
-            if (!alive.current) return;
-            setLoading(false);
+            if (alive.current) {
+                setLoading(false);
+            }
         }
     }, [challengeId]);
 
@@ -119,7 +120,9 @@ const PracticePage: React.FC = () => {
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, String(clamp(rightRatio, 0.25, 0.6)));
-        } catch {}
+        } catch {
+            // Ignore storage write failures in private browsing or locked-down environments.
+        }
     }, [rightRatio]);
 
     /* ---------- drag logic ---------- */
@@ -169,7 +172,7 @@ const PracticePage: React.FC = () => {
     const navHeightPx = 64;
 
     const pageShell =
-        "min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-sm font-sans text-slate-700 flex flex-col";
+        "min-h-screen w-full bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(99,102,241,0.14),_transparent_26%),linear-gradient(160deg,_#f8fbff_0%,_#ffffff_44%,_#eef4ff_100%)] text-sm font-sans text-slate-700 flex flex-col";
 
     const panel =
         "min-w-0 flex flex-col overflow-hidden rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm";

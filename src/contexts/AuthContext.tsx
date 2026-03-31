@@ -2,6 +2,7 @@
 import React, {createContext, useContext, useEffect, useState} from "react";
 import jwtDecode from "jwt-decode";
 import {
+    confirmResetPassword,
     loginUser,
     registerUser,
     inviteAdmin,
@@ -15,11 +16,23 @@ import {
     clearTokens
 } from "../utils/token";
 import {toast} from "react-toastify";
+import {normalizeApiError} from "../utils/apiError";
 
 type User = {
     id?: number;
     user_id?: number;
     username?: string;
+    role?: string;
+    email?: string;
+};
+
+type DecodedToken = {
+    exp?: number;
+    id?: number;
+    pk?: number;
+    user_id?: number;
+    username?: string;
+    user?: string;
     role?: string;
     email?: string;
 };
@@ -32,11 +45,20 @@ type AuthContextType = {
     register: (payload: { username: string; email: string; first_name: string, last_name: string }) => Promise<void>;
     inviteAdmin: (payload: { username: string; email: string }) => Promise<void>;
     verifyEmailSetPassword: (token: string, password: string, confirm_password: string) => Promise<void>;
+    resetPasswordWithToken: (token: string, password: string, confirm_password: string) => Promise<void>;
     verifyResetPassword: (payload: { email: string }) => Promise<void>;
     ready: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function decodeAuthToken(token: string): DecodedToken | null {
+    try {
+        return jwtDecode<DecodedToken>(token);
+    } catch {
+        return null;
+    }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const [user, setUser] = useState<User | null>(null);
@@ -47,49 +69,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
     useEffect(() => {
         const t = getAccessToken();
         if (t) {
-            try {
-                const d: any = jwtDecode(t);
-                if (d?.exp && Date.now() >= d.exp * 1000) {
-                    clearTokens();
-                    setUser(null);
-                    setAccessTokenState(null);
-                    setReady(true);
-                    return;
-                }
-
-                setUser({user_id: d.user_id, username: d.username , email: d.email, role: d.role});
-                setAccessTokenState(t);
-            } catch {
+            const decoded = decodeAuthToken(t);
+            if (!decoded) {
                 clearTokens();
                 setUser(null);
                 setAccessTokenState(null);
+                setReady(true);
+                return;
             }
+
+            if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+                clearTokens();
+                setUser(null);
+                setAccessTokenState(null);
+                setReady(true);
+                return;
+            }
+
+            setUser({user_id: decoded.user_id, username: decoded.username, email: decoded.email, role: decoded.role});
+            setAccessTokenState(t);
         }
         setReady(true);
     }, []);
 
     const login = async (identifier: string, password: string) => {
-        const data = await loginUser({identifier, password});
+        let data;
+        try {
+            data = await loginUser({identifier, password});
+        } catch (error) {
+            throw new Error(normalizeApiError(error, "Wrong email or password.").message);
+        }
         const {access, refresh} = data;
 
         setAccessToken(access);
         setRefreshToken(refresh);
         setAccessTokenState(access);
 
-        try {
-            const d: any = jwtDecode(access);
-            const uid = d.user_id ?? d.id ?? d.pk;
-
-            setUser({
-                id: uid,
-                user_id: uid,
-                username: d.username || d.user || d.email,
-                email: d.email,
-                role: d.role,
-            });
-        } catch {
+        const decoded = decodeAuthToken(access);
+        if (!decoded) {
             setUser(null);
+            return;
         }
+
+        const uid = decoded.user_id ?? decoded.id ?? decoded.pk;
+        setUser({
+            id: uid,
+            user_id: uid,
+            username: decoded.username || decoded.user || decoded.email,
+            email: decoded.email,
+            role: decoded.role,
+        });
     };
 
     const logout = () => {
@@ -99,11 +128,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
     };
 
     const register = async (payload: { username: string; email: string; first_name: string, last_name: string }) => {
-        await registerUser(payload);
+        try {
+            await registerUser(payload);
+        } catch (error) {
+            throw new Error(normalizeApiError(error, "Registration failed.").message);
+        }
     };
 
     const verifyResetPassword = async (payload: { email: string; }) => {
-        await verifyResetUserPassword(payload);
+        try {
+            await verifyResetUserPassword(payload);
+        } catch (error) {
+            throw new Error(normalizeApiError(error, "Unable to start password reset.").message);
+        }
     };
 
     const inviteAdminFn = async (payload: { username: string; email: string }) => {
@@ -112,8 +149,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
     };
 
     const verifyEmailSetPassword = async (token: string, password: string, confirm_password: string) => {
-        await verifyEmailAndSetPassword(token, password, confirm_password);
-        toast.success("Password set - account activated. Please login.");
+        try {
+            await verifyEmailAndSetPassword(token, password, confirm_password);
+            toast.success("Password set - account activated. Please login.");
+        } catch (error) {
+            throw new Error(normalizeApiError(error, "Unable to verify your account.").message);
+        }
+    };
+
+    const resetPasswordWithToken = async (token: string, password: string, confirm_password: string) => {
+        try {
+            await confirmResetPassword(token, password, confirm_password);
+            toast.success("Password reset successfully. Please login.");
+        } catch (error) {
+            throw new Error(normalizeApiError(error, "Unable to reset your password.").message);
+        }
     };
 
     return (
@@ -126,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
                 register,
                 inviteAdmin: inviteAdminFn,
                 verifyEmailSetPassword,
+                resetPasswordWithToken,
                 verifyResetPassword,
                 ready
             }}

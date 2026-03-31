@@ -1,6 +1,5 @@
 // src/pages/dashboard/index.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import Navbar from "../../components/Navbar";
 import {
     FiActivity,
     FiAlertCircle,
@@ -20,7 +19,6 @@ import {
     dedupeSubmissions,
     formatDate,
     formatDateTime,
-    getInitial,
     normalizeDifficulty,
     pct,
     safeNumber,
@@ -30,6 +28,7 @@ import {
     statusPillClass,
     contestState,
 } from "./utils";
+import {LearningShell} from "../../components/layout/LearningShell";
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
@@ -38,15 +37,14 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
     static getDerivedStateFromError() {
         return {hasError: true};
     }
-    componentDidCatch(err: any) {
+    componentDidCatch(err: Error) {
         console.error("Dashboard crash:", err);
     }
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans">
-                    <Navbar />
-                    <main className="mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <LearningShell eyebrow="Dashboard" title="Something went wrong" description="Refresh the page to recover your dashboard.">
+                    <main className="w-full">
                         <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                             <div className="flex items-start gap-3">
                                 <FiAlertCircle className="mt-0.5 shrink-0" />
@@ -59,7 +57,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
                             </div>
                         </div>
                     </main>
-                </div>
+                </LearningShell>
             );
         }
         return this.props.children;
@@ -222,16 +220,33 @@ const DashboardUI: React.FC = () => {
     const contests = data?.contests ?? {ongoing: [], upcoming: [], recent_past: []};
     const topCategory = data?.overall_stats.category_breakdown?.[0] ?? null;
 
-    const Shell: React.FC<{children: React.ReactNode}> = ({children}) => (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700">
-            <Navbar />
-            <main className="mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">{children}</main>
+    const shellActions = (
+        <div className="flex items-center gap-2">
+            {roleLabel ? (
+                <div className="inline-flex items-center gap-2 rounded-xl bg-white/80 ring-1 ring-slate-200/60 px-3 py-2 text-sm tracking-tight text-slate-600 shadow-sm">
+                    <FiShield className={data?.user.is_admin ? "text-emerald-600" : "text-slate-500"} />
+                    {roleLabel}
+                </div>
+            ) : null}
+
+            <button
+                type="button"
+                onClick={refresh}
+                disabled={loading}
+                className={cx(
+                    "inline-flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm tracking-tight text-slate-700 ring-1 ring-slate-200/70 shadow-sm hover:bg-white disabled:opacity-60",
+                    focusRing
+                )}
+            >
+                <FiRefreshCw className={loading ? "animate-spin" : ""} size={16} />
+                {loading ? "Refreshing..." : "Refresh"}
+            </button>
         </div>
     );
 
     if (!data && !hasError) {
         return (
-            <Shell>
+            <LearningShell eyebrow="Dashboard" title="Preparing your dashboard" description="Pulling together your recent learning activity.">
                 <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -245,13 +260,13 @@ const DashboardUI: React.FC = () => {
                     </div>
                 </div>
                 <p className="mt-3 text-center text-sm text-slate-500">Preparing your dashboard…</p>
-            </Shell>
+            </LearningShell>
         );
     }
 
     if (!data && hasError) {
         return (
-            <Shell>
+            <LearningShell eyebrow="Dashboard" title="Dashboard unavailable" description="We could not load your latest dashboard data.">
                 <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                     <div className="flex items-start gap-3">
                         <FiAlertCircle className="mt-0.5 shrink-0" />
@@ -273,52 +288,17 @@ const DashboardUI: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </Shell>
+            </LearningShell>
         );
     }
 
     return (
-        <Shell>
-            {/* Header */}
-            <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/60 font-normal tracking-tight shrink-0">
-                        {getInitial(username)}
-                    </div>
-
-                    <div className="min-w-0">
-                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
-                            {username ? `Welcome, ${username}` : "Welcome"}
-                        </h1>
-                        <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Practice, contests, and submissions - all in one view.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {roleLabel ? (
-                        <div className="inline-flex items-center gap-2 rounded-xl bg-white/65 ring-1 ring-slate-200/60 px-3 py-2 text-sm font-normal tracking-tight text-slate-600">
-                            <FiShield className={data!.user.is_admin ? "text-emerald-600" : "text-slate-500"} />
-                            {roleLabel}
-                        </div>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        onClick={refresh}
-                        disabled={loading}
-                        className={cx(
-                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
-                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
-                            focusRing
-                        )}
-                    >
-                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16} />
-                        {loading ? "Refreshing..." : "Refresh"}
-                    </button>
-                </div>
-            </header>
+        <LearningShell
+            eyebrow="Dashboard"
+            title={username ? `Welcome, ${username}` : "Welcome"}
+            description="Practice, contests, and submissions all in one full-screen responsive view."
+            actions={shellActions}
+        >
 
             {/* Soft error banner */}
             {hasError ? (
@@ -342,10 +322,10 @@ const DashboardUI: React.FC = () => {
             </div>
 
             {/* Main grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-12">
                 {/* Left */}
-                <div className="lg:col-span-2 flex flex-col gap-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-3 2xl:col-span-8">
+                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                         <Card title="Practice Progress" icon={<FiTarget />}>
                             <div className="space-y-2.5">
                                 <div className="flex justify-between gap-2 text-sm sm:text-base">
@@ -439,7 +419,7 @@ const DashboardUI: React.FC = () => {
                 </div>
 
                 {/* Right */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 2xl:col-span-4">
                     <Card title="Strongest Categories" icon={<FiTarget />}>
                         {data!.overall_stats.category_breakdown.length === 0 ? (
                             <div className="rounded-2xl bg-slate-50/60 ring-1 ring-slate-200/60 p-4">
@@ -535,7 +515,7 @@ const DashboardUI: React.FC = () => {
             {state === "loading" ? (
                 <p className="mt-4 text-center text-sm text-slate-500">Preparing your dashboard…</p>
             ) : null}
-        </Shell>
+        </LearningShell>
     );
 };
 

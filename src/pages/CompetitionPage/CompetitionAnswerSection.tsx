@@ -30,8 +30,8 @@ const formatDuration = (ms: number): string => {
 
 type SubmitResult = {
     type: "flag" | "procedure" | string;
-    submission_id: number;
-    correct: boolean;
+    submission_id?: number;
+    correct?: boolean | string | null;
     status: string;
     submitted_at: string;
     submitted_value?: string;
@@ -41,7 +41,7 @@ type SubmitResult = {
 type SubmitResponse = {
     challenge_id: number;
     question_type: string;
-    contest_id: number | null;
+    contest_id?: number | null;
     results: SubmitResult[];
 };
 
@@ -93,8 +93,8 @@ const CompetitionAnswerSection: React.FC<Props> = ({challenge}) => {
     const contest = challenge.active_contest ?? null;
 
     const solutionType = useMemo(() => getSolutionTypeLabel(challenge), [challenge]);
-    const showText = solutionType.includes("procedure");
-    const showFlag = solutionType.includes("flag");
+    const showText = solutionType.includes("procedure") || solutionType === "both";
+    const showFlag = solutionType.includes("flag") || solutionType === "both";
 
     const contestState = useMemo(() => {
         if (!contest) {

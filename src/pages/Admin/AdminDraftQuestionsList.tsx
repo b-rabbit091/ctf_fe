@@ -1,7 +1,7 @@
 // src/pages/AdminDraftQuestionsList/AdminDraftQuestionsList.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
-import Navbar from "../../components/Navbar";
+import AdminNavbar from "../../components/AdminNavbar";
 import {useAuth} from "../../contexts/AuthContext";
 import {bulkUpdateChallenges, deleteChallenge, getChallenges} from "../../api/practice";
 import type {Challenge} from "../CompetitionPage/types";
@@ -313,8 +313,8 @@ const AdminDraftQuestionsList: React.FC = () => {
         return (
             <div
                 className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <AdminNavbar/>
+                <main className="flex-1 w-full px-3 py-5 sm:px-4">
                     <div
                         className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
@@ -328,8 +328,8 @@ const AdminDraftQuestionsList: React.FC = () => {
         return (
             <div
                 className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-                <Navbar/>
-                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <AdminNavbar/>
+                <main className="flex-1 w-full px-3 py-5 sm:px-4">
                     <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                         <div className="flex items-start gap-3">
                             <FiAlertCircle className="mt-0.5 shrink-0"/>
@@ -349,9 +349,9 @@ const AdminDraftQuestionsList: React.FC = () => {
     return (
         <div
             className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar/>
+            <AdminNavbar/>
 
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+            <main className="flex-1 w-full px-3 py-5 sm:px-4">
                 <div className="w-full">
                     <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">

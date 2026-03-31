@@ -2,7 +2,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState, FormEvent} from "react";
 import {useNavigate} from "react-router-dom";
 import {motion} from "framer-motion";
-import Navbar from "../../components/Navbar";
+import AdminNavbar from "../../components/AdminNavbar";
 import {useAuth} from "../../contexts/AuthContext";
 import {AdminUser, getUsers, updateUser, deleteUser, inviteAdmin} from "../../api/usersAdmin";
 import {FiTrash2, FiUserX, FiUserCheck, FiSend, FiAlertCircle, FiInfo} from "react-icons/fi";
@@ -256,8 +256,8 @@ const AdminUserList: React.FC = () => {
     if (!user) {
         return (
             <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-                <Navbar />
-                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <AdminNavbar />
+                <main className="flex-1 w-full px-3 py-5 sm:px-4">
                     <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm p-4 text-sm sm:text-base text-slate-600">
                         Checking permissions…
                     </div>
@@ -269,8 +269,8 @@ const AdminUserList: React.FC = () => {
     if (user.role !== "admin") {
         return (
             <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-                <Navbar />
-                <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+                <AdminNavbar />
+                <main className="flex-1 w-full px-3 py-5 sm:px-4">
                     <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-rose-700">
                         <div className="flex items-start gap-3">
                             <FiAlertCircle className="mt-0.5 shrink-0" />
@@ -289,9 +289,9 @@ const AdminUserList: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar />
+            <AdminNavbar />
 
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
+            <main className="flex-1 w-full px-3 py-5 sm:px-4">
                 <motion.div initial={{opacity: 0, y: 6}} animate={{opacity: 1, y: 0}} className="w-full">
                     <div className="rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden">
                         {/* Header */}

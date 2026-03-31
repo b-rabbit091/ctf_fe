@@ -1,10 +1,20 @@
-type AnyObj = Record<string, any>;
+type Primitive = string | number | boolean | null | undefined;
+type JsonLike = Primitive | JsonLike[] | {[key: string]: JsonLike};
+type AnyObj = Record<string, JsonLike>;
+type ApiLikeError = {
+    code?: string;
+    message?: string;
+    response?: {
+        status?: number;
+        data?: JsonLike;
+    };
+};
 
-function isObject(v: any): v is AnyObj {
+function isObject(v: unknown): v is AnyObj {
     return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-function flattenDRFErrors(data: any): string[] {
+function flattenDRFErrors(data: JsonLike): string[] {
 
     if (data == null) return [];
 
@@ -40,18 +50,19 @@ export type NormalizedApiError = {
     messages: string[];
     isNetworkError: boolean;
     isAuthError: boolean;
-    raw?: any;
+    raw?: unknown;
 };
 
-export function normalizeApiError(err: any, fallback: string): NormalizedApiError {
-    const status = err?.response?.status as number | undefined;
-    const data = err?.response?.data;
+export function normalizeApiError(err: unknown, fallback: string): NormalizedApiError {
+    const error = (err ?? {}) as ApiLikeError;
+    const status = error.response?.status;
+    const data = error.response?.data;
 
     // Network / CORS / server down / timeout
-    const noResponse = !err?.response;
+    const noResponse = !error.response;
     const isTimeout =
-        err?.code === "ECONNABORTED" ||
-        String(err?.message || "").toLowerCase().includes("timeout");
+        error.code === "ECONNABORTED" ||
+        String(error.message || "").toLowerCase().includes("timeout");
 
     if (noResponse) {
         const msg = isTimeout
@@ -59,7 +70,7 @@ export function normalizeApiError(err: any, fallback: string): NormalizedApiErro
             : "Network error. Please check your connection and try again.";
         return {
             status,
-            code: err?.code,
+            code: error.code,
             message: msg,
             messages: [msg],
             isNetworkError: true,
@@ -85,7 +96,7 @@ export function normalizeApiError(err: any, fallback: string): NormalizedApiErro
 
     return {
         status,
-        code: err?.code,
+        code: error.code,
         message,
         messages: pieces.length ? pieces : [message],
         isNetworkError: false,
@@ -104,7 +115,7 @@ export async function safeApi<T>(
     try {
         const data = await fn();
         return { ok: true, data };
-    } catch (e: any) {
+    } catch (e: unknown) {
         return { ok: false, error: normalizeApiError(e, fallback) };
     }
 }

@@ -1,6 +1,7 @@
 import React, {useMemo} from "react";
-import type {Challenge} from "./types";
 import {FiFileText, FiHash} from "react-icons/fi";
+
+import type {Challenge, FileType} from "./types";
 
 interface Props {
     challenge: Challenge;
@@ -31,19 +32,20 @@ const isSafeUrl = (url: string) => {
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
+const safeFiles = (files?: FileType[] | null): FileType[] => (Array.isArray(files) ? files : []);
+
 const PracticeDescription: React.FC<Props> = ({challenge}) => {
-    const categoryLabel = (challenge as any).category?.name || "Uncategorized";
-    const difficultyLabel = (challenge as any).difficulty?.level || "N/A";
-    const solutionTypeLabel = (challenge as any).solution_type?.type || "Solution";
+    const categoryLabel = challenge.category?.name || "Uncategorized";
+    const difficultyLabel = challenge.difficulty?.level || "N/A";
+    const solutionTypeLabel = challenge.solution_type?.type || "Solution";
 
     const createdLabel = useMemo(() => {
-        const d = safeDate((challenge as any)?.created_at ?? null);
+        const d = safeDate(challenge.created_at ?? null);
         return d
             ? d.toLocaleDateString(undefined, {year: "numeric", month: "long", day: "numeric"})
             : null;
-    }, [challenge]);
+    }, [challenge.created_at]);
 
-    // EXACT same styling approach as your CompetitionDescription (minimal LeetCode-ish card)
     const shell =
         "w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden";
     const header = "px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40";
@@ -68,7 +70,6 @@ const PracticeDescription: React.FC<Props> = ({challenge}) => {
     return (
         <div className="text-slate-900">
             <div className={shell}>
-                {/* Header */}
                 <div className={header}>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
@@ -94,7 +95,7 @@ const PracticeDescription: React.FC<Props> = ({challenge}) => {
                                 <span className="text-slate-300">•</span>
 
                                 <span className={cx(pillBase, "ring-slate-200/60 bg-white/70 text-slate-700")}>
-                                    {String(solutionTypeLabel || "Solution")}
+                                    {solutionTypeLabel}
                                 </span>
 
                                 {createdLabel ? (
@@ -113,62 +114,61 @@ const PracticeDescription: React.FC<Props> = ({challenge}) => {
                     </div>
                 </div>
 
-                {/* Body */}
                 <div className={body}>
-                    {isNonEmpty((challenge as any).description) ? (
+                    {isNonEmpty(challenge.description) ? (
                         <section className={sec}>
                             <h2 className={secTitle}>Description</h2>
-                            <div className={text}>{(challenge as any).description}</div>
+                            <div className={text}>{challenge.description}</div>
                         </section>
                     ) : null}
 
-                    {isNonEmpty((challenge as any).constraints) ? (
+                    {isNonEmpty(challenge.constraints) ? (
                         <section className={sec}>
                             <h2 className={secTitle}>Constraints</h2>
-                            <div className={text}>{(challenge as any).constraints}</div>
+                            <div className={text}>{challenge.constraints}</div>
                         </section>
                     ) : null}
 
-                    {isNonEmpty((challenge as any).input_format) ? (
+                    {isNonEmpty(challenge.input_format) ? (
                         <section className={sec}>
                             <h2 className={secTitle}>Input</h2>
-                            <div className={text}>{(challenge as any).input_format}</div>
+                            <div className={text}>{challenge.input_format}</div>
                         </section>
                     ) : null}
 
-                    {isNonEmpty((challenge as any).output_format) ? (
+                    {isNonEmpty(challenge.output_format) ? (
                         <section className={sec}>
                             <h2 className={secTitle}>Output</h2>
-                            <div className={text}>{(challenge as any).output_format}</div>
+                            <div className={text}>{challenge.output_format}</div>
                         </section>
                     ) : null}
 
-                    {isNonEmpty((challenge as any).sample_input) || isNonEmpty((challenge as any).sample_output) ? (
+                    {isNonEmpty(challenge.sample_input) || isNonEmpty(challenge.sample_output) ? (
                         <section className={sec}>
                             <h2 className={secTitle}>Examples</h2>
 
                             <div className="mt-3 grid gap-4 md:grid-cols-2">
                                 <div>
                                     <div className="text-xs uppercase tracking-wide text-slate-500">Example Input</div>
-                                    <div className={code}>{(challenge as any).sample_input || "—"}</div>
+                                    <div className={code}>{challenge.sample_input || "—"}</div>
                                 </div>
 
                                 <div>
                                     <div className="text-xs uppercase tracking-wide text-slate-500">Example Output</div>
-                                    <div className={code}>{(challenge as any).sample_output || "—"}</div>
+                                    <div className={code}>{challenge.sample_output || "—"}</div>
                                 </div>
                             </div>
                         </section>
                     ) : null}
 
-                    {(challenge as any).files && (challenge as any).files.length > 0 ? (
+                    {safeFiles(challenge.files).length > 0 ? (
                         <section className={cx(sec, "pb-2")}>
                             <h2 className={secTitle}>Files</h2>
 
                             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                {(challenge as any).files
-                                    .filter((f: any) => f?.url && isSafeUrl(String(f.url)))
-                                    .map((file: any) => (
+                                {safeFiles(challenge.files)
+                                    .filter((file) => !!file?.url && isSafeUrl(String(file.url)))
+                                    .map((file) => (
                                         <a
                                             key={String(file.url)}
                                             href={String(file.url)}

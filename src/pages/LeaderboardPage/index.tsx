@@ -1,9 +1,9 @@
 // src/pages/LeaderboardPage/index.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import Navbar from "../../components/Navbar";
 import {fetchLeaderboard, getContests, LeaderboardError} from "./api";
 import type {LeaderboardContest, LeaderboardEntry, LeaderboardMode} from "./types";
 import {FiAlertCircle, FiInfo, FiRefreshCw} from "react-icons/fi";
+import {LearningShell} from "../../components/layout/LearningShell";
 
 const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(" ");
 
@@ -221,56 +221,45 @@ const LeaderboardPage: React.FC = () => {
     }, [meta.next]);
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar />
+        <LearningShell
+            eyebrow="Leaderboard"
+            title="See how progress stacks up across labs and contests"
+            description={
+                mode === "competition" && selectedContestName
+                    ? `Track contest performance for ${selectedContestName}, compare scores, and review the latest submission activity.`
+                    : "Track learner performance across practice challenges and competition runs with fast switching between ranking modes."
+            }
+            actions={
+                <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={() => setMode("practice")} className={pill(mode === "practice")}>
+                        Practice
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMode("competition")}
+                        className={pill(mode === "competition")}
+                    >
+                        Competition
+                    </button>
 
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
-                {/* Header */}
-                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
-                            Leaderboard
-                        </h1>
-                        <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Track performance across practice and contests.
-                        </p>
-
-                        {mode === "competition" && selectedContestName ? (
-                            <p className="mt-1 text-sm sm:text-base text-slate-500">
-                                Contest: <span className="font-normal text-slate-700">{selectedContestName}</span>
-                            </p>
-                        ) : null}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={() => setMode("practice")} className={pill(mode === "practice")}>
-                            Practice
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode("competition")}
-                            className={pill(mode === "competition")}
-                        >
-                            Competition
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={loadLeaderboard}
-                            className={cx(
-                                "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
-                                "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
-                                focusRing
-                            )}
-                            disabled={loading}
-                            aria-label="Refresh leaderboard"
-                            title="Refresh"
-                        >
-                            <FiRefreshCw className={loading ? "animate-spin" : ""} size={16} />
-                            {loading ? "Refreshing..." : "Refresh"}
-                        </button>
-                    </div>
-                </header>
+                    <button
+                        type="button"
+                        onClick={loadLeaderboard}
+                        className={cx(
+                            "inline-flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm tracking-tight text-slate-700 ring-1 ring-slate-200/70 shadow-sm hover:bg-white disabled:opacity-60",
+                            focusRing
+                        )}
+                        disabled={loading}
+                        aria-label="Refresh leaderboard"
+                        title="Refresh"
+                    >
+                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                </div>
+            }
+        >
+            <div className="w-full">
 
                 {/* Filters */}
                 <Card>
@@ -527,8 +516,8 @@ const LeaderboardPage: React.FC = () => {
                         </div>
                     </>
                 ) : null}
-            </main>
-        </div>
+            </div>
+        </LearningShell>
     );
 };
 

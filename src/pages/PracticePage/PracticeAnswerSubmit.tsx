@@ -28,10 +28,27 @@ type TimerStore = {
     updated_at: number;
 };
 
+type AuthLikeUser = {
+    id?: number | string;
+    user_id?: number | string;
+};
+
+type SubmissionResult = {
+    score?: number | null;
+    user_score?: number | null;
+};
+
+type SubmissionResponse = {
+    score?: number | null;
+    user_score?: number | null;
+    results?: SubmissionResult[];
+};
+
 const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     const {user} = useAuth();
 
-    const userId = (user as any)?.id ?? (user as any)?.user_id ?? "anon";
+    const authUser = user as AuthLikeUser | null;
+    const userId = authUser?.id ?? authUser?.user_id ?? "anon";
     const challengeId = challenge?.id ?? 0;
 
     const [flagText, setFlagText] = useState("");
@@ -97,7 +114,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
         }, 3500);
     }, []);
 
-    const extractScore = useCallback((data: any): number | null => {
+    const extractScore = useCallback((data: SubmissionResponse | null | undefined): number | null => {
         if (!data) return null;
 
         if (typeof data.score === "number") return data.score;
@@ -195,9 +212,9 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     // ----------------------------
     // Challenge input logic (UNCHANGED)
     // ----------------------------
-    const solutionType = challenge.solution_type?.type || "";
-    const showFlag = solutionType === "flag" || solutionType === "flag and procedure";
-    const showProcedure = solutionType === "procedure" || solutionType === "flag and procedure";
+    const solutionType = (challenge.solution_type?.type || "").toLowerCase();
+    const showFlag = solutionType === "flag" || solutionType === "flag and procedure" || solutionType === "both";
+    const showProcedure = solutionType === "procedure" || solutionType === "flag and procedure" || solutionType === "both";
 
     const hasInput = useMemo(() => {
         return (showFlag && flagText.trim().length > 0) || (showProcedure && procedureText.trim().length > 0);
@@ -248,14 +265,15 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
                     : "Submission received. Check Previous Submissions for status."
             );
             clearBannersSoon();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err?.message || "Submission failed.");
+            setError(err instanceof Error ? err.message : "Submission failed.");
             clearBannersSoon();
         } finally {
             busyRef.current = false;
-            if (!alive.current) return;
-            setSubmitting(false);
+            if (alive.current) {
+                setSubmitting(false);
+            }
         }
     }, [
         hasInput,
@@ -271,7 +289,7 @@ const PracticeAnswerSubmit: React.FC<Props> = ({challenge}) => {
     const typeBadge = useMemo(() => {
         if (solutionType === "flag") return "flag";
         if (solutionType === "procedure") return "procedure";
-        if (solutionType === "flag and procedure") return "flag + procedure";
+        if (solutionType === "flag and procedure" || solutionType === "both") return "flag + procedure";
         return "Practice";
     }, [solutionType]);
 

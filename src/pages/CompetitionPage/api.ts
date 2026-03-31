@@ -1,13 +1,21 @@
 
 import api from "../../api/axios";
 import {
+    getChallengePreviousSubmissions,
+    normalizeFlagSubmission,
+    normalizeTextSubmission,
+    submitChallengeSolution,
+    type SubmitPayload,
+    type SubmitResponse,
+} from "../../api/submissions";
+import {
     Challenge,
 
     CategoryTypes,
     DifficultyTypes,
     SolutionTypes,
 } from "./types";
-import {PreviousSubmission, PreviousSubmissionsApiResponse, SubmissionApiItem} from "./types";
+import {PreviousSubmission} from "./types";
 
 // ----------------- Core challenge APIs (shared) -----------------
 
@@ -105,53 +113,11 @@ export const deletePracticeChallenge = async (id: number) => {
 };
 
 
-export type SubmitPayload = {
-    value?: string;      // flag
-    content?: string;    // procedure
-};
-
-export type SubmitResponse = {
-    challenge_id: number;
-    question_type: "practice" | "competition";
-    contest_id: number | null;
-    results: Array<{
-        type: "flag" | "text"; // backend returns "text" for content submissions (we can rename on UI)
-        submission_id: number;
-        correct: boolean;
-        status: string; // "correct" | "incorrect"
-        submitted_at: string;
-    }>;
-};
-
 export const submitSolution = async (
     challengeId: number,
     payload: SubmitPayload
 ): Promise<SubmitResponse> => {
-    try {
-        const res = await api.post(`/submissions/${challengeId}/`, payload);
-        return res.data;
-    } catch (error: any) {
-        console.error("Error submitting solution:", error);
-
-        // DRF errors are often in error.response.data (dict)
-        const data = error?.response?.data;
-
-        // try to produce a readable message
-        const msg =
-            typeof data === "string"
-                ? data
-                : data?.detail
-                    ? data.detail
-                    : data?.value?.[0]
-                        ? data.value[0]
-                        : data?.content?.[0]
-                            ? data.content[0]
-                            : data?.non_field_errors?.[0]
-                                ? data.non_field_errors[0]
-                                : "Failed to submit solution.";
-
-        throw new Error(msg);
-    }
+    return submitChallengeSolution(challengeId, payload);
 };
 
 export const submitFlag = async (challengeId: number, value: string) =>
@@ -161,27 +127,9 @@ export const submitTextSolution = async (challengeId: number, content: string) =
     submitSolution(challengeId, {content});
 
 
-export const normalizeFlag = (s: SubmissionApiItem): PreviousSubmission => ({
-    id: s.id,
-    username: s.user?.username ?? "",
-    email: s.user?.email ?? "",
-    challengeTitle: s.challenge?.title ?? "",
-    submittedAt: s.submitted_at,
-    status: s.status?.status ?? null,
-    value: s.value ?? null,
-    content: null,
-});
+export const normalizeFlag = normalizeFlagSubmission;
 
-export const normalizeText = (s: SubmissionApiItem): PreviousSubmission => ({
-    id: s.id,
-    username: s.user?.username ?? "",
-    email: s.user?.email ?? "",
-    challengeTitle: s.challenge?.title ?? "",
-    submittedAt: s.submitted_at,
-    status: s.status?.status ?? null,
-    value: null,
-    content: s.content ?? null,
-});
+export const normalizeText = normalizeTextSubmission;
 
 export const getPreviousSubmissions = async (
     challengeId: number
@@ -189,20 +137,5 @@ export const getPreviousSubmissions = async (
     flag_submissions: PreviousSubmission[];
     text_submissions: PreviousSubmission[];
 }> => {
-    try {
-        const response = await api.get<PreviousSubmissionsApiResponse>(
-            `/submissions/previous-submissions/${challengeId}/`
-        );
-
-        const flagRaw = response.data.flag_submissions ?? [];
-        const textRaw = response.data.text_submissions ?? [];
-
-        return {
-            flag_submissions: flagRaw.map(normalizeFlag),
-            text_submissions: textRaw.map(normalizeText),
-        };
-    } catch (error) {
-        console.error("Error fetching previous submissions:", error);
-        return {flag_submissions: [], text_submissions: []};
-    }
+    return getChallengePreviousSubmissions(challengeId);
 };

@@ -3,6 +3,9 @@ import React from "react";
 
 type Props = { children: React.ReactNode; fallback?: React.ReactNode };
 type State = { hasError: boolean };
+type ErrorInfo = {
+    componentStack: string;
+};
 
 export default class ErrorBoundary extends React.Component<Props, State> {
     state: State = { hasError: false };
@@ -11,7 +14,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         return { hasError: true };
     }
 
-    componentDidCatch(error: any, info: any) {
+    componentDidCatch(error: Error, info: ErrorInfo) {
         // keep this console for debugging
         console.error("UI crashed:", error, info);
     }

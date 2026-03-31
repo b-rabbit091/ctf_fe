@@ -111,7 +111,7 @@ export interface ContestDTO {
     name?: string;
     slug?: string;
 
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export const getContests = async (): Promise<ContestDTO[]> => {

@@ -1,5 +1,5 @@
 // src/App.tsx
-import React from "react";
+import React, {Suspense, lazy} from "react";
 import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
 import {ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -11,110 +11,117 @@ import {AuthProvider} from "./contexts/AuthContext";
 import PrivateRoute from "./routes/PrivateRoute";
 import AdminRoute from "./routes/AdminRoute";
 
-// Public pages
-import Login from "./pages/Auth/Login";
-import Register from "./pages/Auth/Register";
-import VerifyEmail from "./pages/Auth/VerifyEmail";
-import VerifyResetPassword from "./pages/Auth/VerifyResetPassword";
-import ResetPassword from "./pages/Auth/ResetPassword";
+const Login = lazy(() => import("./pages/Auth/Login"));
+const Register = lazy(() => import("./pages/Auth/Register"));
+const VerifyEmail = lazy(() => import("./pages/Auth/VerifyEmail"));
+const VerifyResetPassword = lazy(() => import("./pages/Auth/VerifyResetPassword"));
+const ResetPassword = lazy(() => import("./pages/Auth/ResetPassword"));
 
-// Private pages
-import DashboardOverview from "./pages/Dashboard/DashboardOverview";
-import BlogList from "./pages/Blog/BlogList";
-import BlogDetail from "./pages/Blog/BlogDetail";
-import AdminBlogEditor from "./pages/Admin/AdminBlogEditor";
+const DashboardOverview = lazy(() => import("./pages/Dashboard/DashboardOverview"));
+const BlogList = lazy(() => import("./pages/Blog/BlogList"));
+const BlogDetail = lazy(() => import("./pages/Blog/BlogDetail"));
+const PracticeList = lazy(() => import("./pages/PracticePage/PracticeList"));
+const PracticeDetail = lazy(() => import("./pages/PracticePage"));
+const CompetitionList = lazy(() => import("./pages/CompetitionPage/CompetitionList"));
+const CompetitionDetail = lazy(() => import("./pages/CompetitionPage"));
+const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
+const UserGroupPage = lazy(() => import("./pages/CompetitionPage/UserGroupPage"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings/AccountSettings"));
 
-import PracticeList from "./pages/PracticePage/PracticeList";
-import PracticeDetail from "./pages/PracticePage";
-import CompetitionList from "./pages/CompetitionPage/CompetitionList";
-import CompetitionDetail from "./pages/CompetitionPage";
+const AdminDashboard = lazy(() => import("./pages/Admin/AdminDashboard"));
+const AdminCompetitionList = lazy(() => import("./pages/Admin/AdminCompetitionList"));
+const AdminCompetitionEdit = lazy(() => import("./pages/Admin/AdminCompetitionEdit"));
+const AdminPracticeList = lazy(() => import("./pages/Admin/AdminPracticeList"));
+const AdminPracticeEdit = lazy(() => import("./pages/Admin/AdminPracticeEdit"));
+const AdminChallengeMetadata = lazy(() => import("./pages/CategoryDifficultySolutionTypes/AdminChallengeMetadata"));
+const AdminUserList = lazy(() => import("./pages/Admin/AdminUserList"));
+const AdminGenerateReport = lazy(() => import("./pages/Admin/AdminGenerateReport"));
+const AdminGroupList = lazy(() => import("./pages/Admin/AdminGroupList"));
+const AdminBlogList = lazy(() => import("./pages/Admin/AdminBlogList"));
+const AdminBlogEditor = lazy(() => import("./pages/Admin/AdminBlogEditor"));
+const AdminDraftQuestionsList = lazy(() => import("./pages/Admin/AdminDraftQuestionsList"));
+const AdminQuestionCreate = lazy(() => import("./pages/Admin/AdminQuestionCreate"));
+const AdminDraftAssignPracticeList = lazy(() => import("./pages/Admin/AdminDraftAssignPracticeList"));
+const AdminCompetitionAssign = lazy(() => import("./pages/Admin/AdminCompetitionAssign"));
+const AdminContestList = lazy(() => import("./pages/Admin/AdminContestList"));
+const AdminContestEdit = lazy(() => import("./pages/Admin/AdminContestEdit"));
+const AdminContestCreate = lazy(() => import("./pages/Admin/AdminContestCreate"));
+const AdminDraftEdit = lazy(() => import("./pages/Admin/AdminDraftEdit"));
 
-import LeaderboardPage from "./pages/LeaderboardPage";
-import UserGroupPage from "./pages/CompetitionPage/UserGroupPage";
-import AccountSettings from "./pages/AccountSettings/AccountSettings";
-
-// Admin pages
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import AdminCompetitionList from "./pages/Admin/AdminCompetitionList";
-import AdminCompetitionEdit from "./pages/Admin/AdminCompetitionEdit";
-import AdminPracticeList from "./pages/Admin/AdminPracticeList";
-import AdminPracticeEdit from "./pages/Admin/AdminPracticeEdit";
-import AdminChallengeMetadata from "./pages/CategoryDifficultySolutionTypes/AdminChallengeMetadata";
-import AdminUserList from "./pages/Admin/AdminUserList";
-import AdminGenerateReport from "./pages/Admin/AdminGenerateReport";
-import AdminGroupList from "./pages/Admin/AdminGroupList";
-import AdminBlogList from "./pages/Admin/AdminBlogList";
-import AdminDraftQuestionsList from "./pages/Admin/AdminDraftQuestionsList";
-import AdminQuestionCreate from "./pages/Admin/AdminQuestionCreate";
-import AdminDraftAssignPracticeList from "./pages/Admin/AdminDraftAssignPracticeList";
-import AdminCompetitionAssign from "./pages/Admin/AdminCompetitionAssign";
-import AdminContestList from "./pages/Admin/AdminContestList";
-import AdminContestEdit from "./pages/Admin/AdminContestEdit";
-import AdminContestCreate from "./pages/Admin/AdminContestCreate";
-import AdminDraftEdit from "./pages/Admin/AdminDraftEdit";
+const RouteFallback: React.FC = () => (
+    <div className="min-h-screen w-full bg-[linear-gradient(160deg,_#f8fbff_0%,_#ffffff_44%,_#eef4ff_100%)]">
+        <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="rounded-3xl border border-white/80 bg-white/80 px-6 py-5 text-sm tracking-tight text-slate-600 shadow-sm backdrop-blur-xl">
+                Loading page...
+            </div>
+        </div>
+    </div>
+);
 
 const App: React.FC = () => {
     return (
         <ErrorBoundary>
             <AuthProvider>
                 <BrowserRouter basename="/ctf">
-                    <Routes>
-                        {/* ---------------- Public ---------------- */}
-                        <Route path="/login" element={<Login/>}/>
-                        <Route path="/register" element={<Register/>}/>
-                        <Route path="/verify-email" element={<VerifyEmail/>}/>
-                        <Route path="/verify-reset-password" element={<VerifyResetPassword/>}/>
-                        <Route path="/reset-password" element={<ResetPassword/>}/>
+                    <Suspense fallback={<RouteFallback />}>
+                        <Routes>
+                            {/* ---------------- Public ---------------- */}
+                            <Route path="/login" element={<Login/>}/>
+                            <Route path="/register" element={<Register/>}/>
+                            <Route path="/verify-email" element={<VerifyEmail/>}/>
+                            <Route path="/verify-reset-password" element={<VerifyResetPassword/>}/>
+                            <Route path="/reset-password" element={<ResetPassword/>}/>
 
-                        {/* ---------------- Everything else: Auth required ---------------- */}
-                        <Route element={<PrivateRoute/>}>
-                            <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
+                            {/* ---------------- Everything else: Auth required ---------------- */}
+                            <Route element={<PrivateRoute/>}>
+                                <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
 
-                            {/* Blogs */}
-                            <Route path="/blogs" element={<BlogList/>}/>
-                            <Route path="/blogs/:id" element={<BlogDetail/>}/>
+                                {/* Blogs */}
+                                <Route path="/blogs" element={<BlogList/>}/>
+                                <Route path="/blogs/:id" element={<BlogDetail/>}/>
 
-                            {/* User pages */}
-                            <Route path="/dashboard" element={<DashboardOverview/>}/>
-                            <Route path="/practice" element={<PracticeList/>}/>
-                            <Route path="/practice/:id" element={<PracticeDetail/>}/>
-                            <Route path="/compete" element={<CompetitionList/>}/>
-                            <Route path="/compete/:id" element={<CompetitionDetail/>}/>
-                            <Route path="/leaderboard" element={<LeaderboardPage/>}/>
-                            <Route path="/my-group" element={<UserGroupPage/>}/>
-                            <Route path="/account" element={<AccountSettings/>}/>
+                                {/* User pages */}
+                                <Route path="/dashboard" element={<DashboardOverview/>}/>
+                                <Route path="/practice" element={<PracticeList/>}/>
+                                <Route path="/practice/:id" element={<PracticeDetail/>}/>
+                                <Route path="/compete" element={<CompetitionList/>}/>
+                                <Route path="/compete/:id" element={<CompetitionDetail/>}/>
+                                <Route path="/leaderboard" element={<LeaderboardPage/>}/>
+                                <Route path="/my-group" element={<UserGroupPage/>}/>
+                                <Route path="/account" element={<AccountSettings/>}/>
 
-                            {/* ---------------- Admin only ---------------- */}
-                            <Route element={<AdminRoute/>}>
-                                <Route path="/admin-dashboard" element={<AdminDashboard/>}/>
+                                {/* ---------------- Admin only ---------------- */}
+                                <Route element={<AdminRoute/>}>
+                                    <Route path="/admin-dashboard" element={<AdminDashboard/>}/>
 
-                                <Route path="/admin/competition" element={<AdminCompetitionList/>}/>
-                                <Route path="/admin/competition/new" element={<AdminCompetitionAssign/>}/>
-                                <Route path="/admin/competition/:id" element={<AdminCompetitionEdit/>}/>
-                                <Route path="/admin/contests" element={<AdminContestList/>}/>
-                                <Route path="/admin/contests/new" element={<AdminContestCreate/>}/>
-                                <Route path="/admin/contests/:id" element={<AdminContestEdit/>}/>
+                                    <Route path="/admin/competition" element={<AdminCompetitionList/>}/>
+                                    <Route path="/admin/competition/new" element={<AdminCompetitionAssign/>}/>
+                                    <Route path="/admin/competition/:id" element={<AdminCompetitionEdit/>}/>
+                                    <Route path="/admin/contests" element={<AdminContestList/>}/>
+                                    <Route path="/admin/contests/new" element={<AdminContestCreate/>}/>
+                                    <Route path="/admin/contests/:id" element={<AdminContestEdit/>}/>
 
-                                <Route path="/admin/practice" element={<AdminPracticeList/>}/>
-                                <Route path="/admin/practice/new" element={<AdminDraftAssignPracticeList/>}/>
-                                <Route path="/admin/practice/:id" element={<AdminPracticeEdit/>}/>
+                                    <Route path="/admin/practice" element={<AdminPracticeList/>}/>
+                                    <Route path="/admin/practice/new" element={<AdminDraftAssignPracticeList/>}/>
+                                    <Route path="/admin/practice/:id" element={<AdminPracticeEdit/>}/>
 
-                                <Route path="/admin/blogs" element={<AdminBlogList/>}/>
-                                <Route path="/admin/blogs/new" element={<AdminBlogEditor/>}/>
-                                <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor/>}/>
+                                    <Route path="/admin/blogs" element={<AdminBlogList/>}/>
+                                    <Route path="/admin/blogs/new" element={<AdminBlogEditor/>}/>
+                                    <Route path="/admin/blogs/edit/:id" element={<AdminBlogEditor/>}/>
 
-                                <Route path="/admin/taxonomy" element={<AdminChallengeMetadata/>}/>
-                                <Route path="/admin/users" element={<AdminUserList/>}/>
-                                <Route path="/admin/submissions" element={<AdminGenerateReport/>}/>
-                                <Route path="/admin/groups" element={<AdminGroupList/>}/>
-                                <Route path="/admin/questions/create" element={<AdminDraftQuestionsList/>}/>
-                                <Route path="/admin/drafts/new" element={<AdminQuestionCreate/>}/>
-                                <Route path="/admin/drafts/:id" element={<AdminDraftEdit/>}/>
+                                    <Route path="/admin/taxonomy" element={<AdminChallengeMetadata/>}/>
+                                    <Route path="/admin/users" element={<AdminUserList/>}/>
+                                    <Route path="/admin/submissions" element={<AdminGenerateReport/>}/>
+                                    <Route path="/admin/groups" element={<AdminGroupList/>}/>
+                                    <Route path="/admin/questions/create" element={<AdminDraftQuestionsList/>}/>
+                                    <Route path="/admin/drafts/new" element={<AdminQuestionCreate/>}/>
+                                    <Route path="/admin/drafts/:id" element={<AdminDraftEdit/>}/>
 
+                                </Route>
                             </Route>
-                        </Route>
 
-                    </Routes>
+                        </Routes>
+                    </Suspense>
                 </BrowserRouter>
 
                 <ToastContainer position="top-right"/>

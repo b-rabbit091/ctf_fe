@@ -1,13 +1,15 @@
-// src/pages/dashboard/utils.ts
 import type {
+    CategoryStat,
+    ContestItem,
     DashboardOverviewResponse,
     DifficultyKey,
     DifficultyMap,
     RecentSubmission,
-    ContestItem,
 } from "./types";
 
-export const isObject = (v: unknown): v is Record<string, any> =>
+type GenericRecord = Record<string, unknown>;
+
+export const isObject = (v: unknown): v is GenericRecord =>
     v !== null && typeof v === "object" && !Array.isArray(v);
 
 export const safeNumber = (v: unknown, fallback = 0): number =>
@@ -16,7 +18,7 @@ export const safeNumber = (v: unknown, fallback = 0): number =>
 export const safeString = (v: unknown, fallback = ""): string =>
     typeof v === "string" ? v : fallback;
 
-export const safeArray = <T, >(v: unknown, fallback: T[] = []): T[] =>
+export const safeArray = <T,>(v: unknown, fallback: T[] = []): T[] =>
     Array.isArray(v) ? (v as T[]) : fallback;
 
 export const clamp = (n: number, min: number, max: number) =>
@@ -53,9 +55,7 @@ export const safeUsername = (u: unknown): string => {
     return name.length > 32 ? `${name.slice(0, 32)}…` : name;
 };
 
-
 export const sanitizeTitle = (title: unknown): string => {
-    // React escapes text by default; we just normalize + trim.
     const t = safeString(title, "").trim();
     return t || "Untitled";
 };
@@ -65,7 +65,7 @@ export const normalizeDifficulty = (input: unknown): DifficultyMap => {
     if (!isObject(input)) return out;
 
     (Object.keys(out) as DifficultyKey[]).forEach((k) => {
-        out[k] = safeNumber((input as any)[k], 0);
+        out[k] = safeNumber(input[k], 0);
     });
     return out;
 };
@@ -101,26 +101,55 @@ export const fallbackDashboard = (): DashboardOverviewResponse => ({
     contests: {ongoing: [], upcoming: [], recent_past: []},
 });
 
+const toContestItem = (value: unknown): ContestItem => {
+    const contest = isObject(value) ? value : {};
+    return {
+        id: safeNumber(contest.id, 0),
+        name: safeString(contest.name, "Untitled"),
+        slug: safeString(contest.slug, ""),
+        description: safeString(contest.description, ""),
+        contest_type: safeString(contest.contest_type, ""),
+        start_time: safeString(contest.start_time, ""),
+        end_time: safeString(contest.end_time, ""),
+        is_active: Boolean(contest.is_active),
+    };
+};
+
+const toCategoryStat = (value: unknown): CategoryStat => {
+    const category = isObject(value) ? value : {};
+    return {
+        category_id: typeof category.category_id === "number" ? category.category_id : null,
+        category: typeof category.category === "string" ? category.category : null,
+        solved_count: safeNumber(category.solved_count, 0),
+    };
+};
+
+const toRecentSubmission = (value: unknown): RecentSubmission => {
+    const submission = isObject(value) ? value : {};
+    const questionType = safeString(submission.question_type, "unknown");
+
+    return {
+        id: safeNumber(submission.id, 0),
+        type: safeString(submission.type, "unknown"),
+        challenge_id: safeNumber(submission.challenge_id, 0),
+        challenge_title: typeof submission.challenge_title === "string" ? submission.challenge_title : null,
+        question_type: questionType,
+        contest_id: typeof submission.contest_id === "number" ? submission.contest_id : null,
+        contest_name: typeof submission.contest_name === "string" ? submission.contest_name : null,
+        status: typeof submission.status === "string" ? submission.status : null,
+        submitted_at: safeString(submission.submitted_at, ""),
+    };
+};
+
 export const normalizeDashboard = (raw: unknown): DashboardOverviewResponse => {
     const fb = fallbackDashboard();
     if (!isObject(raw)) return fb;
 
-    const userRaw = isObject((raw as any).user) ? (raw as any).user : {};
-    const practiceRaw = isObject((raw as any).practice_stats) ? (raw as any).practice_stats : {};
-    const compRaw = isObject((raw as any).competition_stats) ? (raw as any).competition_stats : {};
-    const overallRaw = isObject((raw as any).overall_stats) ? (raw as any).overall_stats : {};
-    const contestsRaw = isObject((raw as any).contests) ? (raw as any).contests : null;
-
-    const normalizeContest = (c: any): ContestItem => ({
-        id: safeNumber(c?.id, 0),
-        name: safeString(c?.name, "Untitled"),
-        slug: safeString(c?.slug, ""),
-        description: c?.description ?? "",
-        contest_type: safeString(c?.contest_type, ""),
-        start_time: safeString(c?.start_time, ""),
-        end_time: safeString(c?.end_time, ""),
-        is_active: !!c?.is_active,
-    });
+    const userRaw = isObject(raw.user) ? raw.user : {};
+    const practiceRaw = isObject(raw.practice_stats) ? raw.practice_stats : {};
+    const compRaw = isObject(raw.competition_stats) ? raw.competition_stats : {};
+    const overallRaw = isObject(raw.overall_stats) ? raw.overall_stats : {};
+    const contestsRaw = isObject(raw.contests) ? raw.contests : null;
 
     return {
         user: {
@@ -128,8 +157,8 @@ export const normalizeDashboard = (raw: unknown): DashboardOverviewResponse => {
             username: safeString(userRaw.username, fb.user.username),
             email: safeString(userRaw.email, fb.user.email),
             role: safeString(userRaw.role, fb.user.role ?? ""),
-            is_admin: !!userRaw.is_admin,
-            is_student: !!userRaw.is_student,
+            is_admin: Boolean(userRaw.is_admin),
+            is_student: Boolean(userRaw.is_student),
             date_joined: safeString(userRaw.date_joined, fb.user.date_joined),
         },
         practice_stats: {
@@ -147,30 +176,14 @@ export const normalizeDashboard = (raw: unknown): DashboardOverviewResponse => {
         overall_stats: {
             total_solved: safeNumber(overallRaw.total_solved, 0),
             total_attempted: safeNumber(overallRaw.total_attempted, 0),
-            category_breakdown: safeArray<any>(overallRaw.category_breakdown, []).map((c) => ({
-                category_id: c?.category_id ?? null,
-                category: c?.category ?? null,
-                solved_count: safeNumber(c?.solved_count, 0),
-            })),
+            category_breakdown: safeArray(overallRaw.category_breakdown, []).map(toCategoryStat),
         },
-        recent_submissions: safeArray<any>((raw as any).recent_submissions, []).map(
-            (s): RecentSubmission => ({
-                id: safeNumber(s?.id, 0),
-                type: safeString(s?.type, "unknown"),
-                challenge_id: safeNumber(s?.challenge_id, 0),
-                challenge_title: s?.challenge_title ?? null,
-                question_type: safeString(s?.question_type, "unknown"),
-                contest_id: s?.contest_id ?? null,
-                contest_name: s?.contest_name ?? null,
-                status: s?.status ?? null,
-                submitted_at: safeString(s?.submitted_at, ""),
-            })
-        ),
+        recent_submissions: safeArray(raw.recent_submissions, []).map(toRecentSubmission),
         contests: contestsRaw
             ? {
-                ongoing: safeArray<any>(contestsRaw.ongoing, []).map(normalizeContest),
-                upcoming: safeArray<any>(contestsRaw.upcoming, []).map(normalizeContest),
-                recent_past: safeArray<any>(contestsRaw.recent_past, []).map(normalizeContest),
+                ongoing: safeArray(contestsRaw.ongoing, []).map(toContestItem),
+                upcoming: safeArray(contestsRaw.upcoming, []).map(toContestItem),
+                recent_past: safeArray(contestsRaw.recent_past, []).map(toContestItem),
             }
             : fb.contests,
     };
@@ -180,7 +193,6 @@ export const dedupeSubmissions = (rows: RecentSubmission[]) => {
     const seen = new Set<string>();
     const out: RecentSubmission[] = [];
     for (const r of rows) {
-        // Backend sometimes duplicates {type,id}; include timestamp to avoid collisions
         const key = `${r.type}-${r.id}-${r.submitted_at}`;
         if (seen.has(key)) continue;
         seen.add(key);

@@ -1,11 +1,11 @@
 // src/pages/practice/PracticeList.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
-import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
 import {getCategories, getChallenges, getDifficulties} from "./practice";
 import {FiEye, FiTag, FiAlertCircle, FiRefreshCw, FiInfo} from "react-icons/fi";
 import type {Challenge} from "./types";
+import {LearningShell} from "../../components/layout/LearningShell";
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
@@ -68,15 +68,6 @@ const Card = memo(function Card({
     );
 });
 
-const Pill = memo(function Pill({className, children}: { className: string; children: React.ReactNode }) {
-    return (
-        <span
-            className={cx("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs sm:text-sm font-normal tracking-tight ring-1", className)}>
-      {children}
-    </span>
-    );
-});
-
 // Tag chip: no bold, no black backgrounds; pleasant when active
 const tagClass = (active: boolean) =>
     cx(
@@ -124,12 +115,18 @@ const progressChipClass = (key: ProgressFilter, active: boolean) => {
         );
     }
     // unsolved
-
+    return cx(
+        base,
+        ring,
+        active
+            ? "border-slate-300 bg-slate-100 text-slate-800"
+            : "border-slate-200/70 bg-white/70 text-slate-700 hover:bg-slate-50"
+    );
 };
 
 // ✅ show label above title only if user has a status other than not_attempted
 const ProgressLabel = memo(function ProgressLabel({challenge}: { challenge: Challenge }) {
-    const st = normalizeStatus((challenge as any).user_submission_status);
+    const st = normalizeStatus(challenge.user_submission_status);
     if (st === "not_attempted") return null;
 
     const label = st === "solved" ? "Solved" : st === "partially_solved" ? "Partially Solved" : "Attempted";
@@ -194,8 +191,9 @@ const PracticeList: React.FC = () => {
             if (!alive.current) return;
             setError("Failed to load challenges. Please try again.");
         } finally {
-            if (!alive.current) return;
-            setLoading(false);
+            if (alive.current) {
+                setLoading(false);
+            }
         }
     }, []);
 
@@ -225,11 +223,8 @@ const PracticeList: React.FC = () => {
 
             // ✅ progress filtering
             if (progressFilter) {
-                const st = normalizeStatus((c as any).user_submission_status);
-
-
-                    if (st !== progressFilter) return false;
-
+                const st = normalizeStatus(c.user_submission_status);
+                if (st !== progressFilter) return false;
             }
 
             if (!searchLower) return true;
@@ -266,8 +261,8 @@ const PracticeList: React.FC = () => {
 
     const renderChallengeCard = useCallback(
         (c: Challenge) => {
-            const difficulty = (c as any).difficulty?.level || "N/A";
-            const category = (c as any).category?.name || "N/A";
+            const difficulty = c.difficulty?.level || "N/A";
+            const category = c.category?.name || "N/A";
 
             const difficultyLower = String(difficulty || "").toLowerCase();
             const difficultyColor =
@@ -354,38 +349,28 @@ const PracticeList: React.FC = () => {
     );
 
     return (
-        <div
-            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar/>
-
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
-                {/* Header */}
-                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
-                            Practice Challenges
-                        </h1>
-                        <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Search, filter by difficulty and progress, then start solving.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={fetchInitial}
-                        className={cx(
-                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
-                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
-                            focusRing
-                        )}
-                        disabled={loading}
-                        aria-label="Refresh practice challenges"
-                        title="Refresh"
-                    >
-                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
-                        {loading ? "Refreshing..." : "Refresh"}
-                    </button>
-                </header>
+        <LearningShell
+            eyebrow="Practice Arena"
+            title="Hands-on labs built for steady learning"
+            description="Read practice prompts, filter fast, and jump straight into solving."
+            actions={
+                <button
+                    type="button"
+                    onClick={fetchInitial}
+                    className={cx(
+                        "inline-flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm tracking-tight text-slate-700 ring-1 ring-slate-200/70 shadow-sm hover:bg-white disabled:opacity-60",
+                        focusRing
+                    )}
+                    disabled={loading}
+                    aria-label="Refresh practice challenges"
+                    title="Refresh"
+                >
+                    <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                    {loading ? "Refreshing..." : "Refresh"}
+                </button>
+            }
+        >
+            <div className="w-full">
 
                 {/* Filters */}
                 <Card>
@@ -690,8 +675,8 @@ const PracticeList: React.FC = () => {
                         )}
                     </>
                 ) : null}
-            </main>
-        </div>
+            </div>
+        </LearningShell>
     );
 };
 

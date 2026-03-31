@@ -1,10 +1,11 @@
 // src/pages/leaderboard/api.ts
-import axios, { AxiosError } from "axios";
+import axios, {AxiosError} from "axios";
 import api from "../../api/axios";
-import type { LeaderboardApiResponse, LeaderboardEntry, LeaderboardMode } from "./types";
+import type {LeaderboardApiResponse, LeaderboardEntry, LeaderboardMode} from "./types";
 
 export class LeaderboardError extends Error {
     status?: number;
+
     constructor(message: string, status?: number) {
         super(message);
         this.name = "LeaderboardError";
@@ -19,44 +20,31 @@ export type FetchLeaderboardResult = {
     previous: string | null;
 };
 
-function isObject(v: unknown): v is Record<string, any> {
-    return typeof v === "object" && v !== null;
-}
+type UnknownRecord = Record<string, unknown>;
 
-function extractServerMessage(data: unknown): string | null {
-    if (!isObject(data)) return null;
-    const candidates = [data.detail, data.error, data.message, data.msg, data.non_field_errors];
-    for (const c of candidates) {
-        if (typeof c === "string" && c.trim()) return c.trim();
-        if (Array.isArray(c) && typeof c[0] === "string" && c[0].trim()) return c[0].trim();
-    }
-    return null;
-}
+type LeaderboardContestPayload = {
+    id?: number | null;
+    name?: string | null;
+    slug?: string | null;
+};
 
-function toFriendlyAxiosError(err: unknown, fallback: string): LeaderboardError {
-    if (!axios.isAxiosError(err)) {
-        return new LeaderboardError("We could not reach the server. Please check your internet connection.");
-    }
+type LeaderboardUserPayload = {
+    id?: number;
+    username?: string;
+    email?: string;
+};
 
-    const e = err as AxiosError<any>;
-    const status = e.response?.status;
-    const data = e.response?.data;
-
-    const serverMsg = extractServerMessage(data);
-    if (serverMsg) return new LeaderboardError(serverMsg, status);
-
-    if (status === 400) return new LeaderboardError("Invalid request. Please check your inputs and try again.", 400);
-    if (status === 401) return new LeaderboardError("Your session has expired. Please sign in again.", 401);
-    if (status === 403) return new LeaderboardError("You do not have permission to view this leaderboard.", 403);
-    if (status === 404) return new LeaderboardError("Requested resource was not found.", 404);
-    if (status && status >= 500)
-        return new LeaderboardError("Something went wrong on our side. Please try again shortly.", status);
-
-    if (e.code === "ECONNABORTED") return new LeaderboardError("The request timed out. Please try again.", status);
-    if (!e.response) return new LeaderboardError("Unable to connect to the server. Please check your network.", status);
-
-    return new LeaderboardError(e.message || fallback, status);
-}
+type LeaderboardRowPayload = {
+    rank?: number;
+    user?: LeaderboardUserPayload;
+    user_id?: number;
+    username?: string;
+    solved?: number;
+    total_score?: number;
+    score?: number;
+    last_solved_at?: string | null;
+    last_submission_at?: string | null;
+};
 
 type PaginatedEnvelope = {
     count: number;
@@ -65,65 +53,95 @@ type PaginatedEnvelope = {
     results: unknown;
 };
 
-function isPaginatedEnvelope(data: unknown): data is PaginatedEnvelope {
-    return (
-        isObject(data) &&
-        typeof (data as any).count === "number" &&
-        "results" in (data as any) &&
-        ("next" in (data as any) || "previous" in (data as any))
-    );
+function isObject(v: unknown): v is UnknownRecord {
+    return typeof v === "object" && v !== null;
 }
 
-/**
- * Backend can return either:
- *  A) non-paginated: { type, contest, results: [...] }
- *  B) paginated:     { count, next, previous, results: { type, contest, results: [...] } }
- */
+function extractServerMessage(data: unknown): string | null {
+    if (!isObject(data)) return null;
+
+    const candidates = [data.detail, data.error, data.message, data.msg, data.non_field_errors];
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+        if (Array.isArray(candidate) && typeof candidate[0] === "string" && candidate[0].trim()) {
+            return candidate[0].trim();
+        }
+    }
+
+    return null;
+}
+
+function toFriendlyAxiosError(err: unknown, fallback: string): LeaderboardError {
+    if (!axios.isAxiosError(err)) {
+        return new LeaderboardError("We could not reach the server. Please check your internet connection.");
+    }
+
+    const error = err as AxiosError<unknown>;
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    const serverMsg = extractServerMessage(data);
+    if (serverMsg) return new LeaderboardError(serverMsg, status);
+
+    if (status === 400) return new LeaderboardError("Invalid request. Please check your inputs and try again.", 400);
+    if (status === 401) return new LeaderboardError("Your session has expired. Please sign in again.", 401);
+    if (status === 403) return new LeaderboardError("You do not have permission to view this leaderboard.", 403);
+    if (status === 404) return new LeaderboardError("Requested resource was not found.", 404);
+    if (status && status >= 500) {
+        return new LeaderboardError("Something went wrong on our side. Please try again shortly.", status);
+    }
+
+    if (error.code === "ECONNABORTED") return new LeaderboardError("The request timed out. Please try again.", status);
+    if (!error.response) return new LeaderboardError("Unable to connect to the server. Please check your network.", status);
+
+    return new LeaderboardError(error.message || fallback, status);
+}
+
+function isPaginatedEnvelope(data: unknown): data is PaginatedEnvelope {
+    return isObject(data) && typeof data.count === "number" && "results" in data && ("next" in data || "previous" in data);
+}
+
 function unwrapLeaderboardPayload(data: unknown): LeaderboardApiResponse {
-    if (!isObject(data)) return { type: "practice", contest: null, results: [] } as any;
+    if (!isObject(data)) return {contest: null, results: []};
 
-    const maybePaginatedResults = (data as any).results;
-    if (isObject(maybePaginatedResults) && Array.isArray((maybePaginatedResults as any).results)) {
-        return maybePaginatedResults as LeaderboardApiResponse;
+    const maybeNestedResults = data.results;
+    if (isObject(maybeNestedResults) && Array.isArray(maybeNestedResults.results)) {
+        return maybeNestedResults as unknown as LeaderboardApiResponse;
     }
 
-    if (Array.isArray((data as any).results)) {
-        return data as LeaderboardApiResponse;
+    if (Array.isArray(data.results)) {
+        return data as unknown as LeaderboardApiResponse;
     }
 
-    return { type: "practice", contest: null, results: [] } as any;
+    return {contest: null, results: []};
 }
 
 function mapLeaderboardResponseToEntries(
     payload: LeaderboardApiResponse,
-    requestedContest?: { id?: number | null; name?: string | null }
+    requestedContest?: {id?: number | null; name?: string | null}
 ): LeaderboardEntry[] {
-    const contest_id =
-        requestedContest?.id ??
-        (payload.contest ? (payload.contest as any).id : null) ??
-        null;
+    const payloadContest = payload.contest as LeaderboardContestPayload | null;
+    const contestId = requestedContest?.id ?? payloadContest?.id ?? null;
+    const contestName = requestedContest?.name ?? payloadContest?.name ?? payloadContest?.slug ?? null;
 
-    const contest_name =
-        requestedContest?.name ??
-        (payload.contest ? ((payload.contest as any).name || (payload.contest as any).slug || null) : null) ??
-        null;
-
-    return (payload.results ?? []).map((r: any) => {
-        const solved = Number(r.solved ?? 0);
-
-        // ✅ Prefer backend score if provided
-        const score = Number(r.total_score ?? r.score ?? solved);
+    return (payload.results ?? []).map((result) => {
+        const row = result as unknown as LeaderboardRowPayload;
+        const solved = Number(row.solved ?? 0);
+        const score = Number(row.total_score ?? row.score ?? solved);
 
         return {
-            rank: Number(r.rank ?? 0),
-            userId: typeof r.user?.id === "number" ? r.user.id : (typeof r.user_id === "number" ? r.user_id : null),
-            username: r.user?.username || r.username || "Unknown",
-            email: r.user?.email,
+            rank: Number(row.rank ?? 0),
+            userId:
+                typeof row.user?.id === "number"
+                    ? row.user.id
+                    : (typeof row.user_id === "number" ? row.user_id : null),
+            username: row.user?.username || row.username || "Unknown",
+            email: row.user?.email,
             score,
             solved,
-            last_submission_at: r.last_solved_at ?? r.last_submission_at ?? null,
-            contest_id: contest_id ?? undefined,
-            contest_name: contest_name ?? undefined,
+            last_submission_at: row.last_solved_at ?? row.last_submission_at ?? null,
+            contest_id: contestId ?? undefined,
+            contest_name: contestName ?? undefined,
         };
     });
 }
@@ -134,9 +152,9 @@ export async function fetchLeaderboard(opts: {
     contestName?: string | null;
     page?: number;
     pageSize?: number;
-    search?: string
+    search?: string;
 }): Promise<FetchLeaderboardResult> {
-    const { mode, contestId, contestName, page = 1, pageSize = 20 } = opts;
+    const {mode, contestId, contestName, page = 1, pageSize = 20} = opts;
 
     try {
         const normalizedMode = (mode || "practice").toLowerCase() as LeaderboardMode;
@@ -146,13 +164,12 @@ export async function fetchLeaderboard(opts: {
                 mode: normalizedMode,
                 page,
                 page_size: pageSize,
-                ...(normalizedMode === "competition" && contestId ? { contest_id: contestId } : {}),
+                ...(normalizedMode === "competition" && contestId ? {contest_id: contestId} : {}),
             },
         });
 
         const raw = resp.data;
 
-        // If backend is paginated, we keep count/next/previous.
         if (isPaginatedEnvelope(raw)) {
             const payload = unwrapLeaderboardPayload(raw);
             const entries = mapLeaderboardResponseToEntries(payload, {
@@ -168,7 +185,6 @@ export async function fetchLeaderboard(opts: {
             };
         }
 
-        // Non-paginated fallback
         const payload = unwrapLeaderboardPayload(raw);
         const entries = mapLeaderboardResponseToEntries(payload, {
             id: normalizedMode === "competition" ? contestId ?? null : null,
@@ -187,12 +203,11 @@ export async function fetchLeaderboard(opts: {
     }
 }
 
-// ---- contests (dropdown) ----
 export interface ContestDTO {
     id: number;
     name?: string;
     slug?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export const getContests = async (): Promise<ContestDTO[]> => {

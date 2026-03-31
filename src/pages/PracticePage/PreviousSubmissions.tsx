@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {PreviousSubmission} from "./types";
-import {getPreviousSubmissions} from "./practice";
 import {FiAlertCircle, FiInfo} from "react-icons/fi";
+
+import {getPreviousSubmissions} from "./practice";
+import type {PreviousSubmission} from "./types";
 
 interface Props {
     challengeId: number;
@@ -12,13 +13,14 @@ type SubmissionsResponse = {
     text_submissions: PreviousSubmission[];
 };
 
-const safeDateLabel = (iso: any) => {
+const safeDateLabel = (iso: string | null | undefined) => {
+    if (!iso) return "—";
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
 };
 
 const statusTone = (status: string) => {
-    const s = (status || "").toLowerCase();
+    const s = status.toLowerCase();
     if (s === "solved" || s === "accepted" || s === "correct") {
         return "ring-emerald-200/60 bg-emerald-50/70 text-emerald-700";
     }
@@ -61,19 +63,18 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
             const data = await getPreviousSubmissions(challengeId);
             if (!alive.current) return;
 
-            const safe: SubmissionsResponse = {
-                flag_submissions: Array.isArray(data?.flag_submissions) ? data.flag_submissions : [],
-                text_submissions: Array.isArray(data?.text_submissions) ? data.text_submissions : [],
-            };
-
-            setSubmissions(safe);
+            setSubmissions({
+                flag_submissions: Array.isArray(data.flag_submissions) ? data.flag_submissions : [],
+                text_submissions: Array.isArray(data.text_submissions) ? data.text_submissions : [],
+            });
         } catch (err) {
             console.error(err);
             if (!alive.current) return;
             setError("Failed to load previous submissions.");
         } finally {
-            if (!alive.current) return;
-            setLoading(false);
+            if (alive.current) {
+                setLoading(false);
+            }
         }
     }, [challengeId]);
 
@@ -81,18 +82,16 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
         fetchSubmissions();
     }, [fetchSubmissions]);
 
-    const hasAny = useMemo(() => {
-        return submissions.flag_submissions.length > 0 || submissions.text_submissions.length > 0;
-    }, [submissions]);
+    const hasAny = useMemo(
+        () => submissions.flag_submissions.length > 0 || submissions.text_submissions.length > 0,
+        [submissions]
+    );
 
-    // EXACT shell + layout style used in CompetitionPreviousSubmissions
     const shell =
         "w-full rounded-2xl bg-white/65 backdrop-blur-xl ring-1 ring-slate-200/60 shadow-sm overflow-hidden";
-    const header =
-        "px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40";
+    const header = "px-4 sm:px-5 py-4 border-b border-slate-200/70 bg-white/40";
     const body = "px-4 sm:px-5 py-4 space-y-5";
-    const card =
-        "rounded-xl bg-white/70 ring-1 ring-slate-200/60 p-4 overflow-hidden";
+    const card = "rounded-xl bg-white/70 ring-1 ring-slate-200/60 p-4 overflow-hidden";
     const pre =
         "mt-2 rounded-xl bg-slate-50/70 ring-1 ring-slate-200/60 px-4 py-3 text-xs sm:text-sm whitespace-pre-wrap break-words overflow-auto";
 
@@ -101,11 +100,11 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
             <div className={shell}>
                 <div className={header}>
                     <div className="text-sm font-normal text-slate-700">Previous Submissions</div>
-                    <div className="mt-1 text-xs sm:text-sm text-slate-500">Loading…</div>
+                    <div className="mt-1 text-xs sm:text-sm text-slate-500">Loading...</div>
                 </div>
                 <div className={body}>
                     <div className="rounded-xl bg-white/70 ring-1 ring-slate-200/60 p-4 text-xs sm:text-sm text-slate-600">
-                        Loading previous submissions…
+                        Loading previous submissions...
                     </div>
                 </div>
             </div>
@@ -123,7 +122,7 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
                         <div className="flex items-start gap-3">
                             <FiAlertCircle className="mt-0.5 shrink-0" />
                             <div className="min-w-0">
-                                <p className="font-normal tracking-tight">Couldn’t load submissions</p>
+                                <p className="font-normal tracking-tight">Could not load submissions</p>
                                 <p className="mt-1 text-sm break-words text-rose-700/90">{error}</p>
                             </div>
                         </div>
@@ -168,7 +167,7 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
                     </div>
 
                     <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3 py-1 text-xs sm:text-sm text-slate-700">
-                        Total:{" "}
+                        Total:
                         <span className="ml-1 font-semibold">
                             {submissions.flag_submissions.length + submissions.text_submissions.length}
                         </span>
@@ -177,60 +176,58 @@ const PreviousSubmissions: React.FC<Props> = ({challengeId}) => {
             </div>
 
             <div className={body}>
-                {/* Flag submissions */}
                 {submissions.flag_submissions.length > 0 ? (
                     <section className="space-y-3">
                         <h2 className="text-sm sm:text-base font-normal text-slate-800">Flag Submissions</h2>
 
                         <div className="space-y-3">
                             {submissions.flag_submissions.map((sub) => (
-                                <article key={`flag-${(sub as any).id}`} className={card}>
+                                <article key={`flag-${sub.id}`} className={card}>
                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-slate-500">
-                                        <span>{safeDateLabel((sub as any).submittedAt)}</span>
+                                        <span>{safeDateLabel(sub.submittedAt)}</span>
 
-                                        {(sub as any).status ? (
+                                        {sub.status ? (
                                             <span
                                                 className={cx(
                                                     "inline-flex items-center rounded-full ring-1 px-3 py-1 text-xs sm:text-sm",
-                                                    statusTone(String((sub as any).status))
+                                                    statusTone(sub.status)
                                                 )}
                                             >
-                                                {String((sub as any).status)}
+                                                {sub.status}
                                             </span>
                                         ) : null}
                                     </div>
 
-                                    <pre className={cx(pre, "font-mono")}>{(sub as any).value ?? ""}</pre>
+                                    <pre className={cx(pre, "font-mono")}>{sub.value ?? ""}</pre>
                                 </article>
                             ))}
                         </div>
                     </section>
                 ) : null}
 
-                {/* Text submissions */}
                 {submissions.text_submissions.length > 0 ? (
                     <section className="space-y-3">
                         <h2 className="text-sm sm:text-base font-normal text-slate-800">Text Submissions</h2>
 
                         <div className="space-y-3">
                             {submissions.text_submissions.map((sub) => (
-                                <article key={`text-${(sub as any).id}`} className={card}>
+                                <article key={`text-${sub.id}`} className={card}>
                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-slate-500">
-                                        <span>{safeDateLabel((sub as any).submittedAt)}</span>
+                                        <span>{safeDateLabel(sub.submittedAt)}</span>
 
-                                        {(sub as any).status ? (
+                                        {sub.status ? (
                                             <span
                                                 className={cx(
                                                     "inline-flex items-center rounded-full ring-1 px-3 py-1 text-xs sm:text-sm",
-                                                    statusTone(String((sub as any).status))
+                                                    statusTone(sub.status)
                                                 )}
                                             >
-                                                {String((sub as any).status)}
+                                                {sub.status}
                                             </span>
                                         ) : null}
                                     </div>
 
-                                    <pre className={cx(pre, "font-sans")}>{(sub as any).content ?? ""}</pre>
+                                    <pre className={cx(pre, "font-sans")}>{sub.content ?? ""}</pre>
                                 </article>
                             ))}
                         </div>

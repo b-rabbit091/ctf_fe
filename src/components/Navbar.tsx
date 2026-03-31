@@ -58,7 +58,6 @@ const Navbar: React.FC = () => {
     // close menus on navigation
     useEffect(() => {
         closeAll();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
 
     useEscape(closeAll, mobileOpen || menuOpen);
@@ -169,16 +168,13 @@ const Navbar: React.FC = () => {
                     <div className="hidden md:flex items-center gap-2">
                         {user ? (
                             <>
-                                <button
-                                    type="button"
-                                    onClick={() => go("/account")}
+                                <div
                                     className={cx(
-                                        "inline-flex items-center gap-2 rounded-full px-2 py-1.5 transition",
-                                        "bg-white/50 ring-1 ring-slate-200/70 hover:bg-white/80 shadow-sm",
-                                        "text-slate-700 hover:text-indigo-700",
-                                        focusRing
+                                        "inline-flex items-center gap-2 rounded-full px-2 py-1.5",
+                                        "bg-white/50 ring-1 ring-slate-200/70 shadow-sm",
+                                        "text-slate-700"
                                     )}
-                                    aria-label="Account"
+                                    aria-label="Signed in user"
                                 >
                                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/70 text-slate-600 text-sm font-bold">
                                         {user.username?.[0]?.toUpperCase() || <FiUser size={14} />}
@@ -186,7 +182,7 @@ const Navbar: React.FC = () => {
                                     <span className="max-w-[120px] truncate text-sm font-semibold tracking-tight">
                                         {user.username}
                                     </span>
-                                </button>
+                                </div>
 
                                 <div className="relative" ref={menuRef}>
                                     <button

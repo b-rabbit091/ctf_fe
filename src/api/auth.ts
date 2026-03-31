@@ -61,3 +61,8 @@ export const verifyEmailAndSetPassword = async (token: string, password: string,
     const resp = await api.post(`${API_URL}verify-email/`, { token, password, confirm_password });
     return resp.data;
 };
+
+export const confirmResetPassword = async (token: string, password: string, confirm_password: string) => {
+    const resp = await api.post(`${API_URL}reset-password/confirm/`, { token, password, confirm_password });
+    return resp.data;
+};

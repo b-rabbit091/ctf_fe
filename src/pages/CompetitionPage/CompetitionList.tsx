@@ -1,10 +1,10 @@
 // src/pages/CompetePage/CompetitionList.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import Navbar from "../../components/Navbar";
 import {getChallenges, getCategories, getDifficulties} from "./api";
 import {useNavigate} from "react-router-dom";
 import {FiAlertCircle, FiEye, FiInfo, FiRefreshCw, FiTag, FiUsers} from "react-icons/fi";
 import type {Challenge} from "./types";
+import {LearningShell} from "../../components/layout/LearningShell";
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
@@ -606,37 +606,28 @@ const CompetitionList: React.FC = () => {
     );
 
     return (
-        <div
-            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar/>
-
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
-                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">
-                            Competition Challenges
-                        </h1>
-                        <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Filter contests by status, type, and participation - then jump in.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={fetchInitial}
-                        className={cx(
-                            "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
-                            "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
-                            focusRing
-                        )}
-                        disabled={loading}
-                        aria-label="Refresh competition challenges"
-                        title="Refresh"
-                    >
-                        <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
-                        {loading ? "Refreshing..." : "Refresh"}
-                    </button>
-                </header>
+        <LearningShell
+            eyebrow="Competition Hub"
+            title="Train with events that feel close to live competition"
+            description="Read contest tracks, scan active events, and jump into competition sets."
+            actions={
+                <button
+                    type="button"
+                    onClick={fetchInitial}
+                    className={cx(
+                        "inline-flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm tracking-tight text-slate-700 ring-1 ring-slate-200/70 shadow-sm hover:bg-white disabled:opacity-60",
+                        focusRing
+                    )}
+                    disabled={loading}
+                    aria-label="Refresh competition challenges"
+                    title="Refresh"
+                >
+                    <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                    {loading ? "Refreshing..." : "Refresh"}
+                </button>
+            }
+        >
+            <div className="w-full">
 
                 {/* Filters panel */}
                 <Card>
@@ -1031,8 +1022,8 @@ const CompetitionList: React.FC = () => {
                         )}
                     </>
                 ) : null}
-            </main>
-        </div>
+            </div>
+        </LearningShell>
     );
 };
 

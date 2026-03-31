@@ -27,11 +27,11 @@ export interface Challenge {
     id: number;
     title: string;
     description: string;
-    constraints?: any;
-    input_format?: any;
-    output_format?: any;
-    sample_input?: any;
-    sample_output?: any;
+    constraints?: string | null;
+    input_format?: string | null;
+    output_format?: string | null;
+    sample_input?: string | null;
+    sample_output?: string | null;
     files?: FileType[] | null;
     category: CategoryTypes;
     difficulty: DifficultyTypes;
@@ -93,4 +93,3 @@ export type PreviousSubmission = {
     value: string | null;
     content: string | null;
 };
-

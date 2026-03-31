@@ -1,5 +1,6 @@
 import api from "../../api/axios";
 import {Blog} from "./types";
+import {normalizeApiError} from "../../utils/apiError";
 
 const API_URL = "/blogs/";
 
@@ -9,9 +10,9 @@ export const getBlogs = async (): Promise<Blog[]> => {
     try {
         const resp = await api.get<Blog[]>(API_URL);
         return resp.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Error fetching blogs:", err);
-        throw err.response?.data || err;
+        throw normalizeApiError(err, "Failed to fetch blogs.");
     }
 };
 
@@ -20,9 +21,9 @@ export const getBlogById = async (id: number): Promise<Blog> => {
     try {
         const resp = await api.get<Blog>(`${API_URL}${id}/`);
         return resp.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(`Error fetching blog id=${id}:`, err);
-        throw err.response?.data || err;
+        throw normalizeApiError(err, `Failed to fetch blog ${id}.`);
     }
 };
 
@@ -33,9 +34,9 @@ export const createBlog = async (data: FormData): Promise<Blog> => {
             headers: { "Content-Type": "multipart/form-data" },
         });
         return resp.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Error creating blog:", err);
-        throw err.response?.data || err;
+        throw normalizeApiError(err, "Failed to create blog.");
     }
 };
 
@@ -46,9 +47,9 @@ export const updateBlog = async (id: number, data: FormData): Promise<Blog> => {
             headers: { "Content-Type": "multipart/form-data" },
         });
         return resp.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(`Error updating blog id=${id}:`, err);
-        throw err.response?.data || err;
+        throw normalizeApiError(err, `Failed to update blog ${id}.`);
     }
 };
 
@@ -56,9 +57,8 @@ export const updateBlog = async (id: number, data: FormData): Promise<Blog> => {
 export const deleteBlog = async (id: number): Promise<void> => {
     try {
         await api.delete(`${API_URL}${id}/`);
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(`Error deleting blog id=${id}:`, err);
-        throw err.response?.data || err;
+        throw normalizeApiError(err, `Failed to delete blog ${id}.`);
     }
 };
-

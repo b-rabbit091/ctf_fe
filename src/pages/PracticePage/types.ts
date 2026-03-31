@@ -39,11 +39,12 @@ export interface Challenge {
     id: number;
     title: string;
     description: string;
-    constraints?: any;
-    input_format?: any;
-    output_format?: any;
-    sample_input?: any;
-    sample_output?: any;
+    created_at?: string | null;
+    constraints?: string | null;
+    input_format?: string | null;
+    output_format?: string | null;
+    sample_input?: string | null;
+    sample_output?: string | null;
     files?: FileType[] | null;
     category: CategoryTypes;
     difficulty: DifficultyTypes;
@@ -97,7 +98,7 @@ export type ChatMessage = {
     role: ChatRole;
     content: string;
     createdAt: string; // ISO string
-    meta?: Record<string, any>;
+    meta?: Record<string, unknown>;
 };
 
 // -------- Backend DTOs --------
@@ -106,7 +107,7 @@ export type ChatTurnApi = {
     role: ChatRole;
     content: string;
     created_at: string;
-    meta?: Record<string, any>;
+    meta?: Record<string, unknown>;
 };
 
 export type ChatHistoryApiResponse = {

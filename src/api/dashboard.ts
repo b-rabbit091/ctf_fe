@@ -1,6 +1,7 @@
 // src/api/dashboard.ts
 import api from "./axios";
 import axios, {AxiosError} from "axios";
+import {normalizeApiError} from "../utils/apiError";
 
 const API_URL = '/dashboard/'
 /* ==== Types that match the backend payload ==== */
@@ -95,30 +96,9 @@ export const getDashboardOverview = async (): Promise<DashboardOverview> => {
         return resp.data;
     } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
-            const axiosError = error as AxiosError<any>;
-
+            const axiosError = error as AxiosError<unknown>;
             const status = axiosError.response?.status;
-            const data = axiosError.response?.data;
-
-            const detailFromServer =
-                (data && typeof data === "object" && (data as any).detail) || null;
-
-            let message = "Unable to load dashboard.";
-
-            if (detailFromServer) {
-                message = String(detailFromServer);
-            } else if (status === 401) {
-                message =
-                    "Your session has expired or you are not logged in. Please sign in again.";
-            } else if (status === 403) {
-                message = "You do not have permission to access this dashboard.";
-            } else if (status === 500) {
-                message =
-                    "Something went wrong on our side. Please try again in a few moments.";
-            } else if (axiosError.message) {
-                message = axiosError.message;
-            }
-
+            const message = normalizeApiError(error, "Unable to load dashboard.").message;
             throw new DashboardError(message, status);
         }
 
@@ -162,8 +142,21 @@ export interface AdminDashboardTotalsResponse {
  */
 export const getAdminDashboardTotals =
     async (): Promise<AdminDashboardTotalsResponse> => {
-        const resp = await api.get<AdminDashboardTotalsResponse>(
-            `${API_URL}admin/totals/`
-        );
-        return resp.data;
+        try {
+            const resp = await api.get<AdminDashboardTotalsResponse>(
+                `${API_URL}admin/totals/`
+            );
+            return resp.data;
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error)) {
+                const axiosError = error as AxiosError<unknown>;
+                const status = axiosError.response?.status;
+                const message = normalizeApiError(error, "Unable to load admin totals.").message;
+                throw new DashboardError(message, status);
+            }
+
+            throw new DashboardError(
+                "We could not reach the server. Please check your internet connection."
+            );
+        }
     };

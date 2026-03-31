@@ -33,10 +33,13 @@ export interface AdminTextSubmission extends AdminSubmissionBase {
     type: "text";
 }
 
+type AdminFlagSubmissionApi = Omit<AdminFlagSubmission, "type">;
+type AdminTextSubmissionApi = Omit<AdminTextSubmission, "type">;
+
 // Fetch all flag submissions
 export async function getFlagSubmissions(): Promise<AdminFlagSubmission[]> {
-    const res = await api.get("/submissions/flag-submissions");
-    return res.data.map((s: any) => ({
+    const res = await api.get<AdminFlagSubmissionApi[]>("/submissions/flag-submissions");
+    return res.data.map((s) => ({
         ...s,
         type: "flag",
     }));
@@ -44,8 +47,8 @@ export async function getFlagSubmissions(): Promise<AdminFlagSubmission[]> {
 
 // Fetch all text submissions
 export async function getTextSubmissions(): Promise<AdminTextSubmission[]> {
-    const res = await api.get("/submissions/text-submissions");
-    return res.data.map((s: any) => ({
+    const res = await api.get<AdminTextSubmissionApi[]>("/submissions/text-submissions");
+    return res.data.map((s) => ({
         ...s,
         type: "text",
     }));

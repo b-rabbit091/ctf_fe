@@ -81,6 +81,7 @@ const PracticePage: React.FC = () => {
         try {
             localStorage.setItem(STORAGE_KEY, String(clamp(rightRatio, 0.25, 0.6)));
         } catch {
+            // Ignore storage write failures.
         }
     }, [rightRatio]);
 

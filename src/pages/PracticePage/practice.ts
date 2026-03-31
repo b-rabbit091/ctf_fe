@@ -1,11 +1,19 @@
 import api from "../../api/axios";
 import {
+    getChallengePreviousSubmissions,
+    normalizeFlagSubmission,
+    normalizeTextSubmission,
+    submitChallengeSolution,
+    type SubmitPayload,
+    type SubmitResponse,
+} from "../../api/submissions";
+import {
     Challenge,
     CategoryTypes,
     DifficultyTypes,
     SolutionTypes,
 } from "./types";
-import {PreviousSubmission, PreviousSubmissionsApiResponse, SubmissionApiItem} from "./types";
+import {PreviousSubmission} from "./types";
 
 
 export const getChallenges = async (filters?: {
@@ -123,51 +131,11 @@ export const deletePracticeChallenge = async (id: number) => {
 };
 
 
-export type SubmitPayload = {
-    value?: string;      // flag
-    content?: string;    // procedure
-};
-
-export type SubmitResponse = {
-    challenge_id: number;
-    question_type: "practice" | "competition";
-    contest_id: number | null;
-    results: Array<{
-        type: "flag" | "text"; // backend returns "text" for content submissions (we can rename on UI)
-        submission_id: number;
-        correct: boolean;
-        status: string; // "correct" | "incorrect"
-        submitted_at: string;
-    }>;
-};
-
 export const submitSolution = async (
     challengeId: number,
     payload: SubmitPayload
 ): Promise<SubmitResponse> => {
-    try {
-        const res = await api.post(`/submissions/${challengeId}/`, payload);
-        return res.data;
-    } catch (error: any) {
-        console.error("Error submitting solution:", error);
-
-        const data = error?.response?.data;
-
-        const msg =
-            typeof data === "string"
-                ? data
-                : data?.detail
-                    ? data.detail
-                    : data?.value?.[0]
-                        ? data.value[0]
-                        : data?.content?.[0]
-                            ? data.content[0]
-                            : data?.non_field_errors?.[0]
-                                ? data.non_field_errors[0]
-                                : "Failed to submit solution.";
-
-        throw new Error(msg);
-    }
+    return submitChallengeSolution(challengeId, payload);
 };
 
 export const submitFlag = async (challengeId: number, value: string) =>
@@ -177,27 +145,9 @@ export const submitTextSolution = async (challengeId: number, content: string) =
     submitSolution(challengeId, {content});
 
 
-export const normalizeFlag = (s: SubmissionApiItem): PreviousSubmission => ({
-    id: s.id,
-    username: s.user?.username ?? "",
-    email: s.user?.email ?? "",
-    challengeTitle: s.challenge?.title ?? "",
-    submittedAt: s.submitted_at,
-    status: s.status?.status ?? null,
-    value: s.value ?? null,
-    content: null,
-});
+export const normalizeFlag = normalizeFlagSubmission;
 
-export const normalizeText = (s: SubmissionApiItem): PreviousSubmission => ({
-    id: s.id,
-    username: s.user?.username ?? "",
-    email: s.user?.email ?? "",
-    challengeTitle: s.challenge?.title ?? "",
-    submittedAt: s.submitted_at,
-    status: s.status?.status ?? null,
-    value: null,
-    content: s.content ?? null,
-});
+export const normalizeText = normalizeTextSubmission;
 
 export const getPreviousSubmissions = async (
     challengeId: number
@@ -205,39 +155,33 @@ export const getPreviousSubmissions = async (
     flag_submissions: PreviousSubmission[];
     text_submissions: PreviousSubmission[];
 }> => {
-    try {
-        const response = await api.get<PreviousSubmissionsApiResponse>(
-            `/submissions/previous-submissions/${challengeId}/`
-        );
-
-        const flagRaw = response.data.flag_submissions ?? [];
-        const textRaw = response.data.text_submissions ?? [];
-
-        return {
-            flag_submissions: flagRaw.map(normalizeFlag),
-            text_submissions: textRaw.map(normalizeText),
-        };
-    } catch (error) {
-        console.error("Error fetching previous submissions:", error);
-        return {flag_submissions: [], text_submissions: []};
-    }
+    return getChallengePreviousSubmissions(challengeId);
 };
 
 // src/components/chat/api.ts
 import type {
     ApiResult,
     ChatHistoryApiResponse,
+    ChatTurnApi,
     ChatHistoryPage,
     ChatMessage,
     ChatSendApiResponse,
 } from "./types";
 
-function toMessageFromTurn(t: any): ChatMessage {
+type AxiosLikeError = {
+    name?: string;
+    message?: string;
+    response?: {
+        data?: unknown;
+    };
+};
+
+function toMessageFromTurn(t: ChatTurnApi): ChatMessage {
     return {
         id: String(t.id ?? ""),
         role: t.role,
         content: String(t.content ?? ""),
-        createdAt: String(t.created_at ?? t.createdAt ?? ""),
+        createdAt: String(t.created_at ?? ""),
         meta: t.meta ?? {},
     };
 }
@@ -253,22 +197,33 @@ function toHistoryPage(raw: ChatHistoryApiResponse): ChatHistoryPage {
     };
 }
 
-function humanAxiosError(e: any): string {
-    const data = e?.response?.data;
+function humanAxiosError(e: unknown): string {
+    const error = (e ?? {}) as AxiosLikeError;
+    const data = error.response?.data;
     if (typeof data === "string") return data;
-    if (data?.detail) return String(data.detail);
-    return e?.message || "Request failed.";
+    if (typeof data === "object" && data !== null && "detail" in data) {
+        return String((data as {detail?: unknown}).detail ?? "Request failed.");
+    }
+    return error.message || "Request failed.";
 }
 
-export function getChallengeIdFromContext(context?: Record<string, any>): number | null {
+type ChatContext = Record<string, unknown> & {
+    challenge_id?: number | string;
+    challengeId?: number | string;
+    challenge?: {
+        id?: number | string;
+    };
+};
+
+export function getChallengeIdFromContext(context?: ChatContext): number | null {
     const v =
         context?.challenge_id ??
         context?.challengeId ??
         context?.challenge?.id ??
         null;
 
-    const n = typeof v === "string" ? Number(v) : v;
-    if (!Number.isFinite(n) || n <= 0) return null;
+    const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : null;
+    if (n === null || !Number.isFinite(n) || n <= 0) return null;
     return n as number;
 }
 
@@ -294,9 +249,10 @@ export async function fetchChatHistory(args: {
                 signal,
             });
 
-        return { ok: true, data: toHistoryPage(resp.data as any) };
-    } catch (e: any) {
-        const aborted = e?.name === "CanceledError" || e?.name === "AbortError";
+        return { ok: true, data: toHistoryPage(resp.data as ChatHistoryApiResponse) };
+    } catch (e: unknown) {
+        const error = (e ?? {}) as AxiosLikeError;
+        const aborted = error.name === "CanceledError" || error.name === "AbortError";
         return { ok: false, error: aborted ? "aborted" : humanAxiosError(e) };
     }
 }
@@ -314,8 +270,9 @@ export async function clearChatThread(args: {
         });
         const cleared = !!resp.data?.cleared;
         return { ok: true, data: { cleared } };
-    } catch (e: any) {
-        const aborted = e?.name === "CanceledError" || e?.name === "AbortError";
+    } catch (e: unknown) {
+        const error = (e ?? {}) as AxiosLikeError;
+        const aborted = error.name === "CanceledError" || error.name === "AbortError";
         return { ok: false, error: aborted ? "aborted" : humanAxiosError(e) };
     }
 }
@@ -325,7 +282,7 @@ export async function clearChatThread(args: {
  * Backend response is your safe_ok shape: { reply, id, created_at, percent_on_track }
  */
 export async function sendChatMessage(
-    args: { text: string; context?: Record<string, any> },
+    args: { text: string; context?: ChatContext },
     signal?: AbortSignal
 ): Promise<ApiResult<ChatMessage>> {
     const challengeId = getChallengeIdFromContext(args.context);
@@ -348,8 +305,9 @@ export async function sendChatMessage(
         };
 
         return { ok: true, data: msg };
-    } catch (e: any) {
-        const aborted = e?.name === "CanceledError" || e?.name === "AbortError";
+    } catch (e: unknown) {
+        const error = (e ?? {}) as AxiosLikeError;
+        const aborted = error.name === "CanceledError" || error.name === "AbortError";
         return { ok: false, error: aborted ? "aborted" : humanAxiosError(e) };
     }
 }

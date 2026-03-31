@@ -1,11 +1,12 @@
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Link, useNavigate} from "react-router-dom";
-import {FiAlertCircle, FiEdit, FiEye, FiInfo, FiRefreshCw, FiTrash2} from "react-icons/fi";
+import {Link} from "react-router-dom";
+import {FiAlertCircle, FiEye, FiInfo, FiRefreshCw} from "react-icons/fi";
 
-import Navbar from "../../components/Navbar";
 import {useAuth} from "../../contexts/AuthContext";
-import {deleteBlog, getBlogs} from "./api";
+import {getBlogs} from "./api";
 import type {Blog as BlogType} from "./types";
+import {LearningShell} from "../../components/layout/LearningShell";
+import {normalizeApiError} from "../../utils/apiError";
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
@@ -45,7 +46,7 @@ const Card = memo(function Card({children}: { children: React.ReactNode }) {
 
 const BlogList: React.FC = () => {
     const {user} = useAuth();
-    const navigate = useNavigate();
+    void user;
 
     const [blogs, setBlogs] = useState<BlogType[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,11 +71,12 @@ const BlogList: React.FC = () => {
         } catch (e) {
             console.error(e);
             if (!alive.current) return;
-            setError("Failed to load blogs.");
+            setError(normalizeApiError(e, "Failed to load blogs.").message);
             setBlogs([]);
         } finally {
-            if (!alive.current) return;
-            setLoading(false);
+            if (alive.current) {
+                setLoading(false);
+            }
         }
     }, []);
 
@@ -106,44 +108,34 @@ const BlogList: React.FC = () => {
                 ...b,
                 formattedDate: formatDateShort(b.created_at),
                 excerpt: clampText(plain, 200),
-                safeCover: safeString((b as any).cover_image) ? ((b as any).cover_image as string) : null,
+                safeCover: safeString(b.cover_image) ? b.cover_image : null,
             };
         });
     }, [blogs]);
 
     return (
-        <div
-            className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50 font-sans text-slate-700 flex flex-col">
-            <Navbar/>
-
-            <main className="flex-1 mx-auto w-full max-w-6xl px-3 sm:px-4 py-5">
-                {/* Header */}
-                <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <h1 className="truncate text-2xl sm:text-3xl font-normal tracking-tight text-slate-700">Blog</h1>
-                        <p className="mt-1 text-sm sm:text-base text-slate-500">
-                            Articles, writeups, and updates. Open a post to read the full story.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={loadBlogs}
-                            className={cx(
-                                "inline-flex items-center gap-2 rounded-xl bg-white/65 px-3 py-2 text-sm font-normal tracking-tight",
-                                "ring-1 ring-slate-200/60 hover:bg-white/90 disabled:opacity-60",
-                                focusRing
-                            )}
-                            disabled={loading}
-                            aria-label="Refresh blogs"
-                            title="Refresh"
-                        >
-                            <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
-                            {loading ? "Refreshing..." : "Refresh"}
-                        </button>
-                    </div>
-                </header>
+        <LearningShell
+            eyebrow="Knowledge Base"
+            title="Read writeups, updates, and guided learning stories"
+            description="Read writeups, updates, and guided learning stories."
+            actions={
+                <button
+                    type="button"
+                    onClick={loadBlogs}
+                    className={cx(
+                        "inline-flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm tracking-tight text-slate-700 ring-1 ring-slate-200/70 shadow-sm hover:bg-white disabled:opacity-60",
+                        focusRing
+                    )}
+                    disabled={loading}
+                    aria-label="Refresh blogs"
+                    title="Refresh"
+                >
+                    <FiRefreshCw className={loading ? "animate-spin" : ""} size={16}/>
+                    {loading ? "Refreshing..." : "Refresh"}
+                </button>
+            }
+        >
+            <div className="w-full">
 
                 {/* Error */}
                 {error ? (
@@ -265,8 +257,8 @@ const BlogList: React.FC = () => {
                         )}
                     </>
                 ) : null}
-            </main>
-        </div>
+            </div>
+        </LearningShell>
     );
 };
 

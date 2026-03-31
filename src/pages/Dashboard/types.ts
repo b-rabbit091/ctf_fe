@@ -6,8 +6,7 @@ export type ISODateString = string;
 export type DifficultyKey = "Easy" | "Medium" | "Hard" ;
 export type DifficultyMap = Record<DifficultyKey, number>;
 
-export interface DifficultyBreakdown extends DifficultyMap {
-}
+export type DifficultyBreakdown = DifficultyMap;
 
 /* ==== Category ==== */
 export interface CategoryStat {
@@ -114,5 +113,4 @@ export type LoadingState = "idle" | "loading" | "success" | "error";
 export type LoadResult =
     | { ok: true; data: DashboardOverviewResponse }
     | { ok: false; message: string; recoverable: boolean };
-
 

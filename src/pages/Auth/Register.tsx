@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import { toast } from "react-toastify";
-import { ImSpinner8 } from "react-icons/im";
-import { Link } from "react-router-dom";
-import { FaShieldAlt, FaTrophy, FaBolt, FaCheckCircle } from "react-icons/fa";
+import React, {useMemo, useState} from "react";
+import {useAuth} from "../../contexts/AuthContext";
+import {toast} from "react-toastify";
+import {ImSpinner8} from "react-icons/im";
+import {Link} from "react-router-dom";
 
 const Register: React.FC = () => {
-    const { register } = useAuth();
+    const {register} = useAuth();
     const [form, setForm] = useState({
         username: "",
         email: "",
@@ -16,25 +15,17 @@ const Register: React.FC = () => {
     const [loading, setLoading] = useState(false);
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-        setForm({ ...form, [e.target.name]: e.target.value });
+        setForm({...form, [e.target.name]: e.target.value});
 
     const progress = useMemo(() => {
         const fields = [
-            form.username.trim(),
-            form.email.trim(),
             form.first_name.trim(),
             form.last_name.trim(),
+            form.username.trim(),
+            form.email.trim(),
         ];
-        const filled = fields.filter(Boolean).length;
-        return Math.round((filled / fields.length) * 100);
+        return Math.round((fields.filter(Boolean).length / fields.length) * 100);
     }, [form]);
-
-    const rank = useMemo(() => {
-        if (progress <= 25) return { name: "Getting Started", icon: <FaBolt /> };
-        if (progress <= 50) return { name: "In Progress", icon: <FaShieldAlt /> };
-        if (progress <= 75) return { name: "Almost Complete", icon: <FaTrophy /> };
-        return { name: "Ready to Go", icon: <FaCheckCircle /> };
-    }, [progress]);
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,7 +33,7 @@ const Register: React.FC = () => {
         try {
             await register(form);
             toast.success("Registration successful! Check your email to verify your account.");
-            setForm({ username: "", email: "", first_name: "", last_name: "" });
+            setForm({username: "", email: "", first_name: "", last_name: ""});
         } catch (err: any) {
             toast.error(err.response?.data?.detail || "Email or username already taken");
         } finally {
@@ -51,219 +42,180 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full overflow-hidden bg-white">
-            <div className="absolute inset-0 -z-10">
-                <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-[#006747]/15 blur-3xl" />
-                <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-400/15 blur-3xl" />
-                <div
-                    className="absolute inset-0 opacity-[0.06]"
-                    style={{
-                        backgroundImage:
-                            "linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)",
-                        backgroundSize: "36px 36px",
-                    }}
-                />
-            </div>
+        <div className="relative min-h-screen w-full overflow-hidden bg-[#f4f8f5]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(0,103,71,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(22,163,74,0.12),_transparent_28%),linear-gradient(135deg,_#f4f8f5_0%,_#eef6f0_45%,_#f7faf8_100%)]" />
+            <div
+                className="absolute inset-0 opacity-[0.06]"
+                style={{
+                    backgroundImage:
+                        "linear-gradient(to right, rgba(0,0,0,0.7) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.7) 1px, transparent 1px)",
+                    backgroundSize: "42px 42px",
+                }}
+            />
+            <div className="absolute left-1/2 top-[-5rem] h-64 w-64 -translate-x-1/2 rounded-full bg-[#006747]/12 blur-3xl sm:h-80 sm:w-80" />
+            <div className="absolute bottom-[-6rem] right-[-5rem] h-72 w-72 rounded-full bg-emerald-300/18 blur-3xl sm:h-96 sm:w-96" />
+            <div className="absolute bottom-[14%] left-[12%] hidden h-40 w-40 rounded-full border border-[#006747]/10 bg-[#006747]/8 blur-sm lg:block" />
 
-            <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:gap-10 lg:py-0">
-                {/* LEFT: Gamified intro */}
-                <section className="lg:w-[52%]">
-                    <div className="flex items-center gap-3">
-                        <img
-                            alt="Northwest Missouri State University"
-                            src="https://www.nwmissouri.edu/layout/v2019/images/svg/logo-n.svg"
-                            className="h-12 w-12 sm:h-14 sm:w-14 object-contain"
-                            draggable={false}
-                        />
-                        <div className="leading-tight">
-                            <div className="text-sm sm:text-base font-bold text-[#006747]">
-                                NORTHWEST MISSOURI STATE UNIVERSITY
+            <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-8 sm:px-6 lg:px-10">
+                <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[1.1fr_minmax(440px,560px)] lg:gap-14">
+                    <section className="hidden lg:block">
+                        <div className="max-w-2xl">
+                            <div className="mb-6 inline-flex items-center rounded-full border border-[#006747]/15 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#006747] shadow-sm backdrop-blur-md">
+                                Northwest Missouri State University
                             </div>
-                            <div className="text-xs sm:text-sm font-semibold text-[#006747]/90">
-                                Department of Computer Science
+                            <div className="flex items-start gap-5">
+                                <img
+                                    src="https://www.nwmissouri.edu/layout/v2019/images/svg/logo-n.svg"
+                                    alt="Northwest Missouri State University"
+                                    className="mt-1 h-16 w-16 shrink-0 object-contain select-none"
+                                    draggable={false}
+                                />
+                                <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900">
+                                    Create your Bearcat account and step into practice, competitions, and progress tracking.
+                                </h1>
                             </div>
-                        </div>
-                    </div>
+                            <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+                                Registration keeps the same Northwest learning feel as login, with a simple onboarding flow that gets students into labs quickly and cleanly.
+                            </p>
 
-                    <div className="mt-7">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-[#006747]/20 bg-white/70 px-3 py-1 text-xs font-semibold text-[#006747] backdrop-blur">
-                            <span className="h-2 w-2 rounded-full bg-[#006747]" />
-                            Cyber Lab Onboarding
-                        </div>
-
-                        <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
-                            Create your <span className="text-[#006747]">Bearcats</span> account
-                        </h1>
-                        <p className="mt-3 text-gray-600">
-                            Start Practice Labs, join Competitions (Solo/Group), and climb the
-                            Leaderboard - all powered by AI feedback.
-                        </p>
-
-                        {/* Progress / Rank */}
-                        <div className="mt-6 rounded-2xl border border-[#006747]/15 bg-white/70 p-4 backdrop-blur">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm font-semibold text-gray-900">
-                                    Profile Setup
+                            <div className="mt-8 grid max-w-2xl grid-cols-3 gap-4">
+                                <div className="rounded-3xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-md">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#006747]">Profile</div>
+                                    <div className="mt-2 text-sm leading-6 text-slate-600">Create your learner identity with just the essentials.</div>
                                 </div>
-                                <div className="inline-flex items-center gap-2 text-sm font-semibold text-[#006747]">
-                                    <span className="text-base">{rank.icon}</span>
-                                    {rank.name}
+                                <div className="rounded-3xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-md">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#006747]">Verification</div>
+                                    <div className="mt-2 text-sm leading-6 text-slate-600">Finish activation through email before entering the platform.</div>
+                                </div>
+                                <div className="rounded-3xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-md">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#006747]">Learning</div>
+                                    <div className="mt-2 text-sm leading-6 text-slate-600">Move from onboarding straight into labs, contests, and rankings.</div>
                                 </div>
                             </div>
+                        </div>
+                    </section>
 
-                            <div className="mt-3 h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div className="w-full max-w-xl justify-self-center rounded-3xl border border-[#006747]/12 bg-white/95 p-6 shadow-[0_28px_90px_-36px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-8">
+                        <div className="mb-6 flex items-center justify-center gap-4">
+                            <img
+                                src="https://sso.nwmissouri.edu/adfs/portal/logo/logo.png?id=98124957C0CDEFFDBE90AF9EF19DB4BDA8EE87632170955806EE170BF250E5B6"
+                                alt="Register"
+                                className="h-12 w-auto object-contain select-none sm:h-14"
+                                draggable={false}
+                            />
+                        </div>
+
+                        <div className="mb-6 text-center">
+
+                            <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Create Account</h2>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                                Register with your basic profile details to begin your workspace setup.
+                            </p>
+                        </div>
+
+                        <div className="mb-5 rounded-2xl border border-[#006747]/10 bg-[#f4faf6] px-4 py-3">
+                            <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+                                <span>Setup progress</span>
+                                <span className="text-[#006747]">{progress}%</span>
+                            </div>
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
                                 <div
                                     className="h-full rounded-full bg-[#006747] transition-all duration-300"
-                                    style={{ width: `${progress}%` }}
+                                    style={{width: `${progress}%`}}
+                                />
+                            </div>
+                        </div>
+
+                        <form onSubmit={submit} className="space-y-5">
+                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <label htmlFor="first_name" className="block text-sm font-medium text-slate-700">
+                                        First Name
+                                    </label>
+                                    <input
+                                        id="first_name"
+                                        name="first_name"
+                                        type="text"
+                                        value={form.first_name}
+                                        onChange={onChange}
+                                        required
+                                        placeholder="John"
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label htmlFor="last_name" className="block text-sm font-medium text-slate-700">
+                                        Last Name
+                                    </label>
+                                    <input
+                                        id="last_name"
+                                        name="last_name"
+                                        type="text"
+                                        value={form.last_name}
+                                        onChange={onChange}
+                                        required
+                                        placeholder="Doe"
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label htmlFor="username" className="block text-sm font-medium text-slate-700">
+                                    Username
+                                </label>
+                                <input
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    value={form.username}
+                                    onChange={onChange}
+                                    required
+                                    placeholder="Choose a username for the platform"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
                                 />
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
-                                <span>{progress}% complete</span>
-                                <span>Finish setup to unlock labs</span>
+                            <div className="space-y-2">
+                                <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                                    Email
+                                </label>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    value={form.email}
+                                    onChange={onChange}
+                                    required
+                                    placeholder="you@nwmissouri.edu"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
+                                />
                             </div>
 
-                            {/* Mini “perks” row */}
-                            <div className="mt-4 grid grid-cols-3 gap-2">
-                                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-                                    <div className="text-xs font-semibold text-gray-900">Practice</div>
-                                    <div className="text-[11px] text-gray-600">Question cards</div>
-                                </div>
-                                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-                                    <div className="text-xs font-semibold text-gray-900">Competition</div>
-                                    <div className="text-[11px] text-gray-600">Solo / Group</div>
-                                </div>
-                                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-                                    <div className="text-xs font-semibold text-gray-900">Leaderboard</div>
-                                    <div className="text-[11px] text-gray-600">Rank & badges</div>
-                                </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex w-full items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                            >
+                                {loading ? (
+                                    <>
+                                        <ImSpinner8 className="animate-spin mr-2" />
+                                        Creating profile...
+                                    </>
+                                ) : (
+                                    "Create Account"
+                                )}
+                            </button>
+
+                            <div className="flex flex-col gap-2 pt-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                                <Link to="/login" className="text-green-700 hover:underline">
+                                    Click here to sign in
+                                </Link>
                             </div>
-                        </div>
+                        </form>
                     </div>
-                </section>
-
-                {/* RIGHT: Registration card (sleek, “game UI” vibe) */}
-                <section className="mt-8 lg:mt-0 lg:w-[48%]">
-                    <div className="rounded-3xl border border-[#006747]/15 bg-white/80 p-6 sm:p-8 shadow-[0_20px_60px_-35px_rgba(0,0,0,0.45)] backdrop-blur">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                                    Student Registration
-                                </h2>
-                                <p className="mt-1 text-sm text-gray-600">
-                                    Create your profile to start the cyber labs.
-                                </p>
-                            </div>
-
-                        </div>
-
-                        <div className="mt-6">
-                            <form onSubmit={submit} className="space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label htmlFor="first_name" className="block text-sm font-semibold text-gray-800">
-                                            First Name
-                                        </label>
-                                        <input
-                                            id="first_name"
-                                            name="first_name"
-                                            type="text"
-                                            value={form.first_name}
-                                            onChange={onChange}
-                                            required
-                                            placeholder="John"
-                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-[#006747] focus:ring-4 focus:ring-[#006747]/10"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label htmlFor="last_name" className="block text-sm font-semibold text-gray-800">
-                                            Last Name
-                                        </label>
-                                        <input
-                                            id="last_name"
-                                            name="last_name"
-                                            type="text"
-                                            value={form.last_name}
-                                            onChange={onChange}
-                                            required
-                                            placeholder="Doe"
-                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-[#006747] focus:ring-4 focus:ring-[#006747]/10"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label htmlFor="username" className="block text-sm font-semibold text-gray-800">
-                                        Username
-                                    </label>
-                                    <input
-                                        id="username"
-                                        name="username"
-                                        type="text"
-                                        value={form.username}
-                                        onChange={onChange}
-                                        required
-                                        placeholder="Choose a handle (e.g., bearcat_anil)"
-                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-[#006747] focus:ring-4 focus:ring-[#006747]/10"
-                                    />
-                                    <div className="text-[11px] text-gray-500">
-                                        Tip: Use something you’d like to see on the leaderboard.
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label htmlFor="email" className="block text-sm font-semibold text-gray-800">
-                                        Email
-                                    </label>
-                                    <input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        value={form.email}
-                                        onChange={onChange}
-                                        required
-                                        placeholder="you@nwmissouri.edu"
-                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-[#006747] focus:ring-4 focus:ring-[#006747]/10"
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="
-                    w-full rounded-2xl px-4 py-3 text-sm font-bold text-white
-                    bg-[#006747] hover:bg-[#00563a] transition-colors
-                    disabled:opacity-60 flex items-center justify-center
-                  "
-                                >
-                                    {loading ? (
-                                        <>
-                                            <ImSpinner8 className="animate-spin mr-2" />
-                                            Creating profile...
-                                        </>
-                                    ) : (
-                                        "Start My Cyber Journey"
-                                    )}
-                                </button>
-                            </form>
-
-                            <div className="mt-5 flex items-center justify-between">
-                                <p className="text-sm text-gray-600">
-                                    Already have an account?{" "}
-                                    <Link to="/login" className="font-semibold text-[#006747] hover:underline">
-                                        Sign in
-                                    </Link>
-                                </p>
-
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-4 text-center text-xs text-gray-500">
-                        By registering, you agree to participate in ethical, educational cybersecurity labs.
-                    </div>
-                </section>
+                </div>
             </div>
         </div>
     );
