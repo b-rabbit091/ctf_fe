@@ -60,23 +60,26 @@ const Register: React.FC = () => {
                 <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[1.1fr_minmax(440px,560px)] lg:gap-14">
                     <section className="hidden lg:block">
                         <div className="max-w-2xl">
-                            <div className="mb-6 inline-flex items-center rounded-full border border-[#006747]/15 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#006747] shadow-sm backdrop-blur-md">
-                                Northwest Missouri State University
-                            </div>
-                            <div className="flex items-start gap-5">
+
+                            <div className="flex items-center gap-4">
                                 <img
                                     src="https://www.nwmissouri.edu/layout/v2019/images/svg/logo-n.svg"
-                                    alt="Northwest Missouri State University"
-                                    className="mt-1 h-16 w-16 shrink-0 object-contain select-none"
+                                    alt="NW Missouri State"
+                                    className="h-14 w-14 shrink-0 object-contain select-none"
                                     draggable={false}
                                 />
-                                <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900">
-                                    Create your Bearcat account and step into practice, competitions, and progress tracking.
-                                </h1>
+
+                                <div>
+                                    <h1 className="text-5xl font-bold tracking-tight text-[#006747]">
+                                        Bearcat CTF
+                                    </h1>
+                                    <p className="text-sm font-medium text-[#006747]/70 tracking-wide">
+                                        Northwest Missouri State University
+                                    </p>
+                                </div>
                             </div>
-                            <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                                Registration keeps the same Northwest learning feel as login, with a simple onboarding flow that gets students into labs quickly and cleanly.
-                            </p>
+
+
 
                             <div className="mt-8 grid max-w-2xl grid-cols-3 gap-4">
                                 <div className="rounded-3xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-md">
