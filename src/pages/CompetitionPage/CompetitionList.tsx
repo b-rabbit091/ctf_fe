@@ -1,7 +1,7 @@
 // src/pages/CompetePage/CompetitionList.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {getChallenges, getCategories, getDifficulties} from "./api";
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {FiAlertCircle, FiEye, FiInfo, FiRefreshCw, FiTag, FiUsers} from "react-icons/fi";
 import type {Challenge} from "./types";
 import {LearningShell} from "../../components/layout/LearningShell";
@@ -36,8 +36,7 @@ const STATUS_TAGS: Array<{ label: string; value: ContestStatus | "ALL" }> = [
     {label: "All", value: "ALL"},
     {label: "Ongoing", value: "ONGOING"},
     {label: "Upcoming", value: "UPCOMING"},
-    {label: "Ended", value: "ENDED"},
-    {label: "No contest", value: "NONE"},
+
 ];
 
 const CONTEST_TYPE_TAGS: Array<{ label: string; value: ContestTypeFilter }> = [
@@ -82,20 +81,8 @@ function formatDateTimeLocal(iso: string) {
 function getContestMeta(challenge: Challenge): ContestMeta {
     const activeContest = (challenge as any).active_contest ?? null;
 
-    const baseNone: ContestMeta = {
-        label: "NO CONTEST",
-        badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
-        timingPrimary: null,
-        timingSecondary: null,
-        status: "NONE",
-        contestId: null,
-        contestName: null,
-        contestType: null,
-        startIso: null,
-        endIso: null,
-    };
 
-    if (!activeContest) return baseNone;
+
 
     const nowMs = Date.now();
     const startIso = activeContest.start_time ?? null;
@@ -526,7 +513,16 @@ const CompetitionList: React.FC = () => {
                             <div
                                 className="inline-flex items-center gap-2 text-sm sm:text-base font-normal text-slate-600">
                                 <FiUsers size={18}/>
-                                <span>Join or create a group to participate.</span>
+                                <span>
+                                    Join or{" "}
+                                    <Link
+                                        to="/my-group"
+                                        className="text-sky-700 underline underline-offset-2 hover:text-sky-800"
+                                    >
+                                        create a group
+                                    </Link>{" "}
+                                    to participate.
+                                </span>
                             </div>
                         ) : (
                             <button

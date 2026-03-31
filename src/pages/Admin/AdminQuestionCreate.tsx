@@ -99,6 +99,21 @@ const AdminQuestionCreate: React.FC = () => {
         return true;
     }, [title, description, category, difficulty, solutionType]);
 
+    const isFlagActive = solutionType === 1 || solutionType === 3;
+    const isProcedureActive = solutionType === 2 || solutionType === 3;
+
+    const isFlagSolutionValid = !isFlagActive || flagSolution.trim().length > 0;
+    const isProcedureSolutionValid = !isProcedureActive || procedureSolution.trim().length > 0;
+    const isFlagScoreValid = !isFlagActive || (flagScore ?? 0) > 0;
+    const isProcedureScoreValid = !isProcedureActive || (procedureScore ?? 0) > 0;
+
+    const canSubmitChallenge =
+        questionSaved &&
+        isFlagSolutionValid &&
+        isProcedureSolutionValid &&
+        isFlagScoreValid &&
+        isProcedureScoreValid;
+
     const handleSaveQuestion = useCallback(() => {
         resetMessages();
 
@@ -171,6 +186,18 @@ const AdminQuestionCreate: React.FC = () => {
                 return;
             }
 
+            if (!isFlagSolutionValid || !isProcedureSolutionValid) {
+                setError("Active solution fields are mandatory.");
+                setActiveTab("solution");
+                return;
+            }
+
+            if (!isFlagScoreValid || !isProcedureScoreValid) {
+                setError("Active scores are mandatory and must be greater than 0.");
+                setActiveTab("solution");
+                return;
+            }
+
             setSubmitting(true);
 
             try {
@@ -221,7 +248,11 @@ const AdminQuestionCreate: React.FC = () => {
             flagSolution,
             procedureSolution,
             flagScore,
-            procedureScore
+            procedureScore,
+            isFlagSolutionValid,
+            isProcedureSolutionValid,
+            isFlagScoreValid,
+            isProcedureScoreValid
 
         ]
     );
@@ -625,11 +656,11 @@ const AdminQuestionCreate: React.FC = () => {
 
                                     <button
                                         type="submit"
-                                        disabled={submitting}
+                                        disabled={submitting || !canSubmitChallenge}
                                         className={cx(
                                             "inline-flex items-center justify-center rounded-xl px-5 py-2 text-sm font-normal tracking-tight",
                                             "ring-1",
-                                            submitting
+                                            submitting || !canSubmitChallenge
                                                 ? "cursor-not-allowed ring-slate-200/60 bg-white/60 text-slate-400"
                                                 : "ring-emerald-200/60 bg-white/70 text-emerald-700 hover:bg-white/90",
                                             focusRing
@@ -654,7 +685,7 @@ const AdminQuestionCreate: React.FC = () => {
                                                     </label>
                                                     <input
                                                         type="number"
-                                                        min={0}
+                                                        min={1}
                                                         step={1}
                                                         className={inputBase}
                                                         value={flagScore ?? ""}
@@ -674,7 +705,7 @@ const AdminQuestionCreate: React.FC = () => {
                                                     </label>
                                                     <input
                                                         type="number"
-                                                        min={0}
+                                                        min={1}
                                                         step={1}
                                                         className={inputBase}
                                                         value={procedureScore ?? ""}

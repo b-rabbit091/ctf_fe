@@ -226,6 +226,21 @@ const AdminDraftEdit: React.FC = () => {
         return null;
     }, [title, description, category, difficulty, solutionType, lockedQuestionType, questionType]);
 
+    const isFlagActive = solutionType === 1 || solutionType === 3;
+    const isProcedureActive = solutionType === 2 || solutionType === 3;
+
+    const isFlagSolutionValid = !isFlagActive || flagSolution.trim().length > 0;
+    const isProcedureSolutionValid = !isProcedureActive || procedureSolution.trim().length > 0;
+    const isFlagScoreValid = !isFlagActive || flagScore > 0;
+    const isProcedureScoreValid = !isProcedureActive || procedureScore > 0;
+
+    const canUpdateDraft =
+        questionSaved &&
+        isFlagSolutionValid &&
+        isProcedureSolutionValid &&
+        isFlagScoreValid &&
+        isProcedureScoreValid;
+
     const handleSaveQuestionDraft = useCallback(() => {
         resetMessages();
         const err = validateQuestion();
@@ -319,6 +334,18 @@ const AdminDraftEdit: React.FC = () => {
                 return;
             }
 
+            if (!isFlagSolutionValid || !isProcedureSolutionValid) {
+                setError("Active solution fields are mandatory.");
+                setActiveTab("solution");
+                return;
+            }
+
+            if (!isFlagScoreValid || !isProcedureScoreValid) {
+                setError("Active scores are mandatory and must be greater than 0.");
+                setActiveTab("solution");
+                return;
+            }
+
             if (busyRef.current) return;
             busyRef.current = true;
 
@@ -388,6 +415,10 @@ const AdminDraftEdit: React.FC = () => {
             category,
             difficulty,
             solutionType,
+            isFlagSolutionValid,
+            isProcedureSolutionValid,
+            isFlagScoreValid,
+            isProcedureScoreValid,
             flagScore,
             procedureScore,
             flagSolution,
@@ -857,7 +888,7 @@ const AdminDraftEdit: React.FC = () => {
                                 <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                     <button
                                         type="button"
-                                        onClick={() => navigate("/admin/drafts")}
+                                        onClick={() => navigate("/admin/questions/create")}
                                         className={cx("text-sm text-slate-500 hover:text-slate-700", focusRing)}
                                     >
                                         ← Back to drafts list
@@ -887,7 +918,9 @@ const AdminDraftEdit: React.FC = () => {
 
                                 {(solutionType === 1 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Flag Solution</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            Flag Solution <span className="text-rose-500">*</span>
+                                        </label>
                                         <textarea
                                             className={cx(
                                                 "block h-24 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm font-mono text-slate-800 shadow-sm",
@@ -896,13 +929,16 @@ const AdminDraftEdit: React.FC = () => {
                                             )}
                                             value={flagSolution}
                                             onChange={(e) => setFlagSolution(e.target.value)}
+                                            required={isFlagActive}
                                         />
                                     </div>
                                 )}
 
                                 {(solutionType === 2 || solutionType === 3) && (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Procedure / Writeup</label>
+                                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                                            Procedure / Writeup <span className="text-rose-500">*</span>
+                                        </label>
                                         <textarea
                                             className={cx(
                                                 "block h-40 w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
@@ -911,6 +947,7 @@ const AdminDraftEdit: React.FC = () => {
                                             )}
                                             value={procedureSolution}
                                             onChange={(e) => setProcedureSolution(e.target.value)}
+                                            required={isProcedureActive}
                                         />
                                     </div>
                                 )}
@@ -925,10 +962,12 @@ const AdminDraftEdit: React.FC = () => {
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         {(solutionType === 1 || solutionType === 3) && (
                                             <div>
-                                                <label className="mb-1 block text-sm font-medium text-slate-700">Flag Score</label>
+                                                <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                    Flag Score <span className="text-rose-500">*</span>
+                                                </label>
                                                 <input
                                                     type="number"
-                                                    min={0}
+                                                    min={1}
                                                     step={1}
                                                     className={cx(
                                                         "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
@@ -938,16 +977,19 @@ const AdminDraftEdit: React.FC = () => {
                                                     value={Number.isFinite(flagScore) ? flagScore : 0}
                                                     onChange={(e) => setFlagScore(Math.max(0, Number(e.target.value || 0)))}
                                                     placeholder="e.g. 50"
+                                                    required={isFlagActive}
                                                 />
                                             </div>
                                         )}
 
                                         {(solutionType === 2 || solutionType === 3) && (
                                             <div>
-                                                <label className="mb-1 block text-sm font-medium text-slate-700">Procedure Score</label>
+                                                <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                    Procedure Score <span className="text-rose-500">*</span>
+                                                </label>
                                                 <input
                                                     type="number"
-                                                    min={0}
+                                                    min={1}
                                                     step={1}
                                                     className={cx(
                                                         "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
@@ -957,6 +999,7 @@ const AdminDraftEdit: React.FC = () => {
                                                     value={Number.isFinite(procedureScore) ? procedureScore : 0}
                                                     onChange={(e) => setProcedureScore(Math.max(0, Number(e.target.value || 0)))}
                                                     placeholder="e.g. 50"
+                                                    required={isProcedureActive}
                                                 />
                                             </div>
                                         )}
@@ -974,7 +1017,7 @@ const AdminDraftEdit: React.FC = () => {
 
                                     <button
                                         type="submit"
-                                        disabled={submitting}
+                                        disabled={submitting || !canUpdateDraft}
                                         className={cx(
                                             "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm",
                                             "hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed",
