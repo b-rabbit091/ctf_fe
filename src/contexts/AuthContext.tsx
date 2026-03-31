@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
 
     const verifyEmailSetPassword = async (token: string, password: string, confirm_password: string) => {
         await verifyEmailAndSetPassword(token, password, confirm_password);
-        toast.success("Password set — account activated. Please login.");
+        toast.success("Password set - account activated. Please login.");
     };
 
     return (

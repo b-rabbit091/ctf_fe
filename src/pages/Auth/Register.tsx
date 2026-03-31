@@ -41,7 +41,7 @@ const Register: React.FC = () => {
         setLoading(true);
         try {
             await register(form);
-            toast.success("Registration successful!");
+            toast.success("Registration successful! Check your email to verify your account.");
             setForm({ username: "", email: "", first_name: "", last_name: "" });
         } catch (err: any) {
             toast.error(err.response?.data?.detail || "Email or username already taken");
@@ -96,7 +96,7 @@ const Register: React.FC = () => {
                         </h1>
                         <p className="mt-3 text-gray-600">
                             Start Practice Labs, join Competitions (Solo/Group), and climb the
-                            Leaderboard — all powered by AI feedback.
+                            Leaderboard - all powered by AI feedback.
                         </p>
 
                         {/* Progress / Rank */}
