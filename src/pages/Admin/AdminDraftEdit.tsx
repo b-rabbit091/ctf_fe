@@ -563,22 +563,10 @@ const AdminDraftEdit: React.FC = () => {
                                         </label>
 
                                         <select
-                                            className={cx(
-                                                "block w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm",
-                                                "focus:border-sky-300 focus:ring-2 focus:ring-sky-300/30",
-                                                focusRing
-                                            )}
+                                            className="block w-full rounded-xl border border-slate-200/70 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-sm cursor-not-allowed"
                                             value={questionType}
-                                            onChange={(e) => {
-                                                const next = e.target.value as QuestionType;
-
-                                                // hard block swap when locked
-                                                if (lockedQuestionType && next !== "N/A" && next !== lockedQuestionType) return;
-
-                                                setQuestionType(next);
-                                                setQuestionSaved(false);
-                                                setActiveTab("question");
-                                            }}
+                                            disabled
+                                            onChange={() => {}}
                                         >
                                             {allowedQuestionTypeOptions.map((opt) => (
                                                 <option key={opt} value={opt}>
@@ -586,10 +574,6 @@ const AdminDraftEdit: React.FC = () => {
                                                 </option>
                                             ))}
                                         </select>
-
-                                        <p className="mt-1 text-xs text-slate-400">
-                                            If original type is Practice/Competition, you can only change it to N/A (not switch types).
-                                        </p>
                                     </div>
                                 </div>
 

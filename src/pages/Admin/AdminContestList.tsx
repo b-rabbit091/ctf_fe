@@ -176,11 +176,7 @@ const AdminContestList: React.FC = () => {
         [contests, user, flashMessage]
     );
 
-    const handleClearFilters = useCallback(() => {
-        setStatusFilter("ALL");
-        setSearch("");
-        setPage(1);
-    }, []);
+
 
     // --- responsive full-screen shell for guard states (match your AdminPracticeList style) ---
     if (!user) {
@@ -299,18 +295,6 @@ const AdminContestList: React.FC = () => {
                                     })}
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handleClearFilters}
-                                    className={cx(
-                                        "h-10 shrink-0 rounded-xl bg-white/70 px-4 text-sm sm:text-base font-normal tracking-tight",
-                                        "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
-                                        focusRing
-                                    )}
-                                >
-                                    Reset
-                                </button>
-
                                 <span className="inline-flex items-center rounded-full ring-1 ring-slate-200/60 bg-slate-100/70 px-3.5 py-2 text-xs sm:text-sm text-slate-600">
                                     <span className="text-slate-500">Total:</span>
                                     <span className="ml-1">{total}</span>
@@ -415,19 +399,6 @@ const AdminContestList: React.FC = () => {
 
                                                     <td className="px-4 py-3 align-top">
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => navigate(`/admin/contests/${c.id}/view`)}
-                                                                className={cx(
-                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
-                                                                    "ring-1 ring-slate-200/60 text-slate-600 hover:bg-white/90",
-                                                                    focusRing
-                                                                )}
-                                                            >
-                                                                <FiEye size={16}/>
-                                                                <span>View</span>
-                                                            </button>
-
                                                             <button
                                                                 type="button"
                                                                 onClick={() => navigate(`/admin/contests/${c.id}`)}

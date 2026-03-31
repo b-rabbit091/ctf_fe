@@ -46,7 +46,6 @@ const Card = memo(function Card({children}: { children: React.ReactNode }) {
 const BlogList: React.FC = () => {
     const {user} = useAuth();
     const navigate = useNavigate();
-    const isAdmin = user?.role === "admin";
 
     const [blogs, setBlogs] = useState<BlogType[]>([]);
     const [loading, setLoading] = useState(true);
@@ -199,18 +198,7 @@ const BlogList: React.FC = () => {
                                     </div>
                                     <p className="mt-3 text-sm sm:text-base text-slate-600">
                                         No blog posts yet.{" "}
-                                        {isAdmin ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => navigate("/blogs/new")}
-                                                className={cx(
-                                                    "text-emerald-700 hover:text-emerald-800 underline underline-offset-4 decoration-emerald-300/70",
-                                                    focusRing
-                                                )}
-                                            >
-                                                Write the first one.
-                                            </button>
-                                        ) : null}
+
                                     </p>
                                 </div>
                             </Card>
@@ -268,37 +256,7 @@ const BlogList: React.FC = () => {
                                                     <span>Read</span>
                                                 </Link>
 
-                                                {/* {isAdmin ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => navigate(`/blogs/edit/${blog.id}`)}
-                                                            className={cx(
-                                                                "inline-flex items-center justify-center rounded-xl bg-white/70 px-3 py-2 text-sm font-normal tracking-tight",
-                                                                "ring-1 ring-amber-200/60 text-amber-700 hover:bg-white/90",
-                                                                focusRing
-                                                            )}
-                                                            title="Edit Blog"
-                                                            aria-label={`Edit blog ${safeString(blog.title) ? blog.title : ""}`}
-                                                        >
-                                                            <FiEdit size={16}/>
-                                                        </button>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onDelete(blog.id)}
-                                                            className={cx(
-                                                                "inline-flex items-center justify-center rounded-xl bg-white/70 px-3 py-2 text-sm font-normal tracking-tight",
-                                                                "ring-1 ring-rose-200/60 text-rose-700 hover:bg-white/90",
-                                                                focusRing
-                                                            )}
-                                                            title="Delete Blog"
-                                                            aria-label={`Delete blog ${safeString(blog.title) ? blog.title : ""}`}
-                                                        >
-                                                            <FiTrash2 size={16}/>
-                                                        </button>
-                                                    </div>
-                                                ) : null} */}
                                             </div>
                                         </div>
                                     </article>

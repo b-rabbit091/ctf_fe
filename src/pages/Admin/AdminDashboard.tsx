@@ -264,7 +264,7 @@ const AdminDashboard: React.FC = () => {
                             label="Total Challenges"
                             value={totals?.challenges.total_challenges ?? "—"}
                             icon={<FiBookOpen size={18}/>}
-                            helper="Practice + competition challenges."
+                            helper="Draft + Practice + Competition challenges."
                             loading={statsLoading && !totals}
                         />
                         <StatCard
