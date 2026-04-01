@@ -81,6 +81,23 @@ function formatDateTimeLocal(iso: string) {
 function getContestMeta(challenge: Challenge): ContestMeta {
     const activeContest = (challenge as any).active_contest ?? null;
 
+    // Some competition challenges can be returned without an attached active contest.
+    // Return a safe fallback so filtering/rendering does not crash on null access.
+    if (!activeContest) {
+        return {
+            label: "NO CONTEST",
+            badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
+            timingPrimary: null,
+            timingSecondary: null,
+            status: "NONE",
+            contestId: null,
+            contestName: null,
+            contestType: null,
+            startIso: null,
+            endIso: null,
+        };
+    }
+
 
 
 
