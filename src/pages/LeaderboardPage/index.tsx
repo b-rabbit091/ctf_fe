@@ -10,13 +10,6 @@ const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(
 const focusRing =
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white/70";
 
-function formatDateTime(value: string | null | undefined): string {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString();
-}
-
 type PageMeta = {
     count: number;
     next: string | null;
@@ -412,11 +405,9 @@ const LeaderboardPage: React.FC = () => {
                                         <th className="px-5 py-3 font-normal">Rank</th>
                                         <th className="px-5 py-3 font-normal">Player</th>
                                         <th className="px-5 py-3 font-normal">Score</th>
-                                        <th className="px-5 py-3 font-normal">Solved</th>
                                         {mode === "competition" ? (
                                             <th className="px-5 py-3 font-normal">Contest</th>
                                         ) : null}
-                                        <th className="px-5 py-3 font-normal">Last Submission</th>
                                     </tr>
                                     </thead>
 
@@ -441,19 +432,12 @@ const LeaderboardPage: React.FC = () => {
                                                 <td className="px-5 py-3 align-top text-slate-600">
                                                     {safeInt((e as any).score, 0)}
                                                 </td>
-                                                <td className="px-5 py-3 align-top text-slate-600">
-                                                    {safeInt((e as any).solved, 0)}
-                                                </td>
 
                                                 {mode === "competition" ? (
                                                     <td className="px-5 py-3 align-top text-slate-600">
                                                         {safeString((e as any).contest_name, "—")}
                                                     </td>
                                                 ) : null}
-
-                                                <td className="px-5 py-3 align-top text-xs sm:text-sm text-slate-500 whitespace-nowrap">
-                                                    {formatDateTime((e as any).last_submission_at)}
-                                                </td>
                                             </tr>
                                         );
                                     })}
