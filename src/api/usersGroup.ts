@@ -91,7 +91,7 @@ export async function sendGroupInvite(payload: {
     user_id: number;
 }): Promise<GroupInvite> {
     const { group_id, user_id } = payload;
-    const res = await api.post(`api/users/groups/${group_id}/invitations/`, {
+    const res = await api.post(`users/groups/${group_id}/invitations/`, {
         user_id,
     });
     return res.data;
