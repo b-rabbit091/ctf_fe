@@ -15,7 +15,6 @@ import {
     getAccessToken,
     clearTokens
 } from "../utils/token";
-import {toast} from "react-toastify";
 import {normalizeApiError} from "../utils/apiError";
 
 type User = {
@@ -97,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         try {
             data = await loginUser({identifier, password});
         } catch (error) {
-            throw new Error(normalizeApiError(error, "Wrong email or password.").message);
+            throw normalizeApiError(error, "Wrong email or password.");
         }
         const {access, refresh} = data;
 
@@ -131,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         try {
             await registerUser(payload);
         } catch (error) {
-            throw new Error(normalizeApiError(error, "Registration failed.").message);
+            throw normalizeApiError(error, "Registration failed.");
         }
     };
 
@@ -139,30 +138,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({children}
         try {
             await verifyResetUserPassword(payload);
         } catch (error) {
-            throw new Error(normalizeApiError(error, "Unable to start password reset.").message);
+            throw normalizeApiError(error, "Unable to start password reset.");
         }
     };
 
     const inviteAdminFn = async (payload: { username: string; email: string }) => {
         await inviteAdmin(payload);
-        toast.success("Admin invite sent.");
     };
 
     const verifyEmailSetPassword = async (token: string, password: string, confirm_password: string) => {
         try {
             await verifyEmailAndSetPassword(token, password, confirm_password);
-            toast.success("Password set - account activated. Please login.");
         } catch (error) {
-            throw new Error(normalizeApiError(error, "Unable to verify your account.").message);
+            throw normalizeApiError(error, "Unable to verify your account.");
         }
     };
 
     const resetPasswordWithToken = async (token: string, password: string, confirm_password: string) => {
         try {
             await confirmResetPassword(token, password, confirm_password);
-            toast.success("Password reset successfully. Please login.");
         } catch (error) {
-            throw new Error(normalizeApiError(error, "Unable to reset your password.").message);
+            throw normalizeApiError(error, "Unable to reset your password.");
         }
     };
 

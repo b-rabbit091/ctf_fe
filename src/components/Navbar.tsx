@@ -3,8 +3,11 @@ import React, {useEffect, useMemo, useRef, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../contexts/AuthContext";
 import {FiLogOut, FiMenu, FiSettings, FiShield, FiUser, FiUsers, FiX} from "react-icons/fi";
+import {getMyGroupDashboard, getMyIncomingGroupInvites} from "../api/usersGroup";
+import {safeApi} from "../utils/apiError";
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
+const GROUP_NOTIFICATION_STORAGE_KEY = "ctf-group-notification-state";
 
 function useEscape(cb: () => void, enabled: boolean) {
     useEffect(() => {
@@ -35,6 +38,7 @@ const Navbar: React.FC = () => {
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [groupNotificationCount, setGroupNotificationCount] = useState(0);
     const menuRef = useRef<HTMLDivElement | null>(null);
 
     const links = useMemo(
@@ -72,6 +76,93 @@ const Navbar: React.FC = () => {
             document.body.style.overflow = prev;
         };
     }, [mobileOpen]);
+
+    useEffect(() => {
+        if (!user) {
+            setGroupNotificationCount(0);
+            return;
+        }
+
+        let active = true;
+
+        const readStoredCount = () => {
+            try {
+                const raw = window.localStorage.getItem(GROUP_NOTIFICATION_STORAGE_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw) as Record<string, number>;
+                return typeof parsed[user.username || ""] === "number" ? parsed[user.username || ""] : null;
+            } catch {
+                return null;
+            }
+        };
+
+        const writeStoredCount = (memberCount: number) => {
+            try {
+                const raw = window.localStorage.getItem(GROUP_NOTIFICATION_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+                parsed[user.username || ""] = memberCount;
+                window.localStorage.setItem(GROUP_NOTIFICATION_STORAGE_KEY, JSON.stringify(parsed));
+            } catch {
+                // ignore storage issues
+            }
+        };
+
+        const loadGroupNotifications = async () => {
+            const [incomingRes, dashboardRes] = await Promise.all([
+                safeApi(() => getMyIncomingGroupInvites(), "Unable to load group notifications."),
+                safeApi(() => getMyGroupDashboard(), "Unable to load group updates."),
+            ]);
+
+            if (!active) return;
+
+            const incomingCount = incomingRes.ok ? incomingRes.data.length : 0;
+
+            let joinedCount = 0;
+            if (dashboardRes.ok && dashboardRes.data.group?.is_admin) {
+                const currentMembers = dashboardRes.data.members.length;
+                const storedMembers = readStoredCount();
+                if (storedMembers == null) {
+                    writeStoredCount(currentMembers);
+                } else if (currentMembers > storedMembers) {
+                    joinedCount = currentMembers - storedMembers;
+                } else if (currentMembers < storedMembers) {
+                    writeStoredCount(currentMembers);
+                }
+            }
+
+            setGroupNotificationCount(incomingCount + joinedCount);
+        };
+
+        loadGroupNotifications();
+        const interval = window.setInterval(loadGroupNotifications, 30000);
+
+        return () => {
+            active = false;
+            window.clearInterval(interval);
+        };
+    }, [user]);
+
+    useEffect(() => {
+        if (location.pathname !== "/my-group" || !user) return;
+
+        const syncSeenState = async () => {
+            const res = await safeApi(() => getMyGroupDashboard(), "Unable to sync group notifications.");
+            if (!res.ok) return;
+
+            try {
+                const raw = window.localStorage.getItem(GROUP_NOTIFICATION_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+                parsed[user.username || ""] = res.data.members.length;
+                window.localStorage.setItem(GROUP_NOTIFICATION_STORAGE_KEY, JSON.stringify(parsed));
+            } catch {
+                // ignore storage issues
+            }
+
+            setGroupNotificationCount(0);
+        };
+
+        syncSeenState();
+    }, [location.pathname, user]);
 
     const onLogout = () => {
         closeAll();
@@ -184,16 +275,22 @@ const Navbar: React.FC = () => {
                                     </span>
                                 </div>
 
+
                                 <div className="relative" ref={menuRef}>
                                     <button
                                         type="button"
                                         onClick={() => setMenuOpen((v) => !v)}
-                                        className={iconBtn}
+                                        className={cx(iconBtn, "relative")}
                                         aria-label="Open user menu"
                                         aria-haspopup="menu"
                                         aria-expanded={menuOpen}
                                     >
                                         <FiSettings size={18} />
+                                        {groupNotificationCount > 0 ? (
+                                            <span className="absolute -right-1 -top-1 inline-flex min-h-[1.2rem] min-w-[1.2rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+                                                {groupNotificationCount > 9 ? "9+" : groupNotificationCount}
+                                            </span>
+                                        ) : null}
                                     </button>
 
                                     {menuOpen && (
@@ -221,25 +318,19 @@ const Navbar: React.FC = () => {
                                                 role="menuitem"
                                                 onClick={() => go("/my-group")}
                                                 className={cx(
-                                                    "flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold tracking-tight transition",
+                                                    "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold tracking-tight transition",
                                                     "text-slate-700 hover:text-indigo-700 hover:bg-indigo-50/60"
                                                 )}
                                             >
-                                                <FiUsers size={16} />
-                                                Group
-                                            </button>
-                                            <div className="h-px bg-slate-200/70" />
-                                            <button
-                                                type="button"
-                                                role="menuitem"
-                                                onClick={onLogout}
-                                                className={cx(
-                                                    "flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold tracking-tight transition",
-                                                    "text-rose-700 hover:bg-rose-50/70"
-                                                )}
-                                            >
-                                                <FiLogOut size={16} />
-                                                Logout
+                                                <span className="inline-flex items-center gap-3">
+                                                    <FiUsers size={16} />
+                                                    Group
+                                                </span>
+                                                {groupNotificationCount > 0 ? (
+                                                    <span className="inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                                        {groupNotificationCount > 9 ? "9+" : groupNotificationCount}
+                                                    </span>
+                                                ) : null}
                                             </button>
                                         </div>
                                     )}
@@ -259,6 +350,25 @@ const Navbar: React.FC = () => {
                                 Login
                             </button>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={onLogout}
+                            className={cx(
+                                "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold tracking-tight transition",
+                                "bg-rose-50 ring-1 ring-rose-200 text-rose-700 shadow-sm hover:bg-rose-100/70",
+                                focusRing
+                            )}
+                            aria-label="Logout"
+                        >
+                            <FiLogOut size={16} />
+                            Logout
+                        </button>
+
+
+
+
+
                     </div>
 
                     {/* Mobile hamburger */}
@@ -339,9 +449,16 @@ const Navbar: React.FC = () => {
                                         focusRing
                                     )}
                                 >
-                                    <span className="inline-flex items-center gap-2">
-                                        <FiUsers size={16} />
-                                        Group
+                                    <span className="flex items-center justify-between gap-2">
+                                        <span className="inline-flex items-center gap-2">
+                                            <FiUsers size={16} />
+                                            Group
+                                        </span>
+                                        {groupNotificationCount > 0 ? (
+                                            <span className="inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                                {groupNotificationCount > 9 ? "9+" : groupNotificationCount}
+                                            </span>
+                                        ) : null}
                                     </span>
                                 </button>
                                 <button

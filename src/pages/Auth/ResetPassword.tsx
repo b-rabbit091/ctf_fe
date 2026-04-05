@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ImSpinner8 } from "react-icons/im";
 import { FiCheckCircle, FiKey, FiLock, FiShield } from "react-icons/fi";
 import { useAuth } from "../../contexts/AuthContext";
-import {normalizeApiError} from "../../utils/apiError";
+import {collectFieldErrors, normalizeApiError} from "../../utils/apiError";
 
 const fieldClass =
     "w-full rounded-2xl border border-[#09684f]/10 bg-white/80 px-4 py-3.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#09684f] focus:ring-4 focus:ring-[#09684f]/10";
@@ -17,6 +17,8 @@ const ResetPassword: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+    const [successMessage, setSuccessMessage] = useState("");
 
     const navigate = useNavigate();
 
@@ -49,20 +51,30 @@ const ResetPassword: React.FC = () => {
         e.preventDefault();
         if (!token) {
             setError("Invalid or missing token. Please use the link from your email.");
+            setSuccessMessage("");
             return;
         }
         if (!passwordsMatch) {
             setError("Passwords do not match.");
+            setFieldErrors({});
+            setSuccessMessage("");
             return;
         }
 
         setLoading(true);
         setError("");
+        setFieldErrors({});
+        setSuccessMessage("");
         try {
             await resetPasswordWithToken(token, password, confirmPassword);
-            navigate("/login");
+            setSuccessMessage("Password reset successfully. You can now sign in with your new password.");
+            setPassword("");
+            setConfirmPassword("");
         } catch (err: unknown) {
-            setError(normalizeApiError(err, "Unable to reset password.").message);
+            const normalized = normalizeApiError(err, "Unable to reset password.");
+            const grouped = collectFieldErrors(normalized.messages);
+            setFieldErrors(grouped.fieldErrors);
+            setError(grouped.formErrors[0] ?? normalized.message);
         } finally {
             setLoading(false);
         }
@@ -174,6 +186,9 @@ const ResetPassword: React.FC = () => {
                                     placeholder="Create a strong password"
                                     className={fieldClass}
                                 />
+                                {fieldErrors.password?.map((message) => (
+                                    <p key={message} className="mt-2 text-sm text-rose-700">{message}</p>
+                                ))}
                             </label>
 
                             <label className="block">
@@ -191,9 +206,17 @@ const ResetPassword: React.FC = () => {
                                     placeholder="Re-enter your password"
                                     className={fieldClass}
                                 />
+                                {fieldErrors.confirm_password?.map((message) => (
+                                    <p key={message} className="mt-2 text-sm text-rose-700">{message}</p>
+                                ))}
                             </label>
 
                             {error ? <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+                            {successMessage ? (
+                                <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    {successMessage}
+                                </p>
+                            ) : null}
                             {!token ? (
                                 <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                                     Missing token. Please open the password reset link from your email.
@@ -202,7 +225,7 @@ const ResetPassword: React.FC = () => {
 
                             <button
                                 type="submit"
-                                disabled={loading || !passwordsMatch}
+                                disabled={loading || !passwordsMatch || Boolean(successMessage)}
                                 className="mt-auto inline-flex w-full items-center justify-center rounded-2xl bg-[#09684f] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b7d5f] disabled:opacity-60"
                             >
                                 {loading ? (
@@ -215,9 +238,19 @@ const ResetPassword: React.FC = () => {
                                 )}
                             </button>
 
-                            <Link to="/login" className="text-center text-sm font-semibold text-[#09684f] hover:underline">
-                                Back to login
-                            </Link>
+                            {successMessage ? (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate("/login")}
+                                    className="text-center text-sm font-semibold text-[#09684f] hover:underline"
+                                >
+                                    Continue to login
+                                </button>
+                            ) : (
+                                <Link to="/login" className="text-center text-sm font-semibold text-[#09684f] hover:underline">
+                                    Back to login
+                                </Link>
+                            )}
                         </form>
                     </div>
                 </div>

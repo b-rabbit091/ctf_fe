@@ -81,8 +81,20 @@ function formatDateTimeLocal(iso: string) {
 function getContestMeta(challenge: Challenge): ContestMeta {
     const activeContest = (challenge as any).active_contest ?? null;
 
-
-
+    if (!activeContest) {
+        return {
+            label: "NO CONTEST",
+            badgeClass: "bg-slate-100/70 text-slate-600 ring-slate-200/60",
+            timingPrimary: null,
+            timingSecondary: null,
+            status: "NONE",
+            contestId: "no-contest",
+            contestName: "No Contest",
+            contestType: null,
+            startIso: null,
+            endIso: null,
+        };
+    }
 
     const nowMs = Date.now();
     const startIso = activeContest.start_time ?? null;

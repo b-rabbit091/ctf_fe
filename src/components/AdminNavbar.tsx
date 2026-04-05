@@ -204,10 +204,11 @@ const AdminNavbar: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={onLogout}
-                                className="rounded-full bg-white/80 p-2 text-red-600 ring-1 ring-red-100/80 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                                className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-100/80 shadow-sm transition-colors hover:bg-red-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                                 title="Logout"
                             >
                                 <FiLogOut size={18}/>
+                                Logout
                             </button>
                         </>
                     ) : null}

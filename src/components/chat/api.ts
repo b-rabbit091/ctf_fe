@@ -210,6 +210,10 @@ export async function sendChatMessage(
             {
                 text: payload.text,
                 context: payload.context ?? {},
+                challenge_id:
+                    payload.context?.challenge_id ??
+                    payload.context?.challengeId ??
+                    payload.context?.challenge?.id,
             },
             signal ? { signal } : undefined
         );

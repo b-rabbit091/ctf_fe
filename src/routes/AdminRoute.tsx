@@ -10,7 +10,7 @@ const AdminRoute: React.FC = () => {
     if (!user) return <Navigate to="/login" replace/>;
 
     const role = (user.role || "").toLowerCase();
-    if (role !== "admin") return <Navigate to="/dashboard" replace/>;
+    if (role !== "admin") return <Navigate to="/not-found" replace/>;
 
     return <Outlet/>;
 };

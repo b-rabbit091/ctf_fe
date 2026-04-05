@@ -314,7 +314,12 @@ const PracticePage: React.FC = () => {
                             <PracticeAssistPanel
                                 challenge={challenge}
                                 answerSlot={<PracticeAnswerSubmit challenge={challenge} />}
-                                chatContext={{challengeId: challenge.id, solutionType: challenge.solution_type?.type}}
+                                chatContext={{
+                                    challengeId: challenge.id,
+                                    challengeCategory: challenge.category?.name,
+                                    category: challenge.category?.name,
+                                    solutionType: challenge.solution_type?.type,
+                                }}
                             />
                         </div>
                     </div>

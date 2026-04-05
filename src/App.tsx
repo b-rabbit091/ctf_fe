@@ -16,6 +16,7 @@ const Register = lazy(() => import("./pages/Auth/Register"));
 const VerifyEmail = lazy(() => import("./pages/Auth/VerifyEmail"));
 const VerifyResetPassword = lazy(() => import("./pages/Auth/VerifyResetPassword"));
 const ResetPassword = lazy(() => import("./pages/Auth/ResetPassword"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const DashboardOverview = lazy(() => import("./pages/Dashboard/DashboardOverview"));
 const BlogList = lazy(() => import("./pages/Blog/BlogList"));
@@ -71,6 +72,7 @@ const App: React.FC = () => {
                             <Route path="/verify-email" element={<VerifyEmail/>}/>
                             <Route path="/verify-reset-password" element={<VerifyResetPassword/>}/>
                             <Route path="/reset-password" element={<ResetPassword/>}/>
+                            <Route path="/not-found" element={<NotFoundPage/>}/>
 
                             {/* ---------------- Everything else: Auth required ---------------- */}
                             <Route element={<PrivateRoute/>}>
@@ -118,8 +120,11 @@ const App: React.FC = () => {
                                     <Route path="/admin/drafts/:id" element={<AdminDraftEdit/>}/>
 
                                 </Route>
+
+                                <Route path="*" element={<NotFoundPage/>}/>
                             </Route>
 
+                            <Route path="*" element={<NotFoundPage/>}/>
                         </Routes>
                     </Suspense>
                 </BrowserRouter>

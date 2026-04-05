@@ -238,7 +238,12 @@ const PracticePage: React.FC = () => {
                         aiSubtitle="Ask about this challenge or your solution."
                         defaultTab="answer"
                         answerSlot={<PracticeAnswerSubmit challenge={challenge}/>}
-                        chatContext={{challengeId: challenge.id, solutionType: challenge.solution_type?.type}}
+                        chatContext={{
+                            challengeId: challenge.id,
+                            challengeCategory: challenge.category?.name,
+                            category: challenge.category?.name,
+                            solutionType: challenge.solution_type?.type,
+                        }}
                         // endpoint="/api/chat/practice/"  // optional override
                         showSegmentedTabs={true}
                         showMenu={true}

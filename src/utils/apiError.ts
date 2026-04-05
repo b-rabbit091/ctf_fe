@@ -15,7 +15,6 @@ function isObject(v: unknown): v is AnyObj {
 }
 
 function flattenDRFErrors(data: JsonLike): string[] {
-
     if (data == null) return [];
 
     if (typeof data === "string") return [data];
@@ -34,7 +33,6 @@ function flattenDRFErrors(data: JsonLike): string[] {
         for (const [key, val] of Object.entries(data)) {
             if (["error", "detail", "message", "non_field_errors"].includes(key)) continue;
             const msgs = flattenDRFErrors(val);
-            // Include field label for clarity
             msgs.forEach((m) => out.push(`${key}: ${m}`));
         }
         return out;
@@ -53,12 +51,21 @@ export type NormalizedApiError = {
     raw?: unknown;
 };
 
+function isNormalizedApiError(value: unknown): value is NormalizedApiError {
+    if (value == null || typeof value !== "object") return false;
+    const candidate = value as Partial<NormalizedApiError>;
+    return typeof candidate.message === "string" && Array.isArray(candidate.messages);
+}
+
 export function normalizeApiError(err: unknown, fallback: string): NormalizedApiError {
+    if (isNormalizedApiError(err)) {
+        return err;
+    }
+
     const error = (err ?? {}) as ApiLikeError;
     const status = error.response?.status;
     const data = error.response?.data;
 
-    // Network / CORS / server down / timeout
     const noResponse = !error.response;
     const isTimeout =
         error.code === "ECONNABORTED" ||
@@ -80,9 +87,8 @@ export function normalizeApiError(err: unknown, fallback: string): NormalizedApi
     }
 
     const pieces = flattenDRFErrors(data);
-    const baseMsg = pieces.filter(Boolean).join(" • ").trim() || fallback;
+    const baseMsg = pieces.filter(Boolean).join(" | ").trim() || fallback;
 
-    // Status-based defaults (if backend gave nothing)
     const statusFallback =
         status === 401 ? "Session expired. Please log in again."
             : status === 403 ? "Access denied."
@@ -105,17 +111,42 @@ export function normalizeApiError(err: unknown, fallback: string): NormalizedApi
     };
 }
 
-/**
- * Helper wrapper: runs an API call and returns [data, errorMessage]
- */
+export function collectFieldErrors(messages: string[]): {
+    formErrors: string[];
+    fieldErrors: Record<string, string[]>;
+} {
+    const fieldErrors: Record<string, string[]> = {};
+    const formErrors: string[] = [];
+
+    messages.forEach((message) => {
+        const match = /^([a-zA-Z0-9_.]+):\s*(.+)$/.exec(message);
+        if (!match) {
+            formErrors.push(message);
+            return;
+        }
+
+        const [, rawField, detail] = match;
+        const field = rawField.split(".").pop()?.toLowerCase() ?? rawField.toLowerCase();
+
+        if (["detail", "message", "error", "non_field_errors"].includes(field)) {
+            formErrors.push(detail);
+            return;
+        }
+
+        fieldErrors[field] = [...(fieldErrors[field] ?? []), detail];
+    });
+
+    return {formErrors, fieldErrors};
+}
+
 export async function safeApi<T>(
     fn: () => Promise<T>,
     fallback: string
 ): Promise<{ ok: true; data: T } | { ok: false; error: NormalizedApiError }> {
     try {
         const data = await fn();
-        return { ok: true, data };
+        return {ok: true, data};
     } catch (e: unknown) {
-        return { ok: false, error: normalizeApiError(e, fallback) };
+        return {ok: false, error: normalizeApiError(e, fallback)};
     }
 }

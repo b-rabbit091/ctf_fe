@@ -1,7 +1,7 @@
 import React, { useState} from "react";
 import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import {useAuth} from "../../contexts/AuthContext";
-import {normalizeApiError} from "../../utils/apiError";
+import {collectFieldErrors, normalizeApiError} from "../../utils/apiError";
 
 const VerifyEmail: React.FC = () => {
     const [search] = useSearchParams();
@@ -11,6 +11,8 @@ const VerifyEmail: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+    const [successMessage, setSuccessMessage] = useState("");
     const navigate = useNavigate();
 
     const passwordsMatch = Boolean(password && confirmPassword && password === confirmPassword);
@@ -21,22 +23,32 @@ const VerifyEmail: React.FC = () => {
 
         if (!token) {
             setError("Invalid or missing token. Please use the verification link from your email.");
+            setSuccessMessage("");
             return;
         }
 
         if (!passwordsMatch) {
             setError("Passwords do not match.");
+            setFieldErrors({});
+            setSuccessMessage("");
             return;
         }
 
         setLoading(true);
         setError("");
+        setFieldErrors({});
+        setSuccessMessage("");
 
         try {
             await verifyEmailSetPassword(token, password, confirmPassword);
-            navigate("/login");
+            setSuccessMessage("Password set successfully. Your account is now active.");
+            setPassword("");
+            setConfirmPassword("");
         } catch (err: unknown) {
-            setError(normalizeApiError(err, "Unable to verify your account.").message);
+            const normalized = normalizeApiError(err, "Unable to verify your account.");
+            const grouped = collectFieldErrors(normalized.messages);
+            setFieldErrors(grouped.fieldErrors);
+            setError(grouped.formErrors[0] ?? normalized.message);
         } finally {
             setLoading(false);
         }
@@ -129,6 +141,9 @@ const VerifyEmail: React.FC = () => {
                                     placeholder="Create your password"
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
                                 />
+                                {fieldErrors.password?.map((message) => (
+                                    <p key={message} className="text-sm text-rose-700">{message}</p>
+                                ))}
                             </div>
 
                             <div className="space-y-2">
@@ -145,6 +160,9 @@ const VerifyEmail: React.FC = () => {
                                     placeholder="Confirm your password"
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 placeholder:text-slate-400"
                                 />
+                                {fieldErrors.confirm_password?.map((message) => (
+                                    <p key={message} className="text-sm text-rose-700">{message}</p>
+                                ))}
                             </div>
 
                             {error ? (
@@ -153,15 +171,30 @@ const VerifyEmail: React.FC = () => {
                                 </div>
                             ) : null}
 
+                            {successMessage ? (
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    {successMessage}
+                                </div>
+                            ) : null}
+
                             <button
                                 type="submit"
-                                disabled={loading || !passwordsMatch}
+                                disabled={loading || !passwordsMatch || Boolean(successMessage)}
                                 className="flex w-full items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
                             >
                                 {loading ? "Activating account..." : "Activate Account"}
                             </button>
 
                             <div className="flex flex-col gap-2 pt-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                                {successMessage ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate("/login")}
+                                        className="text-green-700 hover:underline"
+                                    >
+                                        Continue to login
+                                    </button>
+                                ) : null}
                                 <Link to="/login" className="text-blue-600 hover:underline">
                                     Back to login
                                 </Link>

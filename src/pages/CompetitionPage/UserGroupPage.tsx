@@ -60,7 +60,7 @@ function extractSuccessMessage(data: any): string | null {
 
 function semanticErrorFromOkResponse(data: any): string | null {
     if (!isObject(data)) return null;
-    const err = data.error ?? data.detail ?? data.message ?? null;
+    const err = data.error ?? null;
     if (typeof err === "string" && err.trim()) return err.trim();
     return null;
 }
@@ -167,8 +167,11 @@ const UserGroupPage: React.FC = () => {
         setIncomingInvites(res.data || []);
     }, []);
 
-    const loadGroupDashboard = useCallback(async () => {
-        resetMessages();
+    const loadGroupDashboard = useCallback(async (options?: {preserveMessage?: boolean}) => {
+        setGroupError(null);
+        if (!options?.preserveMessage) {
+            setMessage(null);
+        }
         setGroupLoading(true);
 
         const res = await safeApi(() => getMyGroupDashboard(), "Failed to load group information. Please try again.");
@@ -190,9 +193,8 @@ const UserGroupPage: React.FC = () => {
         setMyGroup(data.group || null);
         setMembers(data.members || []);
         setPendingInvites(data.pending_invites || []);
+        await loadIncomingInvites();
         setGroupLoading(false);
-
-        loadIncomingInvites();
     }, [loadIncomingInvites]);
 
     useEffect(() => {
@@ -390,7 +392,7 @@ const UserGroupPage: React.FC = () => {
         }
 
         setMessage(extractSuccessMessage(res.data) ?? `Invitation sent to ${u.username}.`);
-        await loadGroupDashboard();
+        await loadGroupDashboard({preserveMessage: true});
     };
 
     const handleAcceptIncoming = async (inviteId: number) => {
@@ -409,8 +411,10 @@ const UserGroupPage: React.FC = () => {
             return;
         }
 
-        setMessage(extractSuccessMessage(res.data) ?? "Invitation accepted. You joined the group.");
-        await loadGroupDashboard();
+        const groupName = typeof res.data?.group_name === "string" ? res.data.group_name : "this group";
+        setIncomingInvites((prev) => prev.filter((invite) => invite.id !== inviteId));
+        setMessage(`You are now part of ${groupName}.`);
+        await loadGroupDashboard({preserveMessage: true});
     };
 
     const handleDeclineIncoming = async (inviteId: number) => {
@@ -430,7 +434,8 @@ const UserGroupPage: React.FC = () => {
         }
 
         setMessage(extractSuccessMessage(res.data) ?? "Invitation declined.");
-        await loadGroupDashboard();
+        setIncomingInvites((prev) => prev.filter((invite) => invite.id !== inviteId));
+        await loadGroupDashboard({preserveMessage: true});
     };
 
     // -------------------- Computed --------------------

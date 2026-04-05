@@ -1,6 +1,5 @@
 import React, {useState} from "react";
 import {Link} from "react-router-dom";
-import {toast} from "react-toastify";
 import {ImSpinner8} from "react-icons/im";
 import {useAuth} from "../../contexts/AuthContext";
 import {normalizeApiError} from "../../utils/apiError";
@@ -9,17 +8,21 @@ const VerifyResetPassword: React.FC = () => {
     const {verifyResetPassword} = useAuth();
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
 
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError("");
+        setSuccessMessage("");
         try {
             await verifyResetPassword({email});
-            toast.success("If an account exists for that email, a password reset link has been sent.");
+            setSuccessMessage("If an account exists for that email, a password reset link has been sent.");
             setEmail("");
         } catch (err: unknown) {
-            toast.error(normalizeApiError(err, "Reset Password Failed").message);
+            setError(normalizeApiError(err, "Reset Password Failed").message);
         } finally {
             setLoading(false);
         }
@@ -98,6 +101,18 @@ const VerifyResetPassword: React.FC = () => {
                         </div>
 
                         <form onSubmit={submit} className="space-y-5">
+                            {error ? (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                                    {error}
+                                </div>
+                            ) : null}
+
+                            {successMessage ? (
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    {successMessage}
+                                </div>
+                            ) : null}
+
                             <div className="space-y-2">
                                 <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                                     Email Address

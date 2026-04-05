@@ -1,8 +1,9 @@
 import React, {useEffect, useState} from "react";
 import {Link, useNavigate} from "react-router-dom";
-import {toast} from "react-toastify";
 import {ImSpinner8} from "react-icons/im";
+
 import {useAuth} from "../../contexts/AuthContext";
+import {normalizeApiError} from "../../utils/apiError";
 
 interface LoginForm {
     identifier: string;
@@ -14,18 +15,21 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
     const [form, setForm] = useState<LoginForm>({identifier: "", password: ""});
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({...form, [e.target.name]: e.target.value});
+        setError("");
+    };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError("");
         try {
             await login(form.identifier, form.password);
-            toast.success("Welcome back!");
-        } catch (err: any) {
-            toast.error(err.response?.data?.detail || "Wrong email or password.");
+        } catch (err: unknown) {
+            setError(normalizeApiError(err, "Wrong email or password.").message);
         } finally {
             setLoading(false);
         }
@@ -57,7 +61,6 @@ const Login: React.FC = () => {
                 <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[1.1fr_minmax(420px,520px)] lg:gap-14">
                     <section className="hidden lg:block">
                         <div className="max-w-2xl">
-
                             <div className="flex items-center gap-4">
                                 <img
                                     src="https://www.nwmissouri.edu/layout/v2019/images/svg/logo-n.svg"
@@ -70,7 +73,7 @@ const Login: React.FC = () => {
                                     <h1 className="text-5xl font-bold tracking-tight text-[#006747]">
                                         Bearcat CTF
                                     </h1>
-                                    <p className="text-sm font-medium text-[#006747]/70 tracking-wide">
+                                    <p className="text-sm font-medium tracking-wide text-[#006747]/70">
                                         Northwest Missouri State University
                                     </p>
                                 </div>
@@ -107,7 +110,6 @@ const Login: React.FC = () => {
                         </div>
 
                         <div className="mb-6 text-center">
-
                             <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Sign In</h2>
                             <p className="mt-2 text-sm leading-6 text-slate-600">
                                 Continue with your username or email to access your workspace.
@@ -115,6 +117,12 @@ const Login: React.FC = () => {
                         </div>
 
                         <form onSubmit={submit} className="space-y-5">
+                            {error ? (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                                    {error}
+                                </div>
+                            ) : null}
+
                             <div className="space-y-2">
                                 <label htmlFor="identifier" className="block text-sm font-medium text-slate-700">
                                     Username / Email
@@ -154,7 +162,7 @@ const Login: React.FC = () => {
                             >
                                 {loading ? (
                                     <>
-                                        <ImSpinner8 className="animate-spin mr-2" />
+                                        <ImSpinner8 className="mr-2 animate-spin" />
                                         Signing in...
                                     </>
                                 ) : (
