@@ -163,43 +163,6 @@ const AdminCompetitionList: React.FC = () => {
         setPage(1);
     }, []);
 
-    const handleDelete = useCallback(
-        async (id: number) => {
-            if (!user || user.role !== "admin") {
-                flashMessage("Unauthorized: admin only.");
-                return;
-            }
-            if (busyRef.current) return;
-
-            if (
-                !window.confirm(
-                    "Are you sure you want to delete this competition challenge? This cannot be undone."
-                )
-            )
-                return;
-
-            busyRef.current = true;
-            setError(null);
-
-            const backup = allChallenges;
-            setAllChallenges((prev) => prev.filter((c) => c.id !== id));
-            flashMessage("Deleting challenge...");
-
-            try {
-                await deleteChallenge(id);
-                if (!alive.current) return;
-                flashMessage("Challenge deleted.");
-            } catch (err) {
-                console.error(err);
-                if (!alive.current) return;
-                setAllChallenges(backup);
-                flashMessage("Failed to delete challenge.");
-            } finally {
-                busyRef.current = false;
-            }
-        },
-        [allChallenges, user, flashMessage]
-    );
 
     // --- responsive full-screen shell for guard states (same style as your AdminPracticeList) ---
     if (!user) {
@@ -505,18 +468,6 @@ const AdminCompetitionList: React.FC = () => {
                                                                 <span>Edit</span>
                                                             </button>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDelete(c.id)}
-                                                                className={cx(
-                                                                    "inline-flex items-center justify-center gap-2 rounded-xl bg-white/70 px-4 py-2 text-xs sm:text-sm font-normal tracking-tight",
-                                                                    "ring-1 ring-rose-200/60 text-rose-700 hover:bg-white/90",
-                                                                    focusRing
-                                                                )}
-                                                            >
-                                                                <FiTrash2 size={16}/>
-                                                                <span>Delete</span>
-                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
